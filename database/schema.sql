@@ -1,5 +1,5 @@
 -- Esquema base del proyecto.
--- Corresponde a la revisión Alembic: baseline_001.
+-- Corresponde a la revisión Alembic: 001.
 --
 -- Se ejecuta para preparar una base nueva.
 -- Los cambios posteriores se aplican mediante Alembic.
