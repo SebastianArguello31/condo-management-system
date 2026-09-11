@@ -112,3 +112,143 @@ def prepare_files(files):
         })
 
     return prepared
+
+def create_incident(data, files, user_id):
+    prepared = prepare_files(files)
+    upload_dir = Path(current_app.config["INCIDENT_UPLOAD_DIR"])
+    created_paths = []
+
+    try:
+        with transaction() as cursor:
+            cursor.execute("""
+                SELECT id_residente
+                FROM residentes
+                WHERE id_usuario = %s AND id_unidad = %s
+                LIMIT 1
+                FOR SHARE;
+            """, (user_id, data["id_unidad"]))
+
+            if not cursor.fetchone():
+                raise Forbidden("La unidad no está asociada a tu usuario")
+
+            cursor.execute("""
+                SELECT id_tipo_incidencia
+                FROM tipos_incidencia
+                WHERE id_tipo_incidencia = %s AND activo = TRUE;
+            """, (data["id_tipo_incidencia"],))
+
+            if not cursor.fetchone():
+                raise BadRequest("El tipo de incidencia no está disponible")
+
+            cursor.execute("""
+                SELECT id_prioridad, tiempo_resolucion_horas
+                FROM prioridades
+                WHERE nombre = 'Normal' AND activo = TRUE
+                ORDER BY id_prioridad
+                LIMIT 1;
+            """)
+
+            priority = cursor.fetchone()
+
+            cursor.execute("""
+                SELECT id_estados_incidencia
+                FROM estados_incidencia
+                WHERE nombre = 'RECIBIDA'
+                ORDER BY id_estados_incidencia
+                LIMIT 1;
+            """)
+
+            state = cursor.fetchone()
+
+            if not priority or not state:
+                raise BadRequest("Falta configurar la prioridad Normal o el estado RECIBIDA")
+
+            cursor.execute("""
+                INSERT INTO incidencias (titulo, descripcion, id_unidad, id_tipo_incidencia, id_prioridad, id_reportante, fecha_limite)
+                VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP + (%s * INTERVAL '1 hour'))
+                RETURNING id_incidencia;
+            """, (data["titulo"], data["descripcion"], data["id_unidad"], data["id_tipo_incidencia"], priority["id_prioridad"], user_id, priority["tiempo_resolucion_horas"],))
+
+            incident_id = cursor.fetchone()["id_incidencia"]
+
+            cursor.execute("""
+                INSERT INTO historial_incidencia (fecha, version, id_estado, id_incidencia, id_usuario)
+                VALUES (CURRENT_TIMESTAMP, 1, %s, %s, %s);
+            """, (state["id_estados_incidencia"], incident_id, user_id,))
+
+            for file in prepared:
+                path = upload_dir / file["storage_name"]
+
+                with path.open("xb") as destination:
+                    created_paths.append(path)
+                    destination.write(file["content"])
+
+                cursor.execute("""
+                    INSERT INTO adjuntos_incidencia (url_archivo, nombre_original, tipo, fecha, id_usuario, incidencias_id_incidencia)
+                    VALUES (%s, %s, %s, CURRENT_TIMESTAMP, %s, %s);
+                """, (file["storage_name"], file["original_name"], file["mime_type"], user_id, incident_id,))
+
+        return {"id_incidencia": incident_id, "estado": "RECIBIDA"}
+
+    except Exception:
+        for path in created_paths:
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                current_app.logger.exception("No se pudo limpiar el adjunto %s", path.name)
+
+        raise
+
+def list_incidents(user):
+    if user["rol"] == "ADMIN":
+        return query(INCIDENT_SELECT + " ORDER BY i.id_incidencia DESC;", many=True,)
+
+    return query(
+        INCIDENT_SELECT + """
+            WHERE i.id_reportante = %s
+            ORDER BY i.id_incidencia DESC;
+        """,(user["id_usuario"],), many=True,
+    )
+
+def get_incident(incident_id, user):
+    statement = INCIDENT_SELECT + " WHERE i.id_incidencia = %s"
+    params = [incident_id]
+
+    if user["rol"] != "ADMIN":
+        statement += " AND i.id_reportante = %s"
+        params.append(user["id_usuario"])
+
+    incident = query(statement, tuple(params))
+
+    if not incident:
+        raise NotFound("Solicitud no encontrada")
+
+    incident["adjuntos"] = query("""
+        SELECT id_adjuntos_incidencia, COALESCE(nombre_original, 'Adjunto') AS nombre_original, tipo
+        FROM adjuntos_incidencia
+        WHERE incidencias_id_incidencia = %s
+        ORDER BY id_adjuntos_incidencia;
+    """, (incident_id,), many=True)
+
+    return incident
+
+def get_attachment(attachment_id, user):
+    statement = """
+        SELECT a.url_archivo, a.nombre_original
+        FROM adjuntos_incidencia a
+        JOIN incidencias i
+            ON i.id_incidencia = a.incidencias_id_incidencia
+        WHERE a.id_adjuntos_incidencia = %s
+    """
+    params = [attachment_id]
+
+    if user["rol"] != "ADMIN":
+        statement += " AND i.id_reportante = %s"
+        params.append(user["id_usuario"])
+
+    attachment = query(statement, tuple(params))
+
+    if not attachment:
+        raise NotFound("Adjunto no encontrado")
+
+    return attachment
