@@ -7,6 +7,16 @@ from werkzeug.utils import secure_filename
 
 from app.core.db_helpers import query, transaction
 
+MAX_FILES = 3
+MAX_FILE_SIZE = 5 * 1024 * 1024
+
+FILE_TYPES = {
+    ".jpg": ("image/jpeg", b"\xff\xd8\xff"),
+    ".jpeg": ("image/jpeg", b"\xff\xd8\xff"),
+    ".png": ("image/png", b"\x89PNG\r\n\x1a\n"),
+    ".pdf": ("application/pdf", b"%PDF-"),
+}
+
 INCIDENT_SELECT = """
     SELECT
         i.id_incidencia,
@@ -63,3 +73,42 @@ def get_metadata(user_id):
     """, (user_id,), many=True)
 
     return {"tipos": types, "unidades": units}
+
+def prepare_files(files):
+    if len(files) > MAX_FILES:
+        raise BadRequest("Puedes adjuntar como máximo 3 archivos")
+
+    prepared = []
+
+    for uploaded in files:
+        original_name = secure_filename(uploaded.filename or "")
+
+        if not original_name or len(original_name) > 200:
+            raise BadRequest("Nombre de archivo inválido o demasiado largo")
+
+        extension = Path(original_name).suffix.lower()
+
+        if extension not in FILE_TYPES:
+            raise BadRequest("Solo se permiten archivos JPG, PNG y PDF")
+
+        content = uploaded.stream.read(MAX_FILE_SIZE + 1)
+
+        if not content:
+            raise BadRequest("No se permiten archivos vacíos")
+
+        if len(content) > MAX_FILE_SIZE:
+            raise BadRequest("Cada archivo puede pesar como máximo 5 MB")
+
+        mime_type, signature = FILE_TYPES[extension]
+
+        if not content.startswith(signature):
+            raise BadRequest(f"El contenido de {original_name} no coincide con su extensión")
+
+        prepared.append({
+            "storage_name": f"{uuid4().hex}{extension}",
+            "original_name": original_name,
+            "mime_type": mime_type,
+            "content": content,
+        })
+
+    return prepared
