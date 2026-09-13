@@ -1,0 +1,22 @@
+# Configuración local
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend
+node_modules/
+dist/
+
+# Archivos subidos y datos locales de Flask
+backend/instance/
+
+# Logs
+*.log
