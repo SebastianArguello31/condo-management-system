@@ -176,7 +176,7 @@ export default function IncidentsPage({ user }) {
 
       {isResident && (
         <form className="card" onSubmit={submit}>
-          <h2>Reportar un problema</h2>
+          <h2>Reportar una incidencia</h2>
 
           {metadata.unidades.length === 0 && (
             <p>
