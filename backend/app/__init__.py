@@ -42,16 +42,13 @@ def create_app():
     @app.errorhandler(UniqueViolation)
     def unique_error(error):
         return jsonify({
-            "error": "Ya existe un registro con ese valor único; "
-                     "comprueba el email."
+            "error": "Ya existe un registro con ese valor único comprueba el email."
         }), 409
 
     @app.errorhandler(ForeignKeyViolation)
     def foreign_key_error(error):
         return jsonify({
-            "error": "La operación no es válida: hay registros "
-                     "relacionados o una referencia seleccionada "
-                     "ya no existe."
+            "error": "La operación no es válida: hay registros relacionados o una referencia seleccionada ya no existe."
         }), 409
 
     @app.errorhandler(HTTPException)
@@ -70,6 +67,6 @@ def create_app():
 
     @app.get("/")
     def index():
-        return {"message": "API de gestión de condominios funcionando"}
+        return {"message": "API de gestion de condominios funcionando"}
 
     return app
