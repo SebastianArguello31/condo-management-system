@@ -1,16 +1,19 @@
 let accessToken = null;
 
-export function setAccessToken(token) {accessToken = token;}
+export function setAccessToken(token) {
+  accessToken = token;
+}
 
 export async function api(
   path,
   { method = "GET", body, responseType = "json" } = {}
 ) {
+  const requestToken = accessToken;
   const headers = {};
   const isFormData = body instanceof FormData;
 
-  if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`;
+  if (requestToken) {
+    headers.Authorization = `Bearer ${requestToken}`;
   }
 
   if (body !== undefined && !isFormData) {
@@ -31,7 +34,7 @@ export async function api(
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
 
-    if (response.status === 401 && path !== "/auth/login") {
+    if (response.status === 401 && path !== "/auth/login" && requestToken === accessToken) {
       accessToken = null;
       window.dispatchEvent(new Event("session-expired"));
     }
