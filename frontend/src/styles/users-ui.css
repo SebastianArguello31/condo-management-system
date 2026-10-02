@@ -85,6 +85,19 @@ button.mg-icon-button:disabled { opacity: .3; }
 .mg-pagination > div { display: flex; gap: 12px; align-items: center; }
 .mg-pagination button { min-height: 31px; font-size: 10px; padding: 6px 11px; }
 .mg-bottom-note { color: #8a999c; font-size: 11px; margin: 16px 2px; line-height: 1.7; }
+.resident-dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, .8fr); gap: 18px; margin-bottom: 20px; }
+.resident-profile-card, .resident-units-card, .resident-history-card { padding: 23px; }
+.resident-profile-card .mg-form-grid { padding: 20px 0; }
+.resident-profile-card h2, .resident-units-card h2, .resident-history-card h2 { margin: 0; font-size: 16px; font-weight: 650; }
+.resident-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.resident-history-card .resident-card-heading { padding: 2px 0 17px; }
+.resident-history-card .resident-card-heading p { margin: 6px 0 0; color: #879296; font-size: 12px; }
+.resident-units-card ul { list-style: none; padding: 0; margin: 18px 0 0; }
+.resident-units-card li { display: flex; flex-direction: column; gap: 6px; padding: 14px 0; border-top: 1px solid #edf1ef; }
+.resident-units-card li strong { font-size: 13px; }
+.resident-units-card li span, .resident-units-card > p, .resident-empty-note { color: #84918f; font-size: 12px; line-height: 1.6; }
+.resident-form-actions { display: flex; justify-content: flex-end; }
+.resident-history-card { margin-top: 20px; }
 .mg-alert { padding: 13px 17px; border-radius: 8px; margin: 0 0 18px; font-size: 12px; line-height: 1.6; display: flex; gap: 10px; align-items: center; overflow-wrap: anywhere; }
 .mg-alert-error { color: #a33e3e; background: #fff1ee; border: 1px solid #f9dbd6; }
 .mg-alert-success { color: #287051; background: #edf7ef; border: 1px solid #d9eddf; }
@@ -153,4 +166,5 @@ label.mg-check-field { display: flex; flex-direction: row; justify-content: spac
   .mg-form-body { padding: 22px; }
   .mg-modal-heading { padding: 22px; }
 }
+@media (max-width: 900px) { .resident-dashboard-grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .mg-spinner { animation: none; } }

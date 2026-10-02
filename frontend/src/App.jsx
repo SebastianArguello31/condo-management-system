@@ -9,6 +9,8 @@ import EmployeesPage from "./features/users/EmployeesPage";
 import AdminsPage from "./features/users/AdminsPage";
 import SpecialtiesPage from "./features/users/SpecialtiesPage";
 import EmployeeProfile from "./features/users/EmployeeProfile";
+import ResidentsPage from "./features/users/ResidentsPage";
+import ResidentHome from "./features/users/ResidentHome";
 import { setAccessToken } from "./services/api";
 import AppShell from "./components/AppShell";
 import "./styles/users-ui.css";
@@ -17,6 +19,7 @@ const pages = {
   users: UsersPage, employees: EmployeesPage, admins: AdminsPage,
   specialties: SpecialtiesPage, buildings: BuildingsPage, units: UnitsPage,
   incidents: IncidentsPage, profile: EmployeeProfile,
+  residents: ResidentsPage, residentHome: ResidentHome,
 };
 
 export default function App() {

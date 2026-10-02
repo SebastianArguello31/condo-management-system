@@ -2,7 +2,7 @@ import { useState } from "react";
 import Icon from "./ui/Icon";
 
 const labels = { ADMIN: "Administrador", TECNICO: "Empleado", RESIDENTE: "Residente" };
-const people = new Set(["users", "employees", "specialties", "admins", "profile"]);
+const people = new Set(["users", "employees", "specialties", "admins", "residents", "residentHome", "profile"]);
 
 export default function AppShell({ user, pages, selected, onNavigate, onLogout, children }) {
   const [open, setOpen] = useState(false);
