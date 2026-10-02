@@ -1,5 +1,5 @@
 export const navigation = [
-  { key: "incidents", label: "Solicitudes", roles: ["ADMIN", "RESIDENTE"] },
+  { key: "incidents", label: "Incidencias", roles: ["ADMIN", "RESIDENTE", "TECNICO"] },
   { key: "profile", label: "Mi perfil", roles: ["TECNICO"] },
   { key: "users", label: "Usuarios y accesos", roles: ["ADMIN"] },
   { key: "employees", label: "Empleados", roles: ["ADMIN"] },
