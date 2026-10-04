@@ -18,6 +18,40 @@ def upgrade():
         unique=True,
     )
 
+    # Catalogos que necesitan las siembras en una base recien migrada.
+    op.execute("""
+        INSERT INTO tipo_edificio (nombre, descripcion)
+        SELECT datos.nombre, datos.descripcion
+        FROM (
+            VALUES
+                ('Residencial', 'Edificio destinado principalmente a viviendas.')
+        ) AS datos(nombre, descripcion)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM tipo_edificio existente
+            WHERE existente.nombre = datos.nombre
+        );
+    """)
+
+    op.execute("""
+        INSERT INTO tipos_evento (nombre, descripcion, activo)
+        SELECT datos.nombre, datos.descripcion, TRUE
+        FROM (
+            VALUES
+                ('Reunión familiar', 'Encuentro privado de familiares y allegados.'),
+                ('Cumpleaños', 'Celebración de cumpleaños.'),
+                ('Asamblea de residentes', 'Reunión de residentes para tratar asuntos del condominio.'),
+                ('Actividad deportiva', 'Encuentro o actividad deportiva.'),
+                ('Actividad recreativa', 'Actividad de entretenimiento o convivencia.'),
+                ('Otro', 'Evento que no corresponde a las categorías anteriores.')
+        ) AS datos(nombre, descripcion)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM tipos_evento existente
+            WHERE existente.nombre = datos.nombre
+        );
+    """)
+
     # Edificio de respaldo solo si la base no tiene ninguno.
     op.execute("""
         INSERT INTO edificios (nombre, direccion, created_at, id_tipo_edificio)
@@ -88,12 +122,22 @@ def downgrade():
         WHERE id_espacio_comun IN (
             SELECT id_espacio_comun
             FROM espacios_comunes
-            WHERE nombre IN ('Salón Comunal', 'Parrillera', 'Cancha deportiva')
+            WHERE (nombre, descripcion, capacidad) IN (
+                VALUES
+                    ('Salón Comunal', 'Salón para eventos y reuniones de residentes.', 50),
+                    ('Parrillera', 'Área con parrillas para reuniones familiares.', 30),
+                    ('Cancha deportiva', 'Cancha multiuso al aire libre.', 20)
+            )
         );
     """)
     op.execute("""
         DELETE FROM espacios_comunes
-        WHERE nombre IN ('Salón Comunal', 'Parrillera', 'Cancha deportiva')
+        WHERE (nombre, descripcion, capacidad) IN (
+            VALUES
+                ('Salón Comunal', 'Salón para eventos y reuniones de residentes.', 50),
+                ('Parrillera', 'Área con parrillas para reuniones familiares.', 30),
+                ('Cancha deportiva', 'Cancha multiuso al aire libre.', 20)
+        )
           AND NOT EXISTS (
               SELECT 1 FROM reservas r
               WHERE r.id_espacio_comun = espacios_comunes.id_espacio_comun
