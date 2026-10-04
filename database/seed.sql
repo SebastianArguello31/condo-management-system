@@ -375,11 +375,49 @@ WHERE NOT EXISTS (
     WHERE existente.nombre = datos.nombre
 );
 
+-- ============================================================
+-- 10. RESIDENTE DE PRUEBA
+-- Usuario demo con unidad vinculada para probar el módulo de reservas.
+-- Requiere: migraciones hasta s3_006 (edificio 'Edificio Principal').
+-- Email: residente.prueba@condominio.local · Contraseña: Residente123!
+-- ============================================================
+
+-- 1) Usuario con rol RESIDENTE (idempotente por email UNIQUE).
+INSERT INTO usuarios (nombre, apellido, email, telefono, password_hash, activo, id_rol)
+SELECT 'Juan', 'Pérez', 'residente.prueba@condominio.local', '0971000000',
+       '$2b$12$M.5J.qW0mgnlV1qFwKhOw.p84JmtWTd7jTFZZgkb2AxKIk6UXyOEy',
+       TRUE, r.id_rol
+FROM roles r
+WHERE r.nombre = 'RESIDENTE'
+ON CONFLICT (email) DO NOTHING;
+
+-- 2) Unidad demo 'A-101' (Departamento) en el edificio de menor id, solo si no existe.
+INSERT INTO unidades (codigo, piso, created_at, id_edificio, id_tipo_unidad)
+SELECT 'A-101', '1', CURRENT_TIMESTAMP, e.id_edificio, tu.id_tipo_unidad
+FROM (
+    SELECT id_edificio
+    FROM edificios
+    ORDER BY id_edificio
+    LIMIT 1
+) e
+JOIN tipo_unidad tu ON tu.nombre = 'Departamento'
+WHERE NOT EXISTS (
+    SELECT 1 FROM unidades existente WHERE existente.codigo = 'A-101'
+);
+
+-- 3) Vinculo residente ↔ unidad (idempotente por UNIQUE de la migracion 002).
+INSERT INTO residentes (id_unidad, id_usuario)
+SELECT u.id_unidad, us.id_usuario
+FROM usuarios us
+JOIN unidades u ON u.codigo = 'A-101'
+WHERE us.email = 'residente.prueba@condominio.local'
+ON CONFLICT (id_unidad, id_usuario) DO NOTHING;
+
 COMMIT;
 
 
 -- ============================================================
--- 10. COMPROBACIÓN
+-- 11. COMPROBACIÓN
 -- Muestra la cantidad total de registros de cada catálogo.
 -- ============================================================
 
