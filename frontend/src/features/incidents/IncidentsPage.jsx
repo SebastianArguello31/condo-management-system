@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 import { api, downloadAttachment } from "../../services/api";
+import Icon from "../../components/ui/Icon";
+import Modal from "../../components/ui/Modal";
 
 const EMPTY_FORM = {
   titulo: "",
@@ -9,7 +10,36 @@ const EMPTY_FORM = {
   id_tipo_incidencia: "",
 };
 
+function formatElapsed(dateString) {
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "—";
+  const now = new Date();
+  const diffMs = now - date;
+  if (diffMs < 0) return "Recién creado";
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
 
+  if (diffMins < 1) return "Recién creado";
+  if (diffMins < 60) return `Hace ${diffMins} min`;
+  if (diffHours < 24) return `Hace ${diffHours} h`;
+  if (diffDays === 1) return "Hace 1 día";
+  return `Hace ${diffDays} días`;
+}
+
+function formatDateTime(dateString) {
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "—";
+  return date.toLocaleString(undefined, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function IncidentsPage({ user }) {
   const isAdmin = user.rol === "ADMIN";
@@ -28,24 +58,26 @@ export default function IncidentsPage({ user }) {
 
   const [rows, setRows] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  // Filtros
-  const [filterSearch, setFilterSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterPriority, setFilterPriority] = useState("");
-  const [filterOnlyMine, setFilterOnlyMine] = useState(false);
+  // Filtros de listado
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [onlyMine, setOnlyMine] = useState(false);
 
-  // Estados de formularios de acción dentro del detalle
+  // Estados de formularios dentro del Modal de detalle
   const [assignTechId, setAssignTechId] = useState("");
   const [assignNotes, setAssignNotes] = useState("");
   const [actionPriorityId, setActionPriorityId] = useState("");
   const [actionStatus, setActionStatus] = useState("");
   const [actionComment, setActionComment] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
+  const [modalTab, setModalTab] = useState("info"); // "info", "actions", "timeline"
 
   const fileInput = useRef(null);
 
@@ -53,7 +85,7 @@ export default function IncidentsPage({ user }) {
     const promises = [api("/incidents")];
 
     if (isResident) {
-      promises.push(api("/incidents/metadata"));
+      promises.push(api("/incidents/metadata").catch(() => ({ tipos: [], unidades: [] })));
     } else {
       promises.push(Promise.resolve({ tipos: [], unidades: [] }));
     }
@@ -77,10 +109,12 @@ export default function IncidentsPage({ user }) {
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setError("");
 
     load()
-      .catch((error) => {
-        if (active) setError(error.message);
+      .catch((err) => {
+        if (active) setError(err.message);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -107,8 +141,8 @@ export default function IncidentsPage({ user }) {
         setSelected(updated);
         syncDetailForm(updated);
       }
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setBusy(false);
     }
@@ -121,6 +155,7 @@ export default function IncidentsPage({ user }) {
     setActionPriorityId(incident.id_prioridad ? String(incident.id_prioridad) : "");
     setActionStatus(incident.estado || "");
     setActionComment("");
+    setModalTab("info");
   }
 
   async function openDetail(id) {
@@ -132,14 +167,14 @@ export default function IncidentsPage({ user }) {
       const data = await api(`/incidents/${id}`);
       setSelected(data);
       syncDetailForm(data);
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setBusy(false);
     }
   }
 
-  async function submit(event) {
+  async function submitReport(event) {
     event.preventDefault();
     setError("");
     setNotice("");
@@ -158,11 +193,9 @@ export default function IncidentsPage({ user }) {
 
     try {
       const body = new FormData();
-
       Object.entries(form).forEach(([key, value]) => {
         body.append(key, value.trim());
       });
-
       files.forEach((file) => body.append("archivos", file));
 
       const result = await api("/incidents", {
@@ -173,16 +206,12 @@ export default function IncidentsPage({ user }) {
       setNotice(`Solicitud #${result.id_incidencia} enviada correctamente.`);
       setForm({ ...EMPTY_FORM });
       setFiles([]);
-
       if (fileInput.current) fileInput.current.value = "";
+      setIsCreateOpen(false);
 
-      try {
-        await load();
-      } catch (error) {
-        setError(`La solicitud se guardó, pero no se pudo actualizar la lista: ${error.message}`);
-      }
-    } catch (error) {
-      setError(error.message);
+      await load();
+    } catch (err) {
+      setError(err.message);
     } finally {
       setBusy(false);
     }
@@ -191,7 +220,7 @@ export default function IncidentsPage({ user }) {
   async function handleAssignTechnician(event) {
     event.preventDefault();
     if (!assignTechId) {
-      setError("Debes seleccionar un técnico para asignar.");
+      setError("Debes seleccionar un técnico.");
       return;
     }
 
@@ -317,573 +346,882 @@ export default function IncidentsPage({ user }) {
 
     try {
       await downloadAttachment(file.id_adjuntos_incidencia, file.nombre_original);
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setBusy(false);
     }
   }
 
-  // Filtrado de incidencias
+  // Filtrado de filas
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
-      if (filterStatus && row.estado !== filterStatus) return false;
-      if (filterPriority && row.prioridad !== filterPriority) return false;
-      if (filterOnlyMine && isTechnician) {
+      if (statusFilter !== "all" && row.estado !== statusFilter) return false;
+      if (priorityFilter !== "all" && row.prioridad !== priorityFilter) return false;
+      if (onlyMine && isTechnician) {
         if (row.id_personal_asignado !== user.id_usuario) return false;
       }
-      if (filterSearch) {
-        const query = filterSearch.toLowerCase();
+      if (search) {
+        const query = search.toLowerCase();
         const titleMatch = (row.titulo || "").toLowerCase().includes(query);
         const descMatch = (row.descripcion || "").toLowerCase().includes(query);
         const codeMatch = String(row.id_incidencia).includes(query);
         const unitMatch = (row.unidad || "").toLowerCase().includes(query);
-        const residentMatch = `${row.residente_nombre || ""} ${row.residente_apellido || ""}`
+        const resMatch = `${row.residente_nombre || ""} ${row.residente_apellido || ""}`
           .toLowerCase()
           .includes(query);
-        if (!titleMatch && !descMatch && !codeMatch && !unitMatch && !residentMatch) {
+        if (!titleMatch && !descMatch && !codeMatch && !unitMatch && !resMatch) {
           return false;
         }
       }
       return true;
     });
-  }, [rows, filterStatus, filterPriority, filterSearch, filterOnlyMine, isTechnician, user.id_usuario]);
+  }, [rows, statusFilter, priorityFilter, search, onlyMine, isTechnician, user.id_usuario]);
 
-  if (loading) return <p>Cargando solicitudes...</p>;
-
-  const canSubmit = metadata.unidades.length > 0 && metadata.tipos.length > 0;
-
-  // Estados permitidos según el rol
+  // Estados permitidos según rol
   const allowedStatuses = isTechnician
     ? ["EN_PROCESO", "EN_ESPERA", "RESUELTA"]
     : statuses.length > 0
       ? statuses.map((s) => s.nombre)
       : [
-        "RECIBIDA",
-        "EN_REVISION",
-        "ASIGNADA",
-        "EN_PROCESO",
-        "EN_ESPERA",
-        "RESUELTA",
-        "CERRADA",
-        "RECHAZADA",
-        "CANCELADA",
-      ];
+          "RECIBIDA",
+          "EN_REVISION",
+          "ASIGNADA",
+          "EN_PROCESO",
+          "EN_ESPERA",
+          "RESUELTA",
+          "CERRADA",
+          "RECHAZADA",
+          "CANCELADA",
+        ];
+
+  // Métricas para estadísticas superiores
+  const openCount = rows.filter((r) =>
+    ["RECIBIDA", "EN_REVISION", "ASIGNADA", "EN_PROCESO", "EN_ESPERA"].includes(r.estado)
+  ).length;
+  const resolvedCount = rows.filter((r) => ["RESUELTA", "CERRADA"].includes(r.estado)).length;
+
+  const canSubmit = metadata.unidades.length > 0 && metadata.tipos.length > 0;
 
   return (
-    <section>
-      <h1>
-        {isResident
-          ? "Mis solicitudes"
-          : isTechnician
-            ? "Incidencias asignadas y tareas"
-            : "Gestión de Incidencias"}
-      </h1>
+    <section className="management-page">
+      {/* Encabezado con el estilo oficial de la plataforma */}
+      <div className="mg-page-heading">
+        <div>
+          <p className="mg-eyebrow">
+            {isResident ? "MI CONDOMINIO" : "GESTIÓN OPERATIVA"}
+          </p>
+          <h1>{isResident ? "Mis Solicitudes" : isTechnician ? "Tareas Asignadas" : "Incidencias"}</h1>
+          <p>
+            {isResident
+              ? "Reporta problemas en tu unidad y consulta el estado de atención."
+              : isTechnician
+              ? "Atiende las solicitudes de mantenimiento asignadas y actualiza su progreso."
+              : "Bandeja general de solicitudes, asignación de personal técnico y seguimiento de estados."}
+          </p>
+        </div>
+
+        {isResident && (
+          <button
+            className="mg-primary"
+            disabled={busy}
+            onClick={() => setIsCreateOpen(true)}
+          >
+            <Icon name="plus" size={18} />
+            Nueva solicitud
+          </button>
+        )}
+      </div>
+
+      {/* Tarjetas de estadísticas unificadas */}
+      <div className="mg-stats">
+        <div className="mg-stat">
+          <div>
+            <span>Total solicitudes</span>
+            <strong>{loading ? "—" : rows.length}</strong>
+          </div>
+          <span className="mg-stat-icon">
+            <Icon name="incidents" size={23} />
+          </span>
+        </div>
+
+        <div className="mg-stat">
+          <div>
+            <span>En curso / Pendientes</span>
+            <strong>{loading ? "—" : openCount}</strong>
+          </div>
+          <span className="mg-stat-icon">
+            <Icon name="refresh" size={23} />
+          </span>
+        </div>
+
+        <div className="mg-stat">
+          <div>
+            <span>Resueltas</span>
+            <strong>{loading ? "—" : resolvedCount}</strong>
+          </div>
+          <span className="mg-stat-icon">
+            <Icon name="check" size={23} />
+          </span>
+        </div>
+      </div>
 
       {error && (
-        <p className="error" role="alert">
+        <div className="mg-alert mg-alert-error" role="alert">
           {error}
-        </p>
+        </div>
       )}
 
       {notice && (
-        <p className="success" role="status">
+        <div className="mg-alert mg-alert-success" role="status">
           {notice}
-        </p>
-      )}
-
-      {isResident && (
-        <form className="card" onSubmit={submit}>
-          <h2>Reportar una incidencia</h2>
-
-          {metadata.unidades.length === 0 && (
-            <p>
-              No tienes una unidad asociada. Solicita al administrador que vincule tu cuenta con una
-              unidad.
-            </p>
-          )}
-
-          {metadata.tipos.length === 0 && <p>No hay tipos de incidencia disponibles.</p>}
-
-          <fieldset disabled={busy || !canSubmit}>
-            <div className="form-grid">
-              <label>
-                Unidad
-                <select name="id_unidad" required value={form.id_unidad} onChange={updateField}>
-                  <option value="">Seleccionar...</option>
-                  {metadata.unidades.map((unit) => (
-                    <option key={unit.id_unidad} value={unit.id_unidad}>
-                      {unit.edificio} · {unit.codigo}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Tipo de problema
-                <select
-                  name="id_tipo_incidencia"
-                  required
-                  value={form.id_tipo_incidencia}
-                  onChange={updateField}
-                >
-                  <option value="">Seleccionar...</option>
-                  {metadata.tipos.map((type) => (
-                    <option key={type.id_tipo_incidencia} value={type.id_tipo_incidencia}>
-                      {type.nombre}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <label className="incident-field">
-              Título
-              <input
-                name="titulo"
-                required
-                minLength={5}
-                maxLength={150}
-                placeholder="Ej.: Pérdida de agua debajo del lavamanos"
-                value={form.titulo}
-                onChange={updateField}
-              />
-            </label>
-
-            <label className="incident-field">
-              Descripción
-              <textarea
-                name="descripcion"
-                required
-                minLength={10}
-                maxLength={5000}
-                rows={5}
-                placeholder="Describe qué ocurre, dónde y desde cuándo."
-                value={form.descripcion}
-                onChange={updateField}
-              />
-            </label>
-
-            <label className="incident-field">
-              Adjuntos opcionales
-              <input
-                ref={fileInput}
-                type="file"
-                multiple
-                accept=".jpg,.jpeg,.png,.pdf"
-                onChange={(event) => setFiles(Array.from(event.target.files || []))}
-              />
-              <small>Hasta 3 archivos JPG, PNG o PDF de 5 MB cada uno.</small>
-            </label>
-
-            {files.length > 0 && (
-              <ul>
-                {files.map((file, index) => (
-                  <li key={`${file.name}-${index}`}>{file.name}</li>
-                ))}
-              </ul>
-            )}
-
-            <button type="submit">{busy ? "Procesando..." : "Enviar solicitud"}</button>
-          </fieldset>
-        </form>
-      )}
-
-      {/* Lista de solicitudes y filtros */}
-      <div className="card">
-        <div className="incident-toolbar">
-          <h2>{isResident ? "Historial de solicitudes" : "Bandeja de incidencias"}</h2>
-          <button type="button" className="secondary" disabled={busy} onClick={refresh}>
-            Actualizar
-          </button>
         </div>
+      )}
 
-        {/* Barra de Filtros */}
-        {!isResident && (
-          <div className="filter-bar">
+      {/* Panel principal de tabla con buscador y filtros estándar */}
+      <div className="mg-panel">
+        <div className="mg-toolbar">
+          <label className="mg-search">
+            <Icon name="search" size={19} />
+            <span className="mg-sr-only">Buscar incidencias</span>
             <input
               type="search"
-              placeholder="Buscar por título, unidad..."
-              value={filterSearch}
-              onChange={(e) => setFilterSearch(e.target.value)}
+              placeholder="Buscar por título, unidad o residente..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
+          </label>
 
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-              <option value="">Todos los estados</option>
-              {allowedStatuses.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-
-            {priorities.length > 0 && (
-              <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
-                <option value="">Todas las prioridades</option>
-                {priorities.map((p) => (
-                  <option key={p.id_prioridad} value={p.nombre}>
-                    {p.nombre}
+          <div className="mg-filters">
+            <label>
+              <span className="mg-sr-only">Filtrar por estado</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">Todos los estados</option>
+                {allowedStatuses.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
                   </option>
                 ))}
               </select>
+            </label>
+
+            {!isResident && priorities.length > 0 && (
+              <label>
+                <span className="mg-sr-only">Filtrar por prioridad</span>
+                <select
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                >
+                  <option value="all">Todas las prioridades</option>
+                  {priorities.map((p) => (
+                    <option key={p.id_prioridad} value={p.nombre}>
+                      {p.nombre}
+                    </option>
+                  ))}
+                </select>
+              </label>
             )}
 
             {isTechnician && (
-              <label style={{ flexDirection: "row", alignItems: "center", gap: 6, margin: 0 }}>
+              <label className="mg-check-field" style={{ gap: 6, cursor: "pointer", fontSize: 12, padding: "0 8px" }}>
                 <input
                   type="checkbox"
-                  checked={filterOnlyMine}
-                  onChange={(e) => setFilterOnlyMine(e.target.checked)}
+                  checked={onlyMine}
+                  onChange={(e) => setOnlyMine(e.target.checked)}
                 />
-                Solo asignadas a mí
+                Solo mías
               </label>
             )}
+
+            <button
+              className="mg-icon-button"
+              title="Actualizar listado"
+              aria-label="Actualizar listado"
+              disabled={loading || busy}
+              onClick={refresh}
+            >
+              <Icon name="refresh" size={18} />
+            </button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="mg-empty" role="status">
+            Cargando incidencias...
+          </div>
+        ) : filteredRows.length === 0 ? (
+          <div className="mg-empty">
+            <h2>{rows.length ? "Sin coincidencias" : "No hay incidencias registradas"}</h2>
+            <p>Las solicitudes y tareas de mantenimiento aparecerán en esta bandeja.</p>
+          </div>
+        ) : (
+          <div className="mg-table-scroll">
+            <table className="mg-table">
+              <thead>
+                <tr>
+                  <th>Incidencia</th>
+                  <th>Ubicación</th>
+                  <th>Tipo</th>
+                  {!isResident && <th>Prioridad</th>}
+                  <th>Estado</th>
+                  {!isResident && <th>Tiempo abierto</th>}
+                  {!isResident && <th>Técnico Asignado</th>}
+                  <th className="mg-actions-heading">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((incident) => {
+                  const dateStr = incident.fecha_reporte || incident.fecha_creacion;
+                  const isPending = ["RECIBIDA", "EN_REVISION", "ASIGNADA", "EN_PROCESO", "EN_ESPERA"].includes(incident.estado);
+                  const techName = incident.tecnico_asignado_nombre || incident.tecnico_asignado;
+
+                  return (
+                    <tr key={incident.id_incidencia}>
+                      <td>
+                        <div className="mg-identity">
+                          <span className="mg-avatar" style={{ fontSize: 11, fontWeight: 700 }}>
+                            #{incident.id_incidencia}
+                          </span>
+                          <div>
+                            <strong>{incident.titulo}</strong>
+                            <span>
+                              {dateStr ? formatDateTime(dateStr) : "Reciente"}
+                              {incident.residente_nombre && !isResident
+                                ? ` · ${incident.residente_nombre} ${incident.residente_apellido || ""}`
+                                : ""}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td>
+                        <span className="mg-tag">
+                          {incident.edificio ? `${incident.edificio} · ` : ""}{incident.unidad || "Áreas comunes"}
+                        </span>
+                      </td>
+
+                      <td className="mg-muted">
+                        {incident.tipo_incidencia || "General"}
+                      </td>
+
+                      {!isResident && (
+                        <td>
+                          <span
+                            className={`priority-badge ${
+                              incident.prioridad?.toLowerCase().includes("alta") ||
+                              incident.prioridad?.toLowerCase().includes("urgente")
+                                ? "urgent"
+                                : incident.prioridad?.toLowerCase().includes("media")
+                                ? "normal"
+                                : "low"
+                            }`}
+                          >
+                            {incident.prioridad || "Normal"}
+                          </span>
+                        </td>
+                      )}
+
+                      <td>
+                        <span className={`status-badge status-${incident.estado}`}>
+                          {incident.estado}
+                        </span>
+                      </td>
+
+                      {!isResident && (
+                        <td>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <strong style={{ fontSize: 12, color: isPending ? "#0f766e" : "#475569" }}>
+                              {formatElapsed(dateStr)}
+                            </strong>
+                            <small style={{ fontSize: 11, color: "#94a3b8" }}>
+                              {dateStr ? formatDateTime(dateStr) : "—"}
+                            </small>
+                          </div>
+                        </td>
+                      )}
+
+                      {!isResident && (
+                        <td>
+                          {techName ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <Icon name="employees" size={15} />
+                              <strong>{techName}</strong>
+                            </div>
+                          ) : (
+                            <span className="mg-muted">Sin asignar</span>
+                          )}
+                        </td>
+                      )}
+
+                      <td>
+                        <div className="mg-row-actions">
+                          <button
+                            type="button"
+                            className="mg-icon-button"
+                            title="Ver detalle"
+                            aria-label="Ver detalle"
+                            disabled={busy}
+                            onClick={() => openDetail(incident.id_incidencia)}
+                          >
+                            <Icon name="eye" size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
-
-        {filteredRows.length === 0 && <p>No se encontraron solicitudes.</p>}
-
-        {filteredRows.map((incident) => (
-          <article className="incident-item" key={incident.id_incidencia}>
-            <div>
-              <h3>
-                #{incident.id_incidencia} · {incident.titulo}
-              </h3>
-
-              <p>
-                {incident.edificio || "Sin edificio"} · Unidad {incident.unidad || "—"} ·{" "}
-                {incident.tipo_incidencia}
-              </p>
-
-              {!isResident && (
-                <p>
-                  <strong>Residente:</strong>{" "}
-                  {incident.residente_nombre
-                    ? `${incident.residente_nombre} ${incident.residente_apellido}`
-                    : "Sin autor registrado"}
-                </p>
-              )}
-
-              {incident.tecnico_asignado_nombre && (
-                <p>
-                  <strong>Técnico:</strong> {incident.tecnico_asignado_nombre}
-                </p>
-              )}
-
-              <p>
-                <span className={`status-badge status-${incident.estado}`}>{incident.estado}</span>
-                {" "}· Prioridad: <strong>{incident.prioridad || "Sin asignar"}</strong>
-                {incident.fecha_limite && (
-                  <span> · Límite: {new Date(incident.fecha_limite).toLocaleDateString()}</span>
-                )}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => openDetail(incident.id_incidencia)}
-            >
-              Ver detalle
-            </button>
-          </article>
-        ))}
       </div>
 
-      {/* Detalle y Gestión de la Incidencia Seleccionada */}
+      {/* ============================================================ */}
+      {/* MODAL 1: DETALLE, ASIGNACIÓN Y GESTIÓN DE INCIDENCIA         */}
+      {/* ============================================================ */}
       {selected && (
-        <div className="card">
-          <div className="incident-toolbar">
-            <h2>Detalle de Incidencia #{selected.id_incidencia}</h2>
+        <Modal
+          title={`Incidencia #${selected.id_incidencia}`}
+          description={`Reportada por ${selected.residente_nombre || "Residente"} ${
+            selected.residente_apellido || ""
+          } · ${selected.edificio || "Condominio"} · Unidad ${selected.unidad || "—"}`}
+          busy={actionBusy || busy}
+          onClose={() => setSelected(null)}
+        >
+          {/* Navegación interna por pestañas en el modal */}
+          <div style={{ display: "flex", gap: 8, padding: "12px 28px 0", borderBottom: "1px solid #edf1ef" }}>
             <button
               type="button"
-              className="secondary"
-              onClick={() => setSelected(null)}
+              className={modalTab === "info" ? "mg-primary" : "mg-secondary"}
+              style={{ minHeight: 32, padding: "6px 12px", fontSize: 11 }}
+              onClick={() => setModalTab("info")}
             >
-              Cerrar detalle
+              Detalles
+            </button>
+            {(isAdmin || isTechnician) && (
+              <button
+                type="button"
+                className={modalTab === "actions" ? "mg-primary" : "mg-secondary"}
+                style={{ minHeight: 32, padding: "6px 12px", fontSize: 11 }}
+                onClick={() => setModalTab("actions")}
+              >
+                Gestión y Asignación
+              </button>
+            )}
+            <button
+              type="button"
+              className={modalTab === "timeline" ? "mg-primary" : "mg-secondary"}
+              style={{ minHeight: 32, padding: "6px 12px", fontSize: 11 }}
+              onClick={() => setModalTab("timeline")}
+            >
+              Historial
             </button>
           </div>
 
-          <h3>{selected.titulo}</h3>
-
-          <p className="incident-description">{selected.descripcion}</p>
-
-          <p>
-            <strong>Ubicación:</strong> {selected.edificio || "—"} · Unidad {selected.unidad || "—"}
-          </p>
-
-          <p>
-            <strong>Estado actual:</strong>{" "}
-            <span className={`status-badge status-${selected.estado}`}>{selected.estado}</span>
-            {"  "}
-            <strong>Prioridad:</strong> {selected.prioridad || "Sin prioridad asignada"}
-          </p>
-
-          {selected.fecha_reporte && (
-            <p>
-              <strong>Reportado el:</strong> {new Date(selected.fecha_reporte).toLocaleString()}
-            </p>
-          )}
-
-          {selected.fecha_limite && (
-            <p>
-              <strong>Fecha límite de resolución:</strong>{" "}
-              {new Date(selected.fecha_limite).toLocaleString()}
-            </p>
-          )}
-
-          {selected.fecha_resolucion && (
-            <p>
-              <strong>Fecha de resolución:</strong>{" "}
-              {new Date(selected.fecha_resolucion).toLocaleString()}
-            </p>
-          )}
-
-          {!isResident && (
-            <p>
-              <strong>Contacto Residente:</strong> {selected.residente_email || "Sin email registrado"}
-              {selected.residente_telefono ? ` · Tel: ${selected.residente_telefono}` : ""}
-            </p>
-          )}
-
-          <p>
-            <strong>Técnico Responsable:</strong>{" "}
-            {selected.tecnico_asignado_nombre ? (
-              <span>
-                {selected.tecnico_asignado_nombre}
-                {selected.tecnico_asignado_email ? ` (${selected.tecnico_asignado_email})` : ""}
-                {selected.asignacion_notas ? ` — Nota: "${selected.asignacion_notas}"` : ""}
-              </span>
-            ) : (
-              <em>Sin técnico asignado aún</em>
-            )}
-          </p>
-
-          {/* ACCIONES OPERATIVAS: Asignación, Prioridad y Estado */}
-          {(isAdmin || isTechnician) && (
-            <div className="detail-grid">
-              {/* ASIGNACIÓN DE TÉCNICO (Solo Admin) */}
-              {isAdmin && (
-                <div className="detail-section">
-                  <h4>Asignar Técnico</h4>
-                  <form onSubmit={handleAssignTechnician}>
-                    <label>
-                      Personal Técnico
-                      <select
-                        value={assignTechId}
-                        onChange={(e) => setAssignTechId(e.target.value)}
-                        required
-                        disabled={actionBusy}
-                      >
-                        <option value="">Seleccionar técnico...</option>
-                        {technicians.map((t) => (
-                          <option key={t.id_usuario} value={t.id_usuario}>
-                            {t.nombre} {t.apellido}
-                            {t.especialidades && t.especialidades.length > 0
-                              ? ` (${t.especialidades.join(", ")})`
-                              : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label style={{ marginTop: 10 }}>
-                      Notas para el técnico (opcional)
-                      <textarea
-                        rows={2}
-                        placeholder="Ej.: Llevar herramientas para tuberías"
-                        value={assignNotes}
-                        onChange={(e) => setAssignNotes(e.target.value)}
-                        disabled={actionBusy}
-                      />
-                    </label>
-
-                    <button
-                      type="submit"
-                      style={{ marginTop: 12, width: "100%" }}
-                      disabled={actionBusy || !assignTechId}
-                    >
-                      {actionBusy ? "Guardando..." : selected.id_personal_asignado ? "Reasignar Técnico" : "Asignar Técnico"}
-                    </button>
-                  </form>
+          <div className="mg-form-body">
+            {/* PESTAÑA 1: INFORMACIÓN GENERAL */}
+            {modalTab === "info" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div>
+                  <h3 style={{ margin: "0 0 6px", fontSize: 16 }}>{selected.titulo}</h3>
+                  <div style={{ background: "#f8faf9", border: "1px solid #e0e7e3", padding: 14, borderRadius: 8 }}>
+                    <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                      {selected.descripcion}
+                    </p>
+                  </div>
                 </div>
-              )}
 
-              {/* CAMBIAR PRIORIDAD (Solo Admin) */}
-              {isAdmin && (
-                <div className="detail-section">
-                  <h4>Gestionar Prioridad</h4>
-                  <form onSubmit={handleUpdatePriority}>
-                    <label>
-                      Prioridad
-                      <select
-                        value={actionPriorityId}
-                        onChange={(e) => setActionPriorityId(e.target.value)}
-                        required
-                        disabled={actionBusy}
-                      >
-                        <option value="">Seleccionar prioridad...</option>
-                        {priorities.map((p) => (
-                          <option key={p.id_prioridad} value={p.id_prioridad}>
-                            {p.nombre} ({p.horas_resolucion}h límite)
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                <div className="mg-form-grid" style={{ gap: 12 }}>
+                  <div>
+                    <small style={{ color: "#7c8d92", display: "block" }}>Estado actual</small>
+                    <span className={`status-badge status-${selected.estado}`} style={{ marginTop: 4 }}>
+                      {selected.estado}
+                    </span>
+                  </div>
 
-                    <button
-                      type="submit"
-                      style={{ marginTop: 12, width: "100%" }}
-                      disabled={actionBusy || !actionPriorityId}
-                    >
-                      {actionBusy ? "Guardando..." : "Actualizar Prioridad"}
-                    </button>
-                  </form>
+                  {!isResident && (
+                    <div>
+                      <small style={{ color: "#7c8d92", display: "block" }}>Prioridad</small>
+                      <strong style={{ fontSize: 13, marginTop: 4, display: "inline-block" }}>
+                        {selected.prioridad || "Sin prioridad"}
+                      </strong>
+                    </div>
+                  )}
+
+                  <div>
+                    <small style={{ color: "#7c8d92", display: "block" }}>Fecha de reporte</small>
+                    <span style={{ fontSize: 12 }}>
+                      {selected.fecha_reporte ? new Date(selected.fecha_reporte).toLocaleString() : "—"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <small style={{ color: "#7c8d92", display: "block" }}>Fecha límite de resolución</small>
+                    <span style={{ fontSize: 12 }}>
+                      {selected.fecha_limite ? new Date(selected.fecha_limite).toLocaleString() : "Sin fecha límite"}
+                    </span>
+                  </div>
+
+                  {!isResident && (
+                    <div className="mg-full-field">
+                      <small style={{ color: "#7c8d92", display: "block" }}>Contacto del Residente</small>
+                      <span style={{ fontSize: 12 }}>
+                        {selected.residente_email || "Sin email"}
+                        {selected.residente_telefono ? ` · Tel: ${selected.residente_telefono}` : ""}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="mg-full-field">
+                    <small style={{ color: "#7c8d92", display: "block" }}>Técnico Responsable</small>
+                    {selected.tecnico_asignado_nombre ? (
+                      <div style={{ marginTop: 4, fontSize: 13 }}>
+                        <strong>{selected.tecnico_asignado_nombre}</strong>
+                        {selected.tecnico_asignado_email && (
+                          <span className="mg-muted"> ({selected.tecnico_asignado_email})</span>
+                        )}
+                        {selected.asignacion_notas && (
+                          <div style={{ fontSize: 12, color: "#4f6a62", marginTop: 2 }}>
+                            <em>"{selected.asignacion_notas}"</em>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="mg-muted" style={{ fontStyle: "italic", fontSize: 12 }}>
+                        Sin técnico asignado aún
+                      </span>
+                    )}
+                  </div>
                 </div>
-              )}
 
-              {/* CAMBIAR ESTADO (Admin y Técnico) */}
-              <div className="detail-section">
-                <h4>Actualizar Estado</h4>
-                <form onSubmit={handleUpdateStatus}>
-                  <label>
-                    Nuevo Estado
-                    <select
-                      value={actionStatus}
-                      onChange={(e) => setActionStatus(e.target.value)}
-                      required
+                {/* Archivos adjuntos */}
+                <div>
+                  <h4 style={{ margin: "14px 0 8px", fontSize: 13, color: "#475c55" }}>Archivos Adjuntos</h4>
+                  {!selected.adjuntos || selected.adjuntos.length === 0 ? (
+                    <p className="mg-muted" style={{ fontSize: 12, margin: 0 }}>
+                      No se adjuntaron archivos en este reporte.
+                    </p>
+                  ) : (
+                    <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                      {selected.adjuntos.map((file) => (
+                        <li
+                          key={file.id_adjuntos_incidencia}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            padding: "8px 12px",
+                            border: "1px solid #e1e7e4",
+                            borderRadius: 6,
+                            background: "#fdfdfd",
+                          }}
+                        >
+                          <span style={{ fontSize: 12, overflowWrap: "anywhere" }}>{file.nombre_original}</span>
+                          <button
+                            type="button"
+                            className="mg-secondary"
+                            style={{ minHeight: 28, padding: "4px 10px", fontSize: 11 }}
+                            disabled={busy}
+                            onClick={() => download(file)}
+                          >
+                            Descargar
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Acción para cancelar por parte del residente */}
+                {isResident && ["RECIBIDA", "EN_REVISION"].includes(selected.estado) && (
+                  <div style={{ borderTop: "1px solid #edf1ef", paddingTop: 14 }}>
+                    <button
+                      type="button"
+                      className="mg-danger"
+                      style={{ width: "100%" }}
                       disabled={actionBusy}
+                      onClick={handleCancelResident}
                     >
-                      <option value="">Seleccionar estado...</option>
-                      {allowedStatuses.map((st) => (
-                        <option key={st} value={st}>
-                          {st}
+                      Cancelar mi solicitud
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* PESTAÑA 2: GESTIÓN DE TÉCNICO Y ESTADO */}
+            {modalTab === "actions" && (isAdmin || isTechnician) && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                {/* CAMBIAR ESTADO (Técnico y Admin) */}
+                <div style={{ background: "#f9fbfa", padding: 16, borderRadius: 8, border: "1px solid #e2eae6" }}>
+                  <h4 style={{ margin: "0 0 10px", fontSize: 13, color: "#186553" }}>
+                    Actualizar Estado Operativo
+                  </h4>
+                  <form onSubmit={handleUpdateStatus}>
+                    <div className="mg-form-grid" style={{ gap: 12 }}>
+                      <label>
+                        <span>Nuevo Estado *</span>
+                        <select
+                          value={actionStatus}
+                          onChange={(e) => setActionStatus(e.target.value)}
+                          required
+                          disabled={actionBusy}
+                        >
+                          <option value="">Seleccionar...</option>
+                          {allowedStatuses.map((st) => (
+                            <option key={st} value={st}>
+                              {st}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="mg-full-field">
+                        <span>Comentario de avance o motivo</span>
+                        <textarea
+                          rows={2}
+                          placeholder="Describe el avance técnico realizado o la justificación del cambio..."
+                          value={actionComment}
+                          onChange={(e) => setActionComment(e.target.value)}
+                          disabled={actionBusy}
+                        />
+                      </label>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+                      <button
+                        type="submit"
+                        className="mg-primary"
+                        disabled={actionBusy || !actionStatus}
+                      >
+                        {actionBusy ? "Guardando..." : "Actualizar Estado"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* ASIGNACIÓN DE TÉCNICO (Solo Admin) */}
+                {isAdmin && (
+                  <div style={{ background: "#f9fbfa", padding: 16, borderRadius: 8, border: "1px solid #e2eae6" }}>
+                    <h4 style={{ margin: "0 0 10px", fontSize: 13, color: "#186553" }}>
+                      Asignar Técnico
+                    </h4>
+                    <form onSubmit={handleAssignTechnician}>
+                      <div className="mg-form-grid" style={{ gap: 12 }}>
+                        <label className="mg-full-field">
+                          <span>Personal Técnico *</span>
+                          <select
+                            value={assignTechId}
+                            onChange={(e) => setAssignTechId(e.target.value)}
+                            required
+                            disabled={actionBusy}
+                          >
+                            <option value="">Seleccionar técnico...</option>
+                            {technicians.map((t) => (
+                              <option key={t.id_usuario} value={t.id_usuario}>
+                                {t.nombre} {t.apellido}
+                                {t.especialidades && t.especialidades.length > 0
+                                  ? ` (${t.especialidades.join(", ")})`
+                                  : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="mg-full-field">
+                          <span>Notas e instrucciones para el técnico</span>
+                          <textarea
+                            rows={2}
+                            placeholder="Indicaciones para la visita, herramientas requeridas, etc."
+                            value={assignNotes}
+                            onChange={(e) => setAssignNotes(e.target.value)}
+                            disabled={actionBusy}
+                          />
+                        </label>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+                        <button
+                          type="submit"
+                          className="mg-primary"
+                          disabled={actionBusy || !assignTechId}
+                        >
+                          {actionBusy ? "Guardando..." : selected.id_personal_asignado ? "Reasignar Técnico" : "Asignar Técnico"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* GESTIÓN DE PRIORIDAD (Solo Admin) */}
+                {isAdmin && (
+                  <div style={{ background: "#f9fbfa", padding: 16, borderRadius: 8, border: "1px solid #e2eae6" }}>
+                    <h4 style={{ margin: "0 0 10px", fontSize: 13, color: "#186553" }}>
+                      Nivel de Prioridad
+                    </h4>
+                    <form onSubmit={handleUpdatePriority}>
+                      <div className="mg-form-grid" style={{ gap: 12 }}>
+                        <label className="mg-full-field">
+                          <span>Prioridad *</span>
+                          <select
+                            value={actionPriorityId}
+                            onChange={(e) => setActionPriorityId(e.target.value)}
+                            required
+                            disabled={actionBusy}
+                          >
+                            <option value="">Seleccionar prioridad...</option>
+                            {priorities.map((p) => (
+                              <option key={p.id_prioridad} value={p.id_prioridad}>
+                                {p.nombre} ({p.horas_resolucion}h límite)
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
+                        <button
+                          type="submit"
+                          className="mg-secondary"
+                          disabled={actionBusy || !actionPriorityId}
+                        >
+                          {actionBusy ? "Guardando..." : "Guardar Prioridad"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* PESTAÑA 3: HISTORIAL DE CAMBIOS */}
+            {modalTab === "timeline" && (
+              <div>
+                <h4 style={{ margin: "0 0 14px", fontSize: 14 }}>Historial de Cambios</h4>
+                {!selected.historial || selected.historial.length === 0 ? (
+                  <p className="mg-muted">No hay registros de historial aún.</p>
+                ) : (
+                  <ul className="timeline">
+                    {selected.historial.map((item, idx) => (
+                      <li className="timeline-item" key={item.id_historial_incidencia || item.id_historial || idx}>
+                        <div className="timeline-header">
+                          <strong>
+                            {item.estado_anterior ? `${item.estado_anterior} ➔ ` : ""}
+                            <span className={`status-badge status-${item.estado_nuevo}`}>
+                              {item.estado_nuevo}
+                            </span>
+                          </strong>
+                          <span>
+                            {item.fecha || item.fecha_cambio
+                              ? formatDateTime(item.fecha || item.fecha_cambio)
+                              : ""}
+                          </span>
+                        </div>
+                        <div className="timeline-body">
+                          {(item.usuario_nombre || item.cambiado_por) && (
+                            <div>
+                              <small style={{ color: "#64748b" }}>
+                                Por: {item.usuario_nombre || item.cambiado_por}
+                              </small>
+                            </div>
+                          )}
+                          {item.comentario && (
+                            <p style={{ margin: "4px 0 0", color: "#334155" }}>"{item.comentario}"</p>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {/* Historial de asignaciones previas */}
+                {selected.asignaciones && selected.asignaciones.length > 0 && (
+                  <div style={{ marginTop: 24 }}>
+                    <h4 style={{ margin: "0 0 10px", fontSize: 13, color: "#475c55" }}>
+                      Historial de Asignaciones
+                    </h4>
+                    <div className="mg-table-scroll">
+                      <table className="mg-table" style={{ fontSize: 12 }}>
+                        <thead>
+                          <tr>
+                            <th>Técnico</th>
+                            <th>Fecha</th>
+                            <th>Notas</th>
+                            <th>Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selected.asignaciones.map((asig, idx) => (
+                            <tr key={asig.id_asignacion || idx}>
+                              <td><strong>{asig.tecnico_nombre}</strong></td>
+                              <td className="mg-muted">
+                                {asig.fecha_asignacion ? new Date(asig.fecha_asignacion).toLocaleString() : "—"}
+                              </td>
+                              <td>{asig.notas || "—"}</td>
+                              <td>
+                                {asig.activa ? (
+                                  <span className="mg-status is-active"><i />Activa</span>
+                                ) : (
+                                  <span className="mg-status is-inactive"><i />Anterior</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="mg-modal-actions">
+            <button
+              type="button"
+              className="mg-secondary"
+              onClick={() => setSelected(null)}
+            >
+              Cerrar
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ============================================================ */}
+      {/* MODAL 2: NUEVA SOLICITUD DE INCIDENCIA (PARA RESIDENTES)     */}
+      {/* ============================================================ */}
+      {isCreateOpen && (
+        <Modal
+          title="Reportar una incidencia"
+          description="Describe el problema de tu unidad o área común para que el equipo lo atienda."
+          busy={busy}
+          onClose={() => setIsCreateOpen(false)}
+        >
+          <form onSubmit={submitReport}>
+            <div className="mg-form-body">
+              {metadata.unidades.length === 0 && (
+                <div className="mg-alert mg-alert-error" style={{ marginBottom: 16 }}>
+                  No tienes una unidad asociada. Solicita al administrador que vincule tu cuenta con una unidad.
+                </div>
+              )}
+
+              {metadata.tipos.length === 0 && (
+                <div className="mg-alert mg-alert-error" style={{ marginBottom: 16 }}>
+                  No hay tipos de incidencia disponibles en este momento.
+                </div>
+              )}
+
+              <fieldset disabled={busy || !canSubmit}>
+                <div className="mg-form-grid">
+                  <label>
+                    <span>Unidad <span className="mg-required">*</span></span>
+                    <select
+                      name="id_unidad"
+                      required
+                      value={form.id_unidad}
+                      onChange={updateField}
+                    >
+                      <option value="">Seleccionar...</option>
+                      {metadata.unidades.map((unit) => (
+                        <option key={unit.id_unidad} value={unit.id_unidad}>
+                          {unit.edificio} · {unit.codigo}
                         </option>
                       ))}
                     </select>
                   </label>
 
-                  <label style={{ marginTop: 10 }}>
-                    Comentario de cambio (opcional)
-                    <textarea
-                      rows={2}
-                      placeholder="Motivo del cambio de estado o avance realizado..."
-                      value={actionComment}
-                      onChange={(e) => setActionComment(e.target.value)}
-                      disabled={actionBusy}
+                  <label>
+                    <span>Tipo de problema <span className="mg-required">*</span></span>
+                    <select
+                      name="id_tipo_incidencia"
+                      required
+                      value={form.id_tipo_incidencia}
+                      onChange={updateField}
+                    >
+                      <option value="">Seleccionar...</option>
+                      {metadata.tipos.map((type) => (
+                        <option key={type.id_tipo_incidencia} value={type.id_tipo_incidencia}>
+                          {type.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="mg-full-field">
+                    <span>Título del problema <span className="mg-required">*</span></span>
+                    <input
+                      name="titulo"
+                      required
+                      minLength={5}
+                      maxLength={150}
+                      placeholder="Ej.: Pérdida de agua debajo del lavamanos"
+                      value={form.titulo}
+                      onChange={updateField}
                     />
                   </label>
 
-                  <button
-                    type="submit"
-                    style={{ marginTop: 12, width: "100%" }}
-                    disabled={actionBusy || !actionStatus}
-                  >
-                    {actionBusy ? "Guardando..." : "Cambiar Estado"}
-                  </button>
-                </form>
-              </div>
-            </div>
-          )}
+                  <label className="mg-full-field">
+                    <span>Descripción detallada <span className="mg-required">*</span></span>
+                    <textarea
+                      name="descripcion"
+                      required
+                      minLength={10}
+                      maxLength={5000}
+                      rows={4}
+                      placeholder="Describe qué ocurre, dónde exactamente y desde cuándo se presenta..."
+                      value={form.descripcion}
+                      onChange={updateField}
+                    />
+                  </label>
 
-          {/* Cancelar por parte del residente */}
-          {isResident && ["RECIBIDA", "EN_REVISION"].includes(selected.estado) && (
-            <div style={{ marginTop: 18 }}>
+                  <label className="mg-full-field">
+                    <span>Adjuntos opcionales (Fotos o PDFs)</span>
+                    <input
+                      ref={fileInput}
+                      type="file"
+                      multiple
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={(event) =>
+                        setFiles(Array.from(event.target.files || []))
+                      }
+                    />
+                    <small>Hasta 3 archivos JPG, PNG o PDF de máximo 5 MB cada uno.</small>
+                  </label>
+                </div>
+
+                {files.length > 0 && (
+                  <ul style={{ margin: "12px 0 0", paddingLeft: 20, fontSize: 12 }}>
+                    {files.map((file, index) => (
+                      <li key={`${file.name}-${index}`}>{file.name}</li>
+                    ))}
+                  </ul>
+                )}
+              </fieldset>
+            </div>
+
+            <div className="mg-modal-actions">
               <button
                 type="button"
-                className="danger"
-                disabled={actionBusy}
-                onClick={handleCancelResident}
+                className="mg-secondary"
+                disabled={busy}
+                onClick={() => setIsCreateOpen(false)}
               >
-                Cancelar mi solicitud
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="mg-primary"
+                disabled={busy || !canSubmit}
+              >
+                {busy ? "Enviando..." : "Enviar solicitud"}
               </button>
             </div>
-          )}
-
-          {/* TRAZABILIDAD / LÍNEA DE TIEMPO DE ESTADOS */}
-          {selected.historial && selected.historial.length > 0 && (
-            <div style={{ marginTop: 24 }}>
-              <h3>Línea de tiempo y trazabilidad</h3>
-              <ul className="timeline">
-                {selected.historial.map((item, idx) => (
-                  <li className="timeline-item" key={item.id_historial_incidencia || idx}>
-                    <div className="timeline-header">
-                      <strong>
-                        {item.estado_anterior ? `${item.estado_anterior} ➔ ` : ""}
-                        <span className={`status-badge status-${item.estado_nuevo}`}>
-                          {item.estado_nuevo}
-                        </span>
-                      </strong>
-                      <span>{item.fecha ? new Date(item.fecha).toLocaleString() : ""}</span>
-                    </div>
-                    <div className="timeline-body">
-                      {item.usuario_nombre && (
-                        <div>
-                          <small>Por: {item.usuario_nombre}</small>
-                        </div>
-                      )}
-                      {item.comentario && <p style={{ margin: "4px 0 0" }}>"{item.comentario}"</p>}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* HISTORIAL DE ASIGNACIONES */}
-          {selected.asignaciones && selected.asignaciones.length > 0 && (
-            <div style={{ marginTop: 24 }}>
-              <h3>Historial de Asignaciones</h3>
-              <div className="table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Técnico</th>
-                      <th>Fecha asignación</th>
-                      <th>Notas</th>
-                      <th>Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selected.asignaciones.map((asig, idx) => (
-                      <tr key={asig.id_asignacion || idx}>
-                        <td>{asig.tecnico_nombre}</td>
-                        <td>{asig.fecha_asignacion ? new Date(asig.fecha_asignacion).toLocaleString() : "—"}</td>
-                        <td>{asig.notas || "—"}</td>
-                        <td>
-                          {asig.activa ? (
-                            <strong style={{ color: "#15803d" }}>Activa</strong>
-                          ) : (
-                            <span style={{ color: "#64748b" }}>Anterior</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ARCHIVOS ADJUNTOS */}
-          <div style={{ marginTop: 24 }}>
-            <h3>Archivos adjuntos</h3>
-            {!selected.adjuntos || selected.adjuntos.length === 0 ? (
-              <p>Esta solicitud no tiene adjuntos.</p>
-            ) : (
-              <ul>
-                {selected.adjuntos.map((file) => (
-                  <li className="incident-attachment" key={file.id_adjuntos_incidencia}>
-                    <span>{file.nombre_original}</span>
-                    <button type="button" disabled={busy} onClick={() => download(file)}>
-                      Descargar
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+          </form>
+        </Modal>
       )}
     </section>
   );
