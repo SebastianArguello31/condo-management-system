@@ -9,6 +9,8 @@ from app.modules.auth.routes import auth_bp
 from app.modules.units.routes import units_bp
 from app.modules.users.routes import user_bp
 from app.modules.incidents.routes import incidents_bp
+from app.modules.espacios_comunes.routes import espacios_bp
+from app.modules.reservations.routes import reservas_bp
 
 def create_app():
     app = Flask(__name__)
@@ -31,6 +33,8 @@ def create_app():
     app.register_blueprint(user_bp)
     app.register_blueprint(units_bp)
     app.register_blueprint(incidents_bp)
+    app.register_blueprint(espacios_bp)
+    app.register_blueprint(reservas_bp)
 
     @app.errorhandler(ValidationError)
     def validation_error(error):

@@ -20,3 +20,8 @@ backend/instance/
 
 # Logs
 *.log
+
+# Archivos de estado y documentación local
+STATUS.md
+docs/contrato-dev4-reservas.md
+docs/dev4/
