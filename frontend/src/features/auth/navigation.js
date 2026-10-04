@@ -9,6 +9,7 @@ export const navigation = [
   { key: "residents", label: "Residentes", roles: ["ADMIN"] },
   { key: "buildings", label: "Edificios", roles: ["ADMIN"] },
   { key: "units", label: "Unidades", roles: ["ADMIN"] },
+  { key: "espacios", label: "Espacios comunes", roles: ["ADMIN"] },
 ];
 
 export function pagesForRole(role) {

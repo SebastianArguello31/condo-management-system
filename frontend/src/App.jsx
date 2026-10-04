@@ -11,6 +11,7 @@ import SpecialtiesPage from "./features/users/SpecialtiesPage";
 import EmployeeProfile from "./features/users/EmployeeProfile";
 import ResidentsPage from "./features/users/ResidentsPage";
 import ResidentHome from "./features/users/ResidentHome";
+import EspaciosPage from "./features/espacios-comunes/EspaciosPage";
 import { setAccessToken } from "./services/api";
 import AppShell from "./components/AppShell";
 import "./styles/users-ui.css";
@@ -20,6 +21,7 @@ const pages = {
   specialties: SpecialtiesPage, buildings: BuildingsPage, units: UnitsPage,
   incidents: IncidentsPage, profile: EmployeeProfile,
   residents: ResidentsPage, residentHome: ResidentHome,
+  espacios: EspaciosPage,
 };
 
 export default function App() {
