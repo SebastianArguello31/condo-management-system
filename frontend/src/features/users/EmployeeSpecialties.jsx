@@ -1,3 +1,4 @@
+import { routes } from "../../services/routes";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../services/api";
 
@@ -11,10 +12,10 @@ export default function EmployeeSpecialties({ employee, onClose }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
-  const endpoint = `/employees/${employee.id_usuario}/specialties`;
+  const endpoint = `${routes.employees}/${employee.id_usuario}/specialties`;
 
   const load = useCallback(async () => {
-    return Promise.all([api(endpoint), api("/specialties")]);
+    return Promise.all([api(endpoint), api(`${routes.specialties}`)]);
   }, [endpoint]);
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { routes } from "../../services/routes";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../services/api";
 import Icon from "../../components/ui/Icon";
@@ -36,7 +37,7 @@ export default function ResidentsPage() {
 
   const load = useCallback(async () => {
     const [residentRows, unitRows] = await Promise.all([
-      api("/residents"), api("/units"),
+      api(`${routes.residents}`), api(`${routes.units}`),
     ]);
     setRows(groupResidents(residentRows));
     setUnits(unitRows);
@@ -47,7 +48,7 @@ export default function ResidentsPage() {
     let active = true;
     setLoading(true);
     setError("");
-    Promise.all([api("/residents"), api("/units")])
+    Promise.all([api(`${routes.residents}`), api(`${routes.units}`)])
       .then(([residentRows, unitRows]) => {
         if (!active) return;
         setRows(groupResidents(residentRows));
@@ -117,7 +118,7 @@ export default function ResidentsPage() {
     setError("");
     setNotice("");
     try {
-      await api(editor ? `/residents/${editor.id_usuario}` : "/residents", {
+      await api(editor ? `${routes.residents}/${editor.id_usuario}` : `${routes.residents}`, {
         method: editor ? "PATCH" : "POST", body,
       });
       setEditor(undefined);
@@ -135,7 +136,7 @@ export default function ResidentsPage() {
     setError("");
     setNotice("");
     try {
-      await api(`/residents/${row.id_usuario}`, {
+      await api(`${routes.residents}/${row.id_usuario}`, {
         method: "PATCH", body: { activo: !row.activo },
       });
       setNotice(`Cuenta ${row.activo ? "desactivada" : "activada"}.`);

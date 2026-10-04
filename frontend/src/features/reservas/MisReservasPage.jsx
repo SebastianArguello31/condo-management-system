@@ -1,3 +1,4 @@
+import { routes } from "../../services/routes";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../services/api";
 import Icon from "../../components/ui/Icon";
@@ -30,9 +31,9 @@ export default function MisReservasPage() {
 
   const load = useCallback(async () => {
     const [reservas, espacios, tipos] = await Promise.all([
-      api("/reservas"),
-      api("/espacios"),
-      api("/reservas/tipos-evento"),
+      api(`${routes.reservations}`),
+      api(`${routes.commonSpaces}`),
+      api(`${routes.reservations}/event-types`),
     ]);
     setRows(reservas || []);
     setEspacios(espacios || []);
@@ -67,17 +68,17 @@ export default function MisReservasPage() {
     }
     let active = true;
     setDisponibilidad(null);
-    api(`/espacios/${form.id_espacio}/disponibilidad?fecha_inicio=${form.fecha}&fecha_fin=${form.fecha}`)
+    api(`${routes.commonSpaces}/${form.id_espacio}/availability?fecha_inicio=${form.fecha}&fecha_fin=${form.fecha}${form.id_tipo_evento ? `&id_tipo_evento=${form.id_tipo_evento}` : ""}`)
       .then((data) => {
         if (active) setDisponibilidad(data);
       })
-      .catch(() => {
-        if (active) setDisponibilidad(null);
+      .catch((err) => {
+        if (active) { setDisponibilidad(null); setError(err.message); }
       });
     return () => {
       active = false;
     };
-  }, [form.id_espacio, form.fecha]);
+  }, [form.id_espacio, form.fecha, form.id_tipo_evento]);
 
   async function submitCreate(event) {
     event.preventDefault();
@@ -94,7 +95,7 @@ export default function MisReservasPage() {
         id_tipo_evento: Number(form.id_tipo_evento),
         observaciones: form.observaciones.trim(),
       };
-      await api("/reservas", { method: "POST", body });
+      await api(`${routes.reservations}`, { method: "POST", body });
       setNotice("Reserva creada correctamente.");
       setForm({ ...EMPTY_FORM });
       setDisponibilidad(null);
@@ -113,7 +114,7 @@ export default function MisReservasPage() {
     setError("");
     setNotice("");
     try {
-      await api(`/reservas/${row.id_reserva}/cancelar`, { method: "POST" });
+      await api(`${routes.reservations}/${row.id_reserva}/status`, { method: "PATCH", body: { estado: "CANCELADA" } });
       setNotice("Reserva cancelada.");
       await load();
     } catch (err) {
@@ -195,6 +196,7 @@ export default function MisReservasPage() {
         <Modal title="Nueva reserva" description="Completá los datos del espacio que querés reservar." busy={busy} onClose={() => setShowCreate(false)}>
           <form onSubmit={submitCreate}>
             <div className="mg-form-body">
+              {error && <p className="mg-alert mg-alert-error" role="alert">{error}</p>}
               <fieldset disabled={busy}>
                 <div className="mg-form-grid">
                   <label>
@@ -274,7 +276,7 @@ export default function MisReservasPage() {
 
             <div className="mg-modal-actions">
               <button type="button" className="mg-secondary" disabled={busy} onClick={() => setShowCreate(false)}>Cancelar</button>
-              <button type="submit" className="mg-primary" disabled={busy}>{busy ? "Guardando..." : "Crear reserva"}</button>
+              <button type="submit" className="mg-primary" disabled={busy || !disponibilidad?.politicas?.length}>{busy ? "Guardando..." : "Crear reserva"}</button>
             </div>
           </form>
         </Modal>

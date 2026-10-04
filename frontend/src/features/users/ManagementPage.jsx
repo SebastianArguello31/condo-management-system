@@ -1,3 +1,4 @@
+import { routes } from "../../services/routes";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../services/api";
 import Icon from "../../components/ui/Icon";
@@ -28,7 +29,7 @@ export default function ManagementPage({ kind, user, onProfileUpdated }) {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => Promise.all([
-    api(config.endpoint), kind === "employees" ? api("/specialties") : Promise.resolve([]),
+    api(config.endpoint), kind === "employees" ? api(`${routes.specialties}`) : Promise.resolve([]),
   ]), [config.endpoint, kind]);
 
   useEffect(() => {

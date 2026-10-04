@@ -1,3 +1,4 @@
+import { routes } from "../../services/routes";
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 
@@ -32,7 +33,7 @@ export default function EmployeeProfile({ onProfileUpdated }) {
 
     async function loadProfile() {
       try {
-        const profile = await api("/employees/me");
+        const profile = await api(`${routes.employees}/me`);
 
         if (!active) return;
 
@@ -77,7 +78,7 @@ export default function EmployeeProfile({ onProfileUpdated }) {
     setBusy(true);
 
     try {
-      const profile = await api("/employees/me", {
+      const profile = await api(`${routes.employees}/me`, {
         method: "PATCH",
         body,
       });

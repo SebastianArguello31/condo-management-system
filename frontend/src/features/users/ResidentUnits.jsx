@@ -1,3 +1,4 @@
+import { routes } from "../../services/routes";
 import { useEffect, useState } from "react";
 
 import { api } from "../../services/api";
@@ -12,7 +13,7 @@ export default function ResidentUnits({ user, onClose }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  const endpoint = `/users/${user.id_usuario}/units`;
+  const endpoint = `${routes.users}/${user.id_usuario}/units`;
 
   useEffect(() => {
     let cancelled = false;
@@ -20,7 +21,7 @@ export default function ResidentUnits({ user, onClose }) {
     async function initialize() {
       try {
         const [allUnits, assignedUnits] = await Promise.all([
-          api("/units"),
+          api(`${routes.units}`),
           api(endpoint),
         ]);
 

@@ -6,7 +6,7 @@ from app.core.validation import read_json
 from app.modules.units.schemas import BuildingCreateSchema, UnitCreateSchema
 from app.modules.units import services
 
-units_bp = Blueprint("units", __name__, url_prefix="/condominio")
+units_bp = Blueprint("units", __name__)
 
 @units_bp.get("/building-types")
 @token_required

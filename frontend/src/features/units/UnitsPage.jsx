@@ -1,3 +1,4 @@
+import { routes } from "../../services/routes";
 import CrudPage from "../../components/CrudPage";
 
 const fields = [
@@ -30,15 +31,16 @@ const columns = [
 ];
 
 const lookups = [
-  { name: "buildings", endpoint: "/buildings" },
-  { name: "types", endpoint: "/unit-types" },
+  { name: "buildings", endpoint: `${routes.buildings}` },
+  { name: "types", endpoint: `${routes.unitTypes}` },
 ];
 
 export default function UnitsPage() {
   return (
     <CrudPage
+      description="Organiza las unidades por edificio, piso y tipo."
       title="Unidades"
-      endpoint="/units"
+      endpoint={`${routes.units}`}
       idField="id_unidad"
       fields={fields}
       columns={columns}
