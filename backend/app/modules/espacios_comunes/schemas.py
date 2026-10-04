@@ -12,6 +12,7 @@ class EspacioUpdateSchema(BaseSchema):
     nombre = required_text(150)
     descripcion = fields.Str(allow_none=True, validate=validate.Length(max=1000),)
     capacidad = fields.Int(strict=True, validate=validate.Range(min=1),)
+    id_edificio = positive_id()
     activo = fields.Bool()
 
 class DisponibilidadQuerySchema(BaseSchema):

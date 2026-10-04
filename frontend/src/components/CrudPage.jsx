@@ -145,7 +145,7 @@ export default function CrudPage({
 
         if (field.type === "multiselect") {
           value = value.map(Number);
-        } else if (field.type === "select") {
+        } else if (field.type === "select" || field.type === "number") {
           value = Number(value);
         } else if (field.nullable && value === "") {
           value = null;

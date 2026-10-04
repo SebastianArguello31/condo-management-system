@@ -75,7 +75,7 @@ def update_espacio(espacio_id, data):
         "id_espacio_comun",
         espacio_id,
         data,
-        {"nombre", "descripcion", "capacidad", "activo"},
+        {"nombre", "descripcion", "capacidad", "id_edificio", "activo"},
     )
 
 def get_disponibilidad(espacio_id, fecha_inicio, fecha_fin, id_tipo_evento=None):

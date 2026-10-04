@@ -34,6 +34,11 @@ def list_reservas():
         args["residente"],
     ))
 
+@reservas_bp.get("/tipos-evento")
+@token_required
+def list_tipos_evento():
+    return jsonify(services.list_tipos_evento())
+
 @reservas_bp.get("/<int:reserva_id>")
 @token_required
 @role_required("RESIDENTE", "ADMIN")
