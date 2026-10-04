@@ -13,3 +13,11 @@ class EspacioUpdateSchema(BaseSchema):
     descripcion = fields.Str(allow_none=True, validate=validate.Length(max=1000),)
     capacidad = fields.Int(strict=True, validate=validate.Range(min=1),)
     activo = fields.Bool()
+
+class DisponibilidadQuerySchema(BaseSchema):
+    fecha_inicio = fields.Date(required=True)
+    fecha_fin = fields.Date(required=True)
+    id_tipo_evento = fields.Int(
+        load_default=None,
+        validate=validate.Range(min=1),
+    )

@@ -1,3 +1,5 @@
+from werkzeug.exceptions import BadRequest, Conflict, NotFound
+
 from app.core.db_helpers import query, transaction, update_record
 
 ESPACIO_SELECT = """
@@ -12,6 +14,24 @@ ESPACIO_SELECT = """
     FROM espacios_comunes ec
     JOIN edificios e
         ON e.id_edificio = ec.id_edificio
+"""
+
+POLITICA_SELECT = """
+    SELECT
+        pr.id_politica_reserva,
+        pr.id_tipo_evento,
+        te.nombre AS tipo_evento,
+        to_char(pr.hora_apertura, 'HH24:MI') AS hora_apertura,
+        to_char(pr.hora_cierre, 'HH24:MI') AS hora_cierre,
+        pr.duracion_max_horas,
+        pr.dias_anticipacion_min,
+        pr.dias_anticipacion_max,
+        pr.aforo_maximo,
+        pr.costo::TEXT AS costo,
+        pr.deposito_garantia::TEXT AS deposito_garantia
+    FROM politicas_reserva pr
+    JOIN tipos_evento te
+        ON te.id_tipo_evento = pr.id_tipo_evento
 """
 
 def list_espacios(rol):
@@ -57,3 +77,64 @@ def update_espacio(espacio_id, data):
         data,
         {"nombre", "descripcion", "capacidad", "activo"},
     )
+
+def get_disponibilidad(espacio_id, fecha_inicio, fecha_fin, id_tipo_evento=None):
+    espacio = get_espacio(espacio_id)
+
+    if not espacio:
+        raise NotFound("Espacio no encontrado")
+
+    if fecha_fin < fecha_inicio:
+        raise BadRequest("La fecha fin no puede ser anterior a la fecha inicio")
+
+    if (fecha_fin - fecha_inicio).days > 31:
+        raise BadRequest("El rango de fechas no puede superar 31 días")
+
+    if id_tipo_evento:
+        politicas = query(
+            POLITICA_SELECT + """
+                WHERE pr.id_espacio_comun = %s
+                  AND pr.id_tipo_evento = %s
+                ORDER BY te.nombre;
+            """,
+            (espacio_id, id_tipo_evento),
+            many=True,
+        )
+
+        if not politicas:
+            raise Conflict(
+                "Sin política configurada para este espacio y tipo de evento"
+            )
+    else:
+        politicas = query(
+            POLITICA_SELECT + """
+                WHERE pr.id_espacio_comun = %s
+                ORDER BY te.nombre;
+            """,
+            (espacio_id,),
+            many=True,
+        )
+
+    tramos_ocupados = query("""
+        SELECT
+            r.id_reserva,
+            to_char(r.fecha, 'YYYY-MM-DD') AS fecha,
+            to_char(r.hora_inicio, 'HH24:MI') AS hora_inicio,
+            to_char(r.hora_fin, 'HH24:MI') AS hora_fin,
+            er.nombre AS estado
+        FROM reservas r
+        JOIN estado_reservas er
+            ON er.id_estado_reserva = r.id_estado_reserva
+        WHERE r.id_espacio_comun = %s
+          AND r.fecha BETWEEN %s AND %s
+          AND er.nombre IN ('PENDIENTE', 'CONFIRMADA')
+        ORDER BY r.fecha, r.hora_inicio;
+    """, (espacio_id, fecha_inicio, fecha_fin), many=True)
+
+    return {
+        "espacio": espacio,
+        "fecha_inicio": fecha_inicio.isoformat(),
+        "fecha_fin": fecha_fin.isoformat(),
+        "politicas": politicas,
+        "tramos_ocupados": tramos_ocupados,
+    }
