@@ -48,6 +48,14 @@ def get_reserva(reserva_id):
         (reserva_id,),
     )
 
+def list_tipos_evento():
+    return query("""
+        SELECT id_tipo_evento, nombre, descripcion
+        FROM tipos_evento
+        WHERE activo = TRUE
+        ORDER BY nombre;
+    """, many=True)
+
 def create_reserva(data, user_id):
     with transaction() as cursor:
         cursor.execute("""
