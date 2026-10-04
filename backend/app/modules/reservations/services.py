@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from werkzeug.exceptions import Conflict, Forbidden, NotFound
+from werkzeug.exceptions import BadRequest, Conflict, Forbidden, NotFound
 
 from app.core.db_helpers import query, transaction
 
@@ -17,6 +17,8 @@ RESERVA_SELECT = """
         r.id_espacio_comun,
         ec.nombre AS espacio,
         r.id_usuario,
+        u.nombre AS residente_nombre,
+        u.apellido AS residente_apellido,
         r.id_tipo_evento,
         te.nombre AS tipo_evento,
         r.id_estado_reserva,
@@ -24,6 +26,8 @@ RESERVA_SELECT = """
     FROM reservas r
     JOIN espacios_comunes ec
         ON ec.id_espacio_comun = r.id_espacio_comun
+    JOIN usuarios u
+        ON u.id_usuario = r.id_usuario
     JOIN tipos_evento te
         ON te.id_tipo_evento = r.id_tipo_evento
     JOIN estado_reservas er
@@ -194,5 +198,125 @@ def create_reserva(data, user_id):
         ))
 
         reserva_id = cursor.fetchone()["id_reserva"]
+
+    return get_reserva(reserva_id)
+
+def build_reserva_filters(user, espacio=None, estado=None, fecha=None, residente=None):
+    conditions = []
+    params = []
+
+    if user["rol"] != "ADMIN":
+        conditions.append("r.id_usuario = %s")
+        params.append(user["id_usuario"])
+
+    if espacio is not None:
+        conditions.append("r.id_espacio_comun = %s")
+        params.append(espacio)
+
+    if fecha is not None:
+        conditions.append("r.fecha = %s")
+        params.append(fecha)
+
+    if residente is not None and user["rol"] == "ADMIN":
+        conditions.append("r.id_usuario = %s")
+        params.append(residente)
+
+    if estado is not None:
+        conditions.append("er.nombre = %s")
+        params.append(estado)
+
+    return conditions, tuple(params)
+
+def list_reservas(user, espacio=None, estado=None, fecha=None, residente=None):
+    if estado is not None and not query(
+        "SELECT 1 FROM estado_reservas WHERE nombre = %s;",
+        (estado,),
+    ):
+        raise BadRequest("El estado indicado no existe")
+
+    conditions, params = build_reserva_filters(
+        user, espacio, estado, fecha, residente
+    )
+
+    statement = RESERVA_SELECT
+
+    if conditions:
+        statement += " WHERE " + " AND ".join(conditions)
+
+    statement += " ORDER BY r.fecha DESC, r.hora_inicio DESC, r.id_reserva DESC;"
+
+    return query(statement, params, many=True)
+
+def get_reserva_detail(reserva_id, user):
+    reserva = get_reserva(reserva_id)
+
+    if not reserva:
+        raise NotFound("Reserva no encontrada")
+
+    if user["rol"] != "ADMIN" and reserva["id_usuario"] != user["id_usuario"]:
+        raise Forbidden("No tienes acceso a esta reserva")
+
+    return reserva
+
+def cancel_reserva(reserva_id, user):
+    with transaction() as cursor:
+        cursor.execute("""
+            SELECT r.id_usuario, r.fecha, r.hora_fin, er.nombre AS estado
+            FROM reservas r
+            JOIN estado_reservas er
+                ON er.id_estado_reserva = r.id_estado_reserva
+            WHERE r.id_reserva = %s;
+        """, (reserva_id,))
+
+        reserva = cursor.fetchone()
+
+        if not reserva:
+            raise NotFound("Reserva no encontrada")
+
+        if user["rol"] != "ADMIN" and reserva["id_usuario"] != user["id_usuario"]:
+            raise Forbidden("Solo puedes cancelar tus propias reservas")
+
+        if reserva["estado"] == "CANCELADA":
+            raise Conflict("La reserva ya está cancelada")
+
+        if reserva["estado"] in ("RECHAZADA", "FINALIZADA"):
+            raise Conflict(
+                f"No se puede cancelar una reserva en estado {reserva['estado']}"
+            )
+
+        cursor.execute("""
+            SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'America/Asuncion')::date AS hoy,
+                   (CURRENT_TIMESTAMP AT TIME ZONE 'America/Asuncion')::time AS hora_actual;
+        """)
+
+        ahora = cursor.fetchone()
+
+        if (
+            reserva["fecha"] < ahora["hoy"]
+            or (
+                reserva["fecha"] == ahora["hoy"]
+                and reserva["hora_fin"] <= ahora["hora_actual"]
+            )
+        ):
+            raise Conflict("No se puede cancelar una reserva pasada")
+
+        cursor.execute("""
+            SELECT id_estado_reserva
+            FROM estado_reservas
+            WHERE nombre = 'CANCELADA'
+            ORDER BY id_estado_reserva
+            LIMIT 1;
+        """)
+
+        estado = cursor.fetchone()
+
+        if not estado:
+            raise Conflict("Falta configurar el estado CANCELADA")
+
+        cursor.execute("""
+            UPDATE reservas
+            SET id_estado_reserva = %s
+            WHERE id_reserva = %s;
+        """, (estado["id_estado_reserva"], reserva_id))
 
     return get_reserva(reserva_id)
