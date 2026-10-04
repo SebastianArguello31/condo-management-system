@@ -4,6 +4,14 @@ from werkzeug.exceptions import BadRequest, Conflict, Forbidden, NotFound
 
 from app.core.db_helpers import query, transaction
 
+TRANSICIONES_ESTADO = {
+    "PENDIENTE": ("CONFIRMADA", "RECHAZADA", "CANCELADA"),
+    "CONFIRMADA": ("CANCELADA",),
+}
+
+def transicion_permitida(estado_actual, estado_nuevo):
+    return estado_nuevo in TRANSICIONES_ESTADO.get(estado_actual, ())
+
 RESERVA_SELECT = """
     SELECT
         r.id_reserva,
@@ -279,7 +287,7 @@ def cancel_reserva(reserva_id, user):
         if reserva["estado"] == "CANCELADA":
             raise Conflict("La reserva ya está cancelada")
 
-        if reserva["estado"] in ("RECHAZADA", "FINALIZADA"):
+        if not transicion_permitida(reserva["estado"], "CANCELADA"):
             raise Conflict(
                 f"No se puede cancelar una reserva en estado {reserva['estado']}"
             )
@@ -320,3 +328,50 @@ def cancel_reserva(reserva_id, user):
         """, (estado["id_estado_reserva"], reserva_id))
 
     return get_reserva(reserva_id)
+
+def cambiar_estado_reserva(reserva_id, estado_nuevo):
+    with transaction() as cursor:
+        cursor.execute("""
+            SELECT r.id_reserva, er.nombre AS estado
+            FROM reservas r
+            JOIN estado_reservas er
+                ON er.id_estado_reserva = r.id_estado_reserva
+            WHERE r.id_reserva = %s;
+        """, (reserva_id,))
+
+        reserva = cursor.fetchone()
+
+        if not reserva:
+            raise NotFound("Reserva no encontrada")
+
+        if not transicion_permitida(reserva["estado"], estado_nuevo):
+            raise Conflict(
+                f"No se permite transicionar de {reserva['estado']} a {estado_nuevo}"
+            )
+
+        cursor.execute("""
+            SELECT id_estado_reserva
+            FROM estado_reservas
+            WHERE nombre = %s
+            ORDER BY id_estado_reserva
+            LIMIT 1;
+        """, (estado_nuevo,))
+
+        estado = cursor.fetchone()
+
+        if not estado:
+            raise Conflict(f"Falta configurar el estado {estado_nuevo}")
+
+        cursor.execute("""
+            UPDATE reservas
+            SET id_estado_reserva = %s
+            WHERE id_reserva = %s;
+        """, (estado["id_estado_reserva"], reserva_id))
+
+    return get_reserva(reserva_id)
+
+def aprobar_reserva(reserva_id):
+    return cambiar_estado_reserva(reserva_id, "CONFIRMADA")
+
+def rechazar_reserva(reserva_id):
+    return cambiar_estado_reserva(reserva_id, "RECHAZADA")

@@ -45,3 +45,15 @@ def detail_reserva(reserva_id):
 @role_required("RESIDENTE", "ADMIN")
 def cancel_reserva(reserva_id):
     return jsonify(services.cancel_reserva(reserva_id, g.current_user))
+
+@reservas_bp.post("/<int:reserva_id>/aprobar")
+@token_required
+@role_required("ADMIN")
+def aprobar_reserva(reserva_id):
+    return jsonify(services.aprobar_reserva(reserva_id))
+
+@reservas_bp.post("/<int:reserva_id>/rechazar")
+@token_required
+@role_required("ADMIN")
+def rechazar_reserva(reserva_id):
+    return jsonify(services.rechazar_reserva(reserva_id))
