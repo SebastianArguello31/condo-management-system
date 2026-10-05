@@ -8,13 +8,13 @@ from app.modules.users.services.accounts import delete_account
 
 admin_bp = Blueprint("admins", __name__, url_prefix="/admins")
 
-@admin_bp.get("")
+@admin_bp.get("", strict_slashes=False)
 @token_required
 @role_required("ADMIN")
 def list_admins():
     return jsonify(services.list_admins())
 
-@admin_bp.post("")
+@admin_bp.post("", strict_slashes=False)
 @token_required
 @role_required("ADMIN")
 def create_admin():

@@ -7,13 +7,13 @@ from app.modules.users.services import specialties as services
 
 specialty_bp = Blueprint("specialties", __name__, url_prefix="/specialties")
 
-@specialty_bp.get("")
+@specialty_bp.get("", strict_slashes=False)
 @token_required
 @role_required("ADMIN")
 def list_specialties():
     return jsonify(services.list_specialties())
 
-@specialty_bp.post("")
+@specialty_bp.post("", strict_slashes=False)
 @token_required
 @role_required("ADMIN")
 def create_specialty():

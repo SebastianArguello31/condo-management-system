@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../services/api";
-import { routes } from "../../services/routes";
 import Icon from "../../components/ui/Icon";
 
 const ESTADOS = ["PENDIENTE", "CONFIRMADA", "RECHAZADA", "CANCELADA", "FINALIZADA"];
@@ -26,8 +25,8 @@ export default function GestionReservasPage() {
     if (filters.residente) params.set("residente", filters.residente);
     const query = params.toString();
     const [reservas, espacios] = await Promise.all([
-      api(`${routes.reservations}${query ? `?${query}` : ""}`),
-      api(routes.commonSpaces),
+      api(`/reservas${query ? `?${query}` : ""}`),
+      api("/espacios"),
     ]);
     setRows(reservas || []);
     setEspacios(espacios || []);
@@ -60,7 +59,7 @@ export default function GestionReservasPage() {
     setError("");
     setNotice("");
     try {
-      await api(`${routes.reservations}/${row.id_reserva}/status`, { method: "PATCH", body: { estado: "CANCELADA" } });
+      await api(`/reservas/${row.id_reserva}/cancelar`, { method: "POST" });
       setNotice(`Reserva #${row.id_reserva} cancelada.`);
       await load();
     } catch (err) {
@@ -76,7 +75,7 @@ export default function GestionReservasPage() {
     setError("");
     setNotice("");
     try {
-      await api(`${routes.reservations}/${row.id_reserva}/status`, { method: "PATCH", body: { estado: "CONFIRMADA" } });
+      await api(`/reservas/${row.id_reserva}/aprobar`, { method: "POST" });
       setNotice(`Reserva #${row.id_reserva} aprobada.`);
       await load();
     } catch (err) {
@@ -92,7 +91,7 @@ export default function GestionReservasPage() {
     setError("");
     setNotice("");
     try {
-      await api(`${routes.reservations}/${row.id_reserva}/status`, { method: "PATCH", body: { estado: "RECHAZADA" } });
+      await api(`/reservas/${row.id_reserva}/rechazar`, { method: "POST" });
       setNotice(`Reserva #${row.id_reserva} rechazada.`);
       await load();
     } catch (err) {

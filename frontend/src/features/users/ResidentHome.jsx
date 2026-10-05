@@ -1,4 +1,3 @@
-import { routes } from "../../services/routes";
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 
@@ -6,7 +5,6 @@ export default function ResidentHome({ onProfileUpdated }) {
   const [profile, setProfile] = useState(null);
   const [units, setUnits] = useState([]);
   const [incidents, setIncidents] = useState([]);
-  const [reservations, setReservations] = useState([]);
   const [form, setForm] = useState({ nombre: "", apellido: "", email: "", telefono: "" });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -15,14 +13,13 @@ export default function ResidentHome({ onProfileUpdated }) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([api(`${routes.residents}/me`), api(`${routes.residents}/me/units`), api(`${routes.incidents}`), api(routes.reservations)])
-      .then(([resident, residentUnits, history, bookings]) => {
+    Promise.all([api("/residents/me"), api("/residents/me/units"), api("/incidents")])
+      .then(([resident, residentUnits, history]) => {
         if (!active) return;
         setProfile(resident);
         setForm({ nombre: resident.nombre, apellido: resident.apellido, email: resident.email, telefono: resident.telefono });
         setUnits(residentUnits);
         setIncidents(history);
-        setReservations(bookings);
       })
       .catch((err) => active && setError(err.message))
       .finally(() => active && setLoading(false));
@@ -33,7 +30,7 @@ export default function ResidentHome({ onProfileUpdated }) {
     event.preventDefault();
     setBusy(true); setError(""); setNotice("");
     try {
-      const updated = await api(`${routes.residents}/me`, { method: "PATCH", body: form });
+      const updated = await api("/residents/me", { method: "PATCH", body: form });
       setProfile(updated);
       onProfileUpdated?.(updated);
       setNotice("Perfil actualizado correctamente.");
@@ -79,16 +76,7 @@ export default function ResidentHome({ onProfileUpdated }) {
           <td>{item.fecha_reporte ? new Date(item.fecha_reporte).toLocaleDateString() : "—"}</td>
         </tr>)}</tbody>
       </table></div> : <p className="resident-empty-note">Aún no tienes incidencias registradas.</p>}
-    </section>
-    <section className="mg-panel resident-history-card">
-      <div className="resident-card-heading"><h2>Historial de reservas</h2></div>
-      {reservations.length ? <div className="mg-table-scroll"><table className="mg-table">
-        <thead><tr><th>Espacio</th><th>Fecha</th><th>Horario</th><th>Evento</th><th>Estado</th></tr></thead>
-        <tbody>{reservations.map((item) => <tr key={item.id_reserva}>
-          <td>{item.espacio}</td><td>{item.fecha}</td><td>{item.hora_inicio} – {item.hora_fin}</td>
-          <td>{item.tipo_evento}</td><td><span className={`status-badge status-${item.estado}`}>{item.estado}</span></td>
-        </tr>)}</tbody>
-      </table></div> : <p className="resident-empty-note">Aún no tienes reservas registradas.</p>}
+      <p className="resident-empty-note">Las reservas aparecerán aquí cuando el módulo de reservas exponga su consulta de historial.</p>
     </section>
   </section>;
 }

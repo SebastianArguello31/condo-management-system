@@ -8,7 +8,7 @@ from app.modules.users.services import accounts as services
 
 accesses_bp = Blueprint("accesses", __name__)
 
-@accesses_bp.get("/users")
+@accesses_bp.get("/users", strict_slashes=False)
 @token_required
 @role_required("ADMIN")
 def list_users():
@@ -19,6 +19,11 @@ def list_users():
 @role_required("ADMIN")
 def list_roles():
     return jsonify(services.get_roles())
+
+@accesses_bp.get("/users/me")
+@token_required
+def me():
+    return jsonify(g.current_user)
 
 @accesses_bp.get("/users/<int:user_id>")
 @token_required
