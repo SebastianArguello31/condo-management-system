@@ -1,3 +1,4 @@
+import CreateAccount from "./CreateAccount";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
@@ -40,7 +41,13 @@ export default function ResidentsPage() {
   }
 
   return <section className="management-page">
-    <div className="mg-page-heading"><div><p className="mg-eyebrow">GESTIÓN HABITACIONAL</p><h1>Residentes</h1><p>Administra las cuentas y unidades vinculadas de cada residente.</p></div><button className="mg-icon-button" title="Actualizar" aria-label="Actualizar" onClick={() => load().catch((e) => setError(e.message))}><Icon name="refresh" size={18} /></button></div>
+    <div className="mg-page-heading">
+      <div><p className="mg-eyebrow">GESTIÓN HABITACIONAL</p><h1>Residentes</h1><p>Administra las cuentas y unidades vinculadas de cada residente.</p></div>
+      <div className="mg-row-actions">
+        <button className="mg-icon-button" title="Actualizar" aria-label="Actualizar" onClick={() => load().catch((e) => setError(e.message))}><Icon name="refresh" size={18} /></button>
+        <CreateAccount kind="residents" onCreated={load} />
+      </div>
+    </div>
     {error && <div className="mg-alert mg-alert-error" role="alert">{error}</div>}{notice && <div className="mg-alert mg-alert-success" role="status">{notice}</div>}
     <div className="mg-panel"><div className="mg-toolbar"><input className="mg-search" type="search" placeholder="Buscar residente o unidad..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
       {loading ? <div className="mg-empty">Cargando residentes...</div> : <div className="mg-table-scroll"><table className="mg-table residents-table"><thead><tr><th>Residente</th><th>Email</th><th>Teléfono</th><th>Estado</th><th className="mg-actions-heading">Acciones</th></tr></thead><tbody>{filtered.map((row) => <tr key={row.id_usuario}><td><strong>{row.nombre} {row.apellido}</strong></td><td>{row.email}</td><td>{row.telefono}</td><td>{row.activo ? "Activo" : "Inactivo"}</td><td><div className="mg-row-actions"><button className="mg-secondary" onClick={() => setSelected(row)}>Ver unidades</button><button className="mg-secondary" onClick={() => toggleStatus(row)}>{row.activo ? "Desactivar" : "Activar"}</button></div></td></tr>)}</tbody></table>{!filtered.length && <div className="mg-empty">No hay residentes que coincidan.</div>}</div>}

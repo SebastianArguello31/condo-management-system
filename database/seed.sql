@@ -16,7 +16,8 @@ LOCK TABLE
     especialidades,
     edificios,
     unidades,
-    espacios_comunes
+    espacios_comunes,
+    politicas_reserva
 IN SHARE ROW EXCLUSIVE MODE;
 
 INSERT INTO roles (nombre, descripcion)
@@ -125,65 +126,6 @@ WHERE NOT EXISTS (
       AND existente.id_edificio = e.id_edificio
 );
 
--- Políticas de reserva para los espacios comunes de demostración.
--- La combinación espacio + tipo de evento se mantiene única de forma lógica
--- para que el seed pueda ejecutarse nuevamente sin crear duplicados.
-INSERT INTO politicas_reserva (
-    dias_anticipacion_min,
-    dias_anticipacion_max,
-    duracion_max_horas,
-    hora_apertura,
-    hora_cierre,
-    costo,
-    aforo_maximo,
-    deposito_garantia,
-    penalizaciones,
-    id_espacio_comun,
-    id_tipo_evento
-)
-SELECT
-    datos.dias_anticipacion_min,
-    datos.dias_anticipacion_max,
-    datos.duracion_max_horas,
-    datos.hora_apertura::TIME,
-    datos.hora_cierre::TIME,
-    datos.costo,
-    LEAST(datos.aforo_maximo, ec.capacidad),
-    datos.deposito_garantia,
-    datos.penalizaciones,
-    ec.id_espacio_comun,
-    te.id_tipo_evento
-FROM (
-    VALUES
-        ('Salón de eventos', 'Reunión familiar',     1, 30, 5, '08:00', '22:00', 50000, 40, 100000, 20000),
-        ('Salón de eventos', 'Cumpleaños',            1, 30, 5, '08:00', '22:00', 50000, 40, 100000, 20000),
-        ('Terraza con parrilla', 'Reunión familiar',  1, 15, 4, '09:00', '21:00', 30000, 20,  60000, 15000),
-        ('Terraza con parrilla', 'Cumpleaños',        1, 15, 4, '09:00', '21:00', 30000, 20,  60000, 15000),
-        ('Gimnasio', 'Actividad deportiva',           1,  7, 2, '07:00', '20:00', 20000, 15,  40000, 10000)
-) AS datos(
-    espacio,
-    tipo_evento,
-    dias_anticipacion_min,
-    dias_anticipacion_max,
-    duracion_max_horas,
-    hora_apertura,
-    hora_cierre,
-    costo,
-    aforo_maximo,
-    deposito_garantia,
-    penalizaciones
-)
-JOIN espacios_comunes ec
-    ON lower(btrim(ec.nombre)) = lower(btrim(datos.espacio))
-JOIN tipos_evento te
-    ON lower(btrim(te.nombre)) = lower(btrim(datos.tipo_evento))
-WHERE te.activo = TRUE
-  AND NOT EXISTS (
-      SELECT 1
-      FROM politicas_reserva existente
-      WHERE existente.id_espacio_comun = ec.id_espacio_comun
-        AND existente.id_tipo_evento = te.id_tipo_evento
-  );
 
 INSERT INTO tipos_incidencia (nombre, descripcion, activo)
 SELECT datos.nombre, datos.descripcion, TRUE
@@ -285,6 +227,54 @@ WHERE NOT EXISTS (
     FROM tipos_evento existente
     WHERE lower(btrim(existente.nombre)) = lower(btrim(datos.nombre))
 );
+
+-- Políticas de demostración: los seis tipos de evento del seed se habilitan
+-- para cada espacio de Torre Norte y Torre Sur, con tarifas según el espacio.
+-- Deben insertarse después de tipos_evento. No reemplazan políticas existentes.
+INSERT INTO politicas_reserva (
+    dias_anticipacion_min, dias_anticipacion_max, duracion_max_horas,
+    hora_apertura, hora_cierre, costo, aforo_maximo,
+    deposito_garantia, penalizaciones, id_espacio_comun, id_tipo_evento
+)
+SELECT
+    datos.dias_anticipacion_min,
+    datos.dias_anticipacion_max,
+    datos.duracion_max_horas,
+    datos.hora_apertura::TIME,
+    datos.hora_cierre::TIME,
+    datos.costo,
+    LEAST(datos.aforo_maximo, ec.capacidad),
+    datos.deposito_garantia,
+    datos.penalizaciones,
+    ec.id_espacio_comun,
+    te.id_tipo_evento
+FROM (
+    VALUES
+        ('Salón de eventos',    1, 30, 5, '08:00', '22:00', 50000, 40, 100000, 20000),
+        ('Terraza con parrilla', 1, 15, 4, '09:00', '21:00', 30000, 20,  60000, 15000),
+        ('Gimnasio',             1,  7, 2, '07:00', '20:00', 20000, 15,  40000, 10000)
+) AS datos(
+    espacio, dias_anticipacion_min, dias_anticipacion_max, duracion_max_horas,
+    hora_apertura, hora_cierre, costo, aforo_maximo,
+    deposito_garantia, penalizaciones
+)
+JOIN espacios_comunes ec
+    ON lower(btrim(ec.nombre)) = lower(btrim(datos.espacio))
+JOIN edificios e ON e.id_edificio = ec.id_edificio
+CROSS JOIN tipos_evento te
+WHERE lower(btrim(e.nombre)) IN ('torre norte', 'torre sur')
+  AND ec.activo = TRUE
+  AND te.activo = TRUE
+  AND lower(btrim(te.nombre)) IN (
+      'reunión familiar', 'cumpleaños', 'asamblea de residentes',
+      'actividad deportiva', 'actividad recreativa', 'otro'
+  )
+  AND NOT EXISTS (
+      SELECT 1
+      FROM politicas_reserva existente
+      WHERE existente.id_espacio_comun = ec.id_espacio_comun
+        AND existente.id_tipo_evento = te.id_tipo_evento
+  );
 
 INSERT INTO estado_reservas (nombre, descripcion)
 SELECT datos.nombre, datos.descripcion

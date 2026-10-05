@@ -336,7 +336,7 @@ def get_incident(incident_id, user):
 
     choices = ALLOWED_TRANSITIONS.get(incident["estado"], set())
     if user["rol"] == "TECNICO":
-        choices = choices & {"EN_PROCESO", "EN_ESPERA", "RESUELTA"}
+        choices = choices & {"EN_PROCESO", "EN_ESPERA", "RESUELTA", "CERRADA"}
     elif user["rol"] == "RESIDENTE":
         choices = {"CANCELADA"} if incident["estado"] in ("RECIBIDA", "EN_REVISION") else set()
     if not incident["id_personal_asignado"]:
@@ -617,7 +617,7 @@ def update_status(incident_id, data, actor):
         elif role == "TECNICO":
             if incident["id_personal_asignado"] != actor["id_usuario"]:
                 raise Forbidden("Solo puedes actualizar incidencias asignadas a ti")
-            if new_state_name not in ("EN_PROCESO", "EN_ESPERA", "RESUELTA"):
+            if new_state_name not in ("EN_PROCESO", "EN_ESPERA", "RESUELTA", "CERRADA"):
                 raise Forbidden(f"Los técnicos no pueden establecer el estado {new_state_name}")
 
         if new_state_name in ("ASIGNADA", "EN_PROCESO", "EN_ESPERA", "RESUELTA", "CERRADA") and not incident["id_personal_asignado"]:
