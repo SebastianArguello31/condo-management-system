@@ -1,3 +1,4 @@
+import { routes } from "../../services/routes";
 import CrudPage from "../../components/CrudPage";
 
 const fields = [
@@ -26,14 +27,15 @@ const columns = [
 ];
 
 const lookups = [
-  { name: "types", endpoint: "/building-types" },
+  { name: "types", endpoint: `${routes.buildingTypes}` },
 ];
 
 export default function BuildingsPage() {
   return (
     <CrudPage
+      description="Administra los edificios, direcciones y tipos del condominio."
       title="Edificios"
-      endpoint="/buildings"
+      endpoint={`${routes.buildings}`}
       idField="id_edificio"
       fields={fields}
       columns={columns}

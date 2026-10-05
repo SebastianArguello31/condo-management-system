@@ -77,6 +77,8 @@ table.mg-table { margin: 0; min-width: 690px; }
 .mg-status.is-inactive { color: #8e918d; background: #f1f3f1; }
 .mg-table .mg-actions-heading { text-align: right; }
 .mg-row-actions { display: flex; justify-content: flex-end; gap: 5px; }
+.residents-table th:last-child, .residents-table td:last-child { text-align: left; width: 1%; white-space: nowrap; }
+.residents-table .mg-row-actions { justify-content: flex-start; }
 button.mg-icon-button { padding: 8px; border: 1px solid transparent; background: transparent; color: #7a8d92; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 button.mg-icon-button:hover:not(:disabled) { background: #eef5f1; color: #286c54; }
 button.mg-delete-button:hover:not(:disabled) { background: #fff0ef; color: #bf5353; }
