@@ -334,6 +334,14 @@ def get_incident(incident_id, user):
     if not incident:
         raise NotFound("Solicitud no encontrada")
 
+    choices = ALLOWED_TRANSITIONS.get(incident["estado"], set())
+    if user["rol"] == "TECNICO":
+        choices = choices & {"EN_PROCESO", "EN_ESPERA", "RESUELTA"}
+    elif user["rol"] == "RESIDENTE":
+        choices = {"CANCELADA"} if incident["estado"] in ("RECIBIDA", "EN_REVISION") else set()
+    if not incident["id_personal_asignado"]:
+        choices = choices - {"ASIGNADA", "EN_PROCESO", "EN_ESPERA", "RESUELTA", "CERRADA"}
+    incident["estados_permitidos"] = sorted(choices)
     incident["adjuntos"] = query("""
         SELECT id_adjuntos_incidencia, COALESCE(nombre_original, 'Adjunto') AS nombre_original, tipo
         FROM adjuntos_incidencia
@@ -351,6 +359,7 @@ def get_incident_history(incident_id, user):
             h.id_historial_incidencia,
             h.fecha,
             h.version,
+            h.comentario,
             e.id_estados_incidencia AS id_estado,
             e.nombre AS estado,
             e.descripcion AS estado_descripcion,
@@ -421,6 +430,16 @@ def assign_technician(incident_id, data, actor):
 
         if tech["rol"] != "TECNICO":
             raise BadRequest("El usuario asignado debe tener el rol TECNICO")
+
+        cursor.execute("""
+            SELECT e.nombre FROM historial_incidencia h
+            JOIN estados_incidencia e ON e.id_estados_incidencia = h.id_estado
+            WHERE h.id_incidencia = %s
+            ORDER BY h.version DESC, h.id_historial_incidencia DESC LIMIT 1
+        """, (incident_id,))
+        state = cursor.fetchone()
+        if state and state["nombre"] in ("RESUELTA", "CERRADA", "RECHAZADA", "CANCELADA"):
+            raise BadRequest("Reabre la incidencia antes de asignar un técnico")
 
         # Desactivar asignaciones activas anteriores para esta incidencia
         cursor.execute("""
@@ -537,7 +556,7 @@ def update_status(incident_id, data, actor):
                 LIMIT 1
             ) asignado ON TRUE
             WHERE i.id_incidencia = %s
-            FOR UPDATE;
+            FOR UPDATE OF i;
         """, (incident_id,))
         incident = cursor.fetchone()
         if not incident:
@@ -583,7 +602,7 @@ def update_status(incident_id, data, actor):
 
         # Validaciones de transiciones permitidas
         allowed = ALLOWED_TRANSITIONS.get(current_state_name, set())
-        if new_state_name not in allowed and role != "ADMIN":
+        if new_state_name not in allowed:
             raise BadRequest(f"No se permite transicionar de {current_state_name} a {new_state_name}")
 
         # Permisos específicos por rol
@@ -601,11 +620,14 @@ def update_status(incident_id, data, actor):
             if new_state_name not in ("EN_PROCESO", "EN_ESPERA", "RESUELTA"):
                 raise Forbidden(f"Los técnicos no pueden establecer el estado {new_state_name}")
 
+        if new_state_name in ("ASIGNADA", "EN_PROCESO", "EN_ESPERA", "RESUELTA", "CERRADA") and not incident["id_personal_asignado"]:
+            raise BadRequest("Asigna un técnico antes de avanzar la incidencia")
+
         # Actualiza la fecha de resolución si es necesario.
         if new_state_name in ("RESUELTA", "CERRADA"):
             cursor.execute("""
                 UPDATE incidencias
-                SET fecha_resolucion = CURRENT_TIMESTAMP,
+                SET fecha_resolucion = COALESCE(fecha_resolucion, CURRENT_TIMESTAMP),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id_incidencia = %s;
             """, (incident_id,))
@@ -632,9 +654,9 @@ def update_status(incident_id, data, actor):
         next_version = cursor.fetchone()["next_version"]
 
         cursor.execute("""
-            INSERT INTO historial_incidencia (fecha, version, id_estado, id_incidencia, id_usuario)
-            VALUES (CURRENT_TIMESTAMP, %s, %s, %s, %s);
-        """, (next_version, target_state["id_estados_incidencia"], incident_id, actor["id_usuario"]))
+            INSERT INTO historial_incidencia (fecha, version, id_estado, id_incidencia, id_usuario, comentario)
+            VALUES (CURRENT_TIMESTAMP, %s, %s, %s, %s, %s);
+        """, (next_version, target_state["id_estados_incidencia"], incident_id, actor["id_usuario"], data.get("comentario")))
 
     return get_incident(incident_id, actor)
 
@@ -672,3 +694,44 @@ def get_attachment(attachment_id, user):
         raise Forbidden("No tienes acceso a este adjunto")
 
     return attachment
+
+def list_interventions(incident_id, actor):
+    get_incident(incident_id, actor)
+    return query("""
+        SELECT v.id_intervencion, v.fecha_inicio, v.fecha_fin, v.resultado,
+               v.id_personal, u.nombre AS tecnico_nombre, u.apellido AS tecnico_apellido
+        FROM intervenciones v JOIN usuarios u ON u.id_usuario = v.id_personal
+        WHERE v.id_incidencia = %s ORDER BY v.fecha_inicio DESC, v.id_intervencion DESC
+    """, (incident_id,), many=True)
+
+def create_intervention(incident_id, data, actor):
+    if actor["rol"] not in ("ADMIN", "TECNICO"):
+        raise Forbidden("Solo el equipo técnico puede registrar intervenciones")
+    with transaction() as cursor:
+        cursor.execute("SELECT id_incidencia FROM incidencias WHERE id_incidencia = %s FOR UPDATE", (incident_id,))
+        if not cursor.fetchone():
+            raise NotFound("Incidencia no encontrada")
+        cursor.execute("""
+            SELECT id_personal_asignado FROM asignaciones
+            WHERE id_incidencia = %s AND activa = TRUE
+            ORDER BY fecha_asignacion DESC, id_asignacion DESC LIMIT 1
+        """, (incident_id,))
+        assigned = cursor.fetchone()
+        if not assigned or (actor["rol"] == "TECNICO" and assigned["id_personal_asignado"] != actor["id_usuario"]):
+            raise Forbidden("La incidencia debe estar asignada al técnico responsable")
+        cursor.execute("""
+            SELECT e.nombre FROM historial_incidencia h
+            JOIN estados_incidencia e ON e.id_estados_incidencia = h.id_estado
+            WHERE h.id_incidencia = %s ORDER BY h.version DESC, h.id_historial_incidencia DESC LIMIT 1
+        """, (incident_id,))
+        state = cursor.fetchone()
+        if not state or state["nombre"] not in ("ASIGNADA", "EN_PROCESO", "EN_ESPERA"):
+            raise BadRequest("Solo puedes intervenir una incidencia asignada o en atención")
+        cursor.execute("""
+            INSERT INTO intervenciones (fecha_inicio, fecha_fin, resultado, created_at, id_incidencia, id_personal)
+            VALUES (CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, %s, CURRENT_TIMESTAMP, %s, %s)
+            RETURNING id_intervencion, fecha_inicio, fecha_fin, resultado, id_personal
+        """, (data["resultado"], incident_id, actor["id_usuario"]))
+        result = cursor.fetchone()
+        cursor.execute("UPDATE incidencias SET updated_at = CURRENT_TIMESTAMP WHERE id_incidencia = %s", (incident_id,))
+    return result

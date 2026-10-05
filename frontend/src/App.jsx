@@ -18,24 +18,20 @@ import { setAccessToken } from "./services/api";
 import AppShell from "./components/AppShell";
 import "./styles/users-ui.css";
 
-const pages = {
+const pageComponents = {
   users: UsersPage, employees: EmployeesPage, admins: AdminsPage,
   specialties: SpecialtiesPage, buildings: BuildingsPage, units: UnitsPage,
   incidents: IncidentsPage, profile: EmployeeProfile,
   residents: ResidentsPage, residentHome: ResidentHome,
-  espacios: EspaciosPage,
-  misReservas: MisReservasPage, gestionReservas: GestionReservasPage,
+  espacios: EspaciosPage, misReservas: MisReservasPage,
+  gestionReservas: GestionReservasPage,
 };
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState(null);
 
-  function logout() {
-    setAccessToken(null);
-    setUser(null);
-    setPage(null);
-  }
+  function logout() { setAccessToken(null); setUser(null); setPage(null); }
 
   useEffect(() => {
     window.addEventListener("session-expired", logout);
@@ -50,8 +46,7 @@ export default function App() {
 
   function updateProfile(profile) {
     setUser((current) => current?.id_usuario === profile.id_usuario
-      ? { ...current, nombre: profile.nombre, apellido: profile.apellido,
-          email: profile.email, telefono: profile.telefono }
+      ? { ...current, nombre: profile.nombre, apellido: profile.apellido, email: profile.email, telefono: profile.telefono }
       : current);
   }
 
@@ -59,11 +54,9 @@ export default function App() {
 
   const allowedPages = pagesForRole(user.rol);
   const selected = allowedPages.find((item) => item.key === page) ?? allowedPages[0];
-  const Page = selected ? pages[selected.key] : null;
+  const Page = selected ? pageComponents[selected.key] : null;
 
-  return <AppShell user={user} pages={allowedPages} selected={selected}
-    onNavigate={setPage} onLogout={logout}>
-    {Page ? <Page key={selected.key} user={user} onProfileUpdated={updateProfile} />
-      : <p>Tu cuenta no tiene pantallas habilitadas.</p>}
+  return <AppShell user={user} pages={allowedPages} selected={selected} onNavigate={setPage} onLogout={logout}>
+    {Page ? <Page key={selected.key} user={user} onProfileUpdated={updateProfile} /> : <p>Tu cuenta no tiene pantallas habilitadas.</p>}
   </AppShell>;
 }

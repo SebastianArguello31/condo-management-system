@@ -5,10 +5,11 @@ from app.core.validation import read_json
 from app.modules.reservations.schemas import (
     ReservaCreateSchema,
     ReservaListQuerySchema,
+    ReservaStatusSchema,
 )
 from app.modules.reservations import services
 
-reservas_bp = Blueprint("reservas", __name__, url_prefix="/condominio/reservas")
+reservas_bp = Blueprint("reservas", __name__, url_prefix="/reservations")
 
 @reservas_bp.post("")
 @token_required
@@ -34,7 +35,7 @@ def list_reservas():
         args["residente"],
     ))
 
-@reservas_bp.get("/tipos-evento")
+@reservas_bp.get("/event-types")
 @token_required
 def list_tipos_evento():
     return jsonify(services.list_tipos_evento())
@@ -45,20 +46,14 @@ def list_tipos_evento():
 def detail_reserva(reserva_id):
     return jsonify(services.get_reserva_detail(reserva_id, g.current_user))
 
-@reservas_bp.post("/<int:reserva_id>/cancelar")
+@reservas_bp.patch("/<int:reserva_id>/status")
 @token_required
 @role_required("RESIDENTE", "ADMIN")
-def cancel_reserva(reserva_id):
-    return jsonify(services.cancel_reserva(reserva_id, g.current_user))
-
-@reservas_bp.post("/<int:reserva_id>/aprobar")
-@token_required
-@role_required("ADMIN")
-def aprobar_reserva(reserva_id):
-    return jsonify(services.aprobar_reserva(reserva_id))
-
-@reservas_bp.post("/<int:reserva_id>/rechazar")
-@token_required
-@role_required("ADMIN")
-def rechazar_reserva(reserva_id):
-    return jsonify(services.rechazar_reserva(reserva_id))
+def update_status(reserva_id):
+    data = read_json(ReservaStatusSchema())
+    if data["estado"] == "CANCELADA":
+        return jsonify(services.cancel_reserva(reserva_id, g.current_user))
+    if g.current_user["rol"] != "ADMIN":
+        from werkzeug.exceptions import Forbidden
+        raise Forbidden("Solo administradores pueden aprobar o rechazar reservas")
+    return jsonify(services.cambiar_estado_reserva(reserva_id, data["estado"]))

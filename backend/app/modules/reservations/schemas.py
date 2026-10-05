@@ -26,3 +26,6 @@ class ReservaListQuerySchema(BaseSchema):
     )
     fecha = fields.Date(load_default=None)
     residente = fields.Int(load_default=None, validate=validate.Range(min=1))
+
+class ReservaStatusSchema(BaseSchema):
+    estado = fields.Str(required=True, validate=validate.OneOf(["CONFIRMADA", "RECHAZADA", "CANCELADA"]))
