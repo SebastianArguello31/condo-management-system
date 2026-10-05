@@ -7,7 +7,7 @@ from .resident_units import resident_units_bp
 from .residents import resident_bp
 from .specialties import specialty_bp
 
-user_bp = Blueprint("users", __name__)
+user_bp = Blueprint("users", __name__, url_prefix="/condominio")
 user_bp.register_blueprint(accesses_bp)
 user_bp.register_blueprint(admin_bp)
 user_bp.register_blueprint(employee_bp)

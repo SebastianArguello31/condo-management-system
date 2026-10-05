@@ -1,4 +1,4 @@
-from flask import Blueprint, Flask, jsonify
+from flask import Flask, jsonify
 from marshmallow import ValidationError
 from psycopg2.errors import ForeignKeyViolation, UniqueViolation
 from werkzeug.exceptions import HTTPException
@@ -15,7 +15,6 @@ from app.modules.reservations.routes import reservas_bp
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-    app.url_map.strict_slashes = False
 
     # Hasta 3 archivos de 5 MB, más los datos del formulario.
     app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
@@ -30,14 +29,12 @@ def create_app():
     if not app.config["JWT_SECRET_KEY"]:
         raise RuntimeError("Debes configurar JWT_SECRET_KEY")
 
-    api_bp = Blueprint("api", __name__, url_prefix="/condominio")
-    api_bp.register_blueprint(auth_bp)
-    api_bp.register_blueprint(user_bp)
-    api_bp.register_blueprint(units_bp)
-    api_bp.register_blueprint(incidents_bp)
-    api_bp.register_blueprint(espacios_bp)
-    api_bp.register_blueprint(reservas_bp)
-    app.register_blueprint(api_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(user_bp)
+    app.register_blueprint(units_bp)
+    app.register_blueprint(incidents_bp)
+    app.register_blueprint(espacios_bp)
+    app.register_blueprint(reservas_bp)
 
     @app.errorhandler(ValidationError)
     def validation_error(error):

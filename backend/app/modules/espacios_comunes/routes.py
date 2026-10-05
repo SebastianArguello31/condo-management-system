@@ -3,10 +3,14 @@ from werkzeug.exceptions import NotFound
 
 from app.core.decorators import role_required, token_required
 from app.core.validation import read_json
-from app.modules.espacios_comunes.schemas import DisponibilidadQuerySchema, EspacioCreateSchema, PolicySchema,EspacioUpdateSchema
+from app.modules.espacios_comunes.schemas import (
+    DisponibilidadQuerySchema,
+    EspacioCreateSchema,
+    EspacioUpdateSchema,
+)
 from app.modules.espacios_comunes import services
 
-espacios_bp = Blueprint("espacios_comunes", __name__, url_prefix="/common-spaces")
+espacios_bp = Blueprint("espacios_comunes", __name__, url_prefix="/condominio/espacios")
 
 @espacios_bp.get("")
 @token_required
@@ -44,7 +48,7 @@ def edit_espacio(espacio_id):
 
     return jsonify({"message": "Espacio actualizado"})
 
-@espacios_bp.get("/<int:espacio_id>/availability")
+@espacios_bp.get("/<int:espacio_id>/disponibilidad")
 @token_required
 def disponibilidad(espacio_id):
     args = DisponibilidadQuerySchema().load(request.args.to_dict())
@@ -55,28 +59,3 @@ def disponibilidad(espacio_id):
         args["fecha_fin"],
         args["id_tipo_evento"],
     ))
-
-@espacios_bp.get("/<int:espacio_id>/policies")
-@token_required
-@role_required("ADMIN")
-def list_policies(espacio_id):
-    return jsonify(services.list_policies(espacio_id))
-
-@espacios_bp.post("/<int:espacio_id>/policies")
-@token_required
-@role_required("ADMIN")
-def create_policy(espacio_id):
-    return jsonify(services.save_policy(espacio_id, read_json(PolicySchema()))), 201
-
-@espacios_bp.put("/<int:espacio_id>/policies/<int:policy_id>")
-@token_required
-@role_required("ADMIN")
-def replace_policy(espacio_id, policy_id):
-    return jsonify(services.save_policy(espacio_id, read_json(PolicySchema()), policy_id))
-
-@espacios_bp.delete("/<int:espacio_id>/policies/<int:policy_id>")
-@token_required
-@role_required("ADMIN")
-def delete_policy(espacio_id, policy_id):
-    services.delete_policy(espacio_id, policy_id)
-    return "", 204

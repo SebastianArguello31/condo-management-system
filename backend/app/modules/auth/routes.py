@@ -6,7 +6,7 @@ from app.core.validation import read_json
 from app.modules.auth.schemas import LoginSchema
 from app.modules.auth.services import authenticate_user
 
-auth_bp = Blueprint("auth", __name__, url_prefix="/auth",)
+auth_bp = Blueprint("auth", __name__, url_prefix="/condominio/auth",)
 
 @auth_bp.post("/login")
 def login():
@@ -14,7 +14,7 @@ def login():
     result = authenticate_user(**data)
 
     if result is None:
-        raise Unauthorized("Credenciales inválidas")
+        raise Unauthorized("Credenciales invÃ¡lidas")
 
     return jsonify(result)
 

@@ -1,4 +1,3 @@
-import { API_BASE, routes } from "./routes";
 let accessToken = null;
 
 export function setAccessToken(token) {
@@ -21,7 +20,7 @@ export async function api(
     headers["Content-Type"] = "application/json";
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`/condominio${path}`, {
     method,
     headers,
     body:
@@ -35,7 +34,7 @@ export async function api(
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
 
-    if (response.status === 401 && path !== `${routes.auth}/login` && requestToken === accessToken) {
+    if (response.status === 401 && path !== "/auth/login" && requestToken === accessToken) {
       accessToken = null;
       window.dispatchEvent(new Event("session-expired"));
     }
@@ -69,7 +68,7 @@ export async function api(
 }
 
 export async function downloadAttachment(id, filename) {
-  const blob = await api(`${routes.incidents}/attachments/${id}`, {
+  const blob = await api(`/incidents/attachments/${id}`, {
     responseType: "blob",
   });
 

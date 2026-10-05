@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../services/api";
-import Modal from "./ui/Modal";
-import Icon from "./ui/Icon";
 
 const EMPTY_LOOKUPS = [];
 const always = () => true;
@@ -18,9 +16,7 @@ function emptyForm(fields) {
 
 export default function CrudPage({
   title,
-  description = "Administra los registros del condominio.",
   endpoint,
-  updateMethod = "PATCH",
   idField,
   fields,
   columns,
@@ -34,8 +30,6 @@ export default function CrudPage({
   getRecordLabel,
 }) {
   const [rows, setRows] = useState([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState("");
   const [options, setOptions] = useState({});
   const [form, setForm] = useState(() => emptyForm(fields));
   const [editingId, setEditingId] = useState(null);
@@ -91,7 +85,6 @@ export default function CrudPage({
   }, [load, reloadKey]);
 
   function resetForm() {
-    setIsOpen(false);
     setEditingId(null);
     setForm(emptyForm(fields));
   }
@@ -101,7 +94,6 @@ export default function CrudPage({
     setError("");
     setNotice("");
     setEditingId(row[idField]);
-    setIsOpen(true);
 
     setForm(
       Object.fromEntries(
@@ -151,9 +143,7 @@ export default function CrudPage({
           throw new Error("La contraseña no puede superar 72 bytes.");
         }
 
-        if (field.nullable && value === "") {
-          value = null;
-        } else if (field.type === "multiselect") {
+        if (field.type === "multiselect") {
           value = value.map(Number);
         } else if (field.type === "select" || field.type === "number") {
           value = Number(value);
@@ -167,7 +157,7 @@ export default function CrudPage({
       await api(
         editingId === null ? endpoint : `${endpoint}/${editingId}`,
         {
-          method: editingId === null ? "POST" : updateMethod,
+          method: editingId === null ? "POST" : "PATCH",
           body,
         }
       );
@@ -222,34 +212,26 @@ export default function CrudPage({
 
   const showActions = canEdit || canDelete || Boolean(renderExtraActions);
 
-  const filtered = rows.filter((row) => columns.some((column) =>
-    String(row[column.name] ?? "").toLocaleLowerCase().includes(search.toLocaleLowerCase())));
+  if (loading) return <p>Cargando...</p>;
 
   return (
-    <section className="management-page">
-      <div className="mg-page-heading">
-        <div><p className="mg-eyebrow">ADMINISTRACIÓN</p><h1>{title}</h1><p>{description}</p></div>
-        {canCreate && <button className="mg-primary" disabled={busy || !ready} onClick={() => {
-          resetForm(); setError(""); setNotice(""); setIsOpen(true);
-        }}><Icon name="plus" size={18} />Nuevo registro</button>}
-      </div>
+    <section>
+      <h1>{title}</h1>
 
-      {error && <p className="mg-alert mg-alert-error" role="alert">{error}</p>}
-      {notice && <p className="mg-alert mg-alert-success" role="status">{notice}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
+      {notice && <p className="success" role="status">{notice}</p>}
       {!ready && <button type="button" disabled={busy}
         onClick={() => setReloadKey((value) => value + 1)}>Reintentar carga</button>}
 
-      {isOpen && <Modal title={`${editingId === null ? "Crear" : "Editar"} · ${title}`}
-        busy={busy} onClose={resetForm}>
-        <form onSubmit={save}><div className="mg-form-body">
-        {error && <p className="mg-alert mg-alert-error" role="alert">{error}</p>}
+      {(canCreate || editingId !== null) && <form className="card" onSubmit={save}>
+        <h2>{editingId === null ? "Crear registro" : "Editar registro"}</h2>
         {editingRow && <p>Registro: {getRecordLabel?.(editingRow) || `#${editingId}`}</p>}
 
         <fieldset disabled={busy || !ready}>
-          <div className="mg-form-grid">
+          <div className="form-grid">
             {fields.map((field) => (
               <label key={field.name}>
-                <span>{field.label}{field.required ? " *" : ""}</span>
+                {field.label}
 
                 {field.type === "select" || field.type === "multiselect" ? (
                   <select
@@ -303,9 +285,6 @@ export default function CrudPage({
                       !(field.type === "password" && editingId !== null)
                     }
                     minLength={field.type === "password" ? 8 : undefined}
-                    min={field.min}
-                    max={field.max}
-                    step={field.step}
                     maxLength={field.maxLength}
                     autoComplete={
                       field.type === "password" ? "new-password" : undefined
@@ -332,15 +311,15 @@ export default function CrudPage({
             ))}
           </div>
 
-          <div className="mg-row-actions">
-            <button type="submit" className="mg-primary" disabled={busy || !ready}>
+          <div className="actions">
+            <button type="submit">
               {busy ? "Procesando..." : "Guardar"}
             </button>
 
-            {(
+            {editingId !== null && (
               <button
                 type="button"
-                className="mg-secondary"
+                className="secondary"
                 onClick={resetForm}
               >
                 Cancelar
@@ -348,17 +327,10 @@ export default function CrudPage({
             )}
           </div>
         </fieldset>
-      </div></form></Modal>}
+      </form>}
 
-      <div className="mg-panel">
-        <div className="mg-toolbar">
-          <label className="mg-search"><Icon name="search" size={18} />
-            <input aria-label={`Buscar en ${title}`} placeholder="Buscar registros..." value={search} onChange={(event) => setSearch(event.target.value)} />
-          </label>
-          <span className="mg-muted">{filtered.length} registros</span>
-          <button className="mg-secondary" disabled={busy || loading} onClick={() => setReloadKey((value) => value + 1)}>Actualizar</button>
-        </div>
-        <div className="mg-table-scroll"><table className="mg-table">
+      <div className="card table-container">
+        <table>
           <thead>
             <tr>
               {columns.map((column) => (
@@ -369,7 +341,7 @@ export default function CrudPage({
           </thead>
 
           <tbody>
-            {filtered.map((row) => (
+            {rows.map((row) => (
               <tr key={row[idField]}>
                 {columns.map((column) => (
                   <td key={column.name}>
@@ -378,25 +350,25 @@ export default function CrudPage({
                       : row[column.name] ?? "—"}
                   </td>
                 ))}
-                {showActions && <td><div className="mg-row-actions">
+                {showActions && <td><div className="actions">
                   {canEdit && <button type="button" disabled={busy || !ready || !canEditRow(row)}
-                    className="mg-secondary" onClick={() => edit(row)}>Editar</button>}
-                  {canDelete && <button type="button" className="mg-danger"
+                    onClick={() => edit(row)}>Editar</button>}
+                  {canDelete && <button type="button" className="danger"
                     disabled={busy || !ready} onClick={() => remove(row)}>Eliminar</button>}
                   {renderExtraActions?.(row, busy || !ready)}
                 </div></td>}
               </tr>
             ))}
 
-            {(loading || (ready && filtered.length === 0)) && (
+            {ready && rows.length === 0 && (
               <tr>
                 <td colSpan={columns.length + (showActions ? 1 : 0)}>
-                  {loading ? "Cargando registros..." : "No hay registros que coincidan."}
+                  No hay registros.
                 </td>
               </tr>
             )}
           </tbody>
-        </table></div>
+        </table>
       </div>
     </section>
   );

@@ -5,14 +5,13 @@ from app.core.decorators import role_required, token_required
 from app.core.validation import read_json
 from app.modules.incidents.schemas import (
     IncidentAssignSchema,
-    InterventionCreateSchema,
     IncidentCreateSchema,
     IncidentPriorityUpdateSchema,
     IncidentStatusUpdateSchema,
 )
 from app.modules.incidents import services
 
-incidents_bp = Blueprint("incidents", __name__, url_prefix="/incidents")
+incidents_bp = Blueprint("incidents", __name__, url_prefix="/condominio/incidents")
 
 @incidents_bp.get("/metadata")
 @token_required
@@ -75,7 +74,7 @@ def update_priority(incident_id):
     data = read_json(IncidentPriorityUpdateSchema())
     return jsonify(services.update_priority(incident_id, data, g.current_user))
 
-@incidents_bp.post("/<int:incident_id>/assignments")
+@incidents_bp.post("/<int:incident_id>/assign")
 @token_required
 @role_required("ADMIN")
 def assign_technician(incident_id):
@@ -123,16 +122,3 @@ def download(attachment_id):
     response.headers["Cache-Control"] = "no-store"
 
     return response
-
-@incidents_bp.get("/<int:incident_id>/interventions")
-@token_required
-@role_required("ADMIN", "TECNICO", "RESIDENTE")
-def list_interventions(incident_id):
-    return jsonify(services.list_interventions(incident_id, g.current_user))
-
-@incidents_bp.post("/<int:incident_id>/interventions")
-@token_required
-@role_required("ADMIN", "TECNICO")
-def create_intervention(incident_id):
-    data = read_json(InterventionCreateSchema())
-    return jsonify(services.create_intervention(incident_id, data, g.current_user)), 201

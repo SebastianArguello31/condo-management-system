@@ -1,4 +1,3 @@
-import { routes } from "../../services/routes";
 import { useRef, useState } from "react";
 import { api } from "../../services/api";
 import Icon from "../../components/ui/Icon";
@@ -18,7 +17,7 @@ export default function Login({ onLogin }) {
     setBusy(true);
     setError("");
     try {
-      const result = await api(`${routes.auth}/login`, { method: "POST", body: { email: email.trim(), password } });
+      const result = await api("/auth/login", { method: "POST", body: { email: email.trim(), password } });
       onLogin(result);
     } catch (err) {
       setError(err.message || "No se pudo iniciar sesión.");
