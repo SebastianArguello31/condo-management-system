@@ -1,7 +1,8 @@
+-- Reejecutable: no borra datos, no cambia identificadores ni reactiva catálogos.
+-- No crea cuentas ni contraseñas conocidas.
+
 BEGIN;
 
--- Evita inserciones simultáneas mientras se cargan los catálogos.
--- La mayoría de estas tablas no tiene UNIQUE sobre nombre.
 LOCK TABLE
     roles,
     tipo_edificio,
@@ -11,219 +12,219 @@ LOCK TABLE
     prioridades,
     cargos_personal,
     tipos_evento,
-    estado_reservas
+    estado_reservas,
+    especialidades,
+    edificios,
+    unidades,
+    espacios_comunes
 IN SHARE ROW EXCLUSIVE MODE;
-
--- ============================================================
--- 1. ROLES
--- Nombres utilizados por los decoradores del backend.
--- ============================================================
 
 INSERT INTO roles (nombre, descripcion)
 VALUES
-    (
-        'ADMIN',
-        'Administra usuarios, edificios, unidades y solicitudes.'
-    ),
-    (
-        'RESIDENTE',
-        'Reporta problemas y consulta sus propias solicitudes.'
-    ),
-    (
-        'TECNICO',
-        'Personal encargado de mantenimiento y servicios.'
-    )
+    ('ADMIN', 'Administra usuarios, edificios, unidades y solicitudes.'),
+    ('RESIDENTE', 'Reporta problemas y consulta sus propias solicitudes.'),
+    ('TECNICO', 'Personal encargado de mantenimiento y servicios.')
 ON CONFLICT (nombre) DO NOTHING;
-
-
--- ============================================================
--- 2. TIPOS DE EDIFICIO
--- ============================================================
 
 INSERT INTO tipo_edificio (nombre, descripcion)
 SELECT datos.nombre, datos.descripcion
 FROM (
     VALUES
-        (
-            'Residencial',
-            'Edificio destinado principalmente a viviendas.'
-        ),
-        (
-            'Comercial',
-            'Edificio destinado principalmente a locales comerciales.'
-        ),
-        (
-            'Mixto',
-            'Edificio con viviendas y espacios comerciales.'
-        ),
-        (
-            'Administrativo',
-            'Edificio destinado a oficinas y administración.'
-        )
+        ('Residencial', 'Edificio destinado principalmente a viviendas.'),
+        ('Comercial', 'Edificio destinado principalmente a locales comerciales.'),
+        ('Mixto', 'Edificio con viviendas y espacios comerciales.'),
+        ('Administrativo', 'Edificio destinado a oficinas y administración.')
 ) AS datos(nombre, descripcion)
 WHERE NOT EXISTS (
     SELECT 1
     FROM tipo_edificio existente
-    WHERE existente.nombre = datos.nombre
+    WHERE lower(btrim(existente.nombre)) = lower(btrim(datos.nombre))
 );
-
-
--- ============================================================
--- 3. TIPOS DE UNIDAD
--- ============================================================
 
 INSERT INTO tipo_unidad (nombre, descripcion)
 SELECT datos.nombre, datos.descripcion
 FROM (
     VALUES
-        (
-            'Departamento',
-            'Unidad habitacional dentro de un edificio.'
-        ),
-        (
-            'Casa',
-            'Vivienda individual dentro del condominio.'
-        ),
-        (
-            'Local comercial',
-            'Unidad destinada a actividades comerciales.'
-        ),
-        (
-            'Oficina',
-            'Unidad destinada a actividades profesionales.'
-        ),
-        (
-            'Cochera',
-            'Unidad destinada al estacionamiento de vehículos.'
-        ),
-        (
-            'Depósito',
-            'Unidad destinada al almacenamiento.'
-        )
+        ('Departamento', 'Unidad habitacional dentro de un edificio.'),
+        ('Casa', 'Vivienda individual dentro del condominio.'),
+        ('Local comercial', 'Unidad destinada a actividades comerciales.'),
+        ('Oficina', 'Unidad destinada a actividades profesionales.'),
+        ('Cochera', 'Unidad destinada al estacionamiento de vehículos.'),
+        ('Depósito', 'Unidad destinada al almacenamiento.')
 ) AS datos(nombre, descripcion)
 WHERE NOT EXISTS (
     SELECT 1
     FROM tipo_unidad existente
-    WHERE existente.nombre = datos.nombre
+    WHERE lower(btrim(existente.nombre)) = lower(btrim(datos.nombre))
 );
 
+-- Edificios de demostración. Se buscan por nombre para que el seed sea
+-- reejecutable y conserve los identificadores existentes.
+INSERT INTO edificios (nombre, direccion, created_at, id_tipo_edificio)
+SELECT datos.nombre, datos.direccion, CURRENT_TIMESTAMP, te.id_tipo_edificio
+FROM (
+    VALUES
+        ('Torre Norte', 'Av. de la Integración 1200', 'Residencial'),
+        ('Torre Sur', 'Av. de la Integración 1250', 'Residencial')
+) AS datos(nombre, direccion, tipo_edificio)
+JOIN tipo_edificio te
+    ON lower(btrim(te.nombre)) = lower(btrim(datos.tipo_edificio))
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM edificios existente
+    WHERE lower(btrim(existente.nombre)) = lower(btrim(datos.nombre))
+);
 
--- ============================================================
--- 4. TIPOS DE INCIDENCIA
--- ============================================================
+-- Unidades vinculadas a cada edificio mediante su nombre y tipo de unidad.
+INSERT INTO unidades (codigo, piso, created_at, id_edificio, id_tipo_unidad)
+SELECT datos.codigo, datos.piso, CURRENT_TIMESTAMP, e.id_edificio, tu.id_tipo_unidad
+FROM (
+    VALUES
+        ('101', '1', 'Torre Norte', 'Departamento'),
+        ('102', '1', 'Torre Norte', 'Departamento'),
+        ('201', '2', 'Torre Norte', 'Departamento'),
+        ('202', '2', 'Torre Norte', 'Departamento'),
+        ('301', '3', 'Torre Norte', 'Departamento'),
+        ('302', '3', 'Torre Norte', 'Departamento'),
+        ('101', '1', 'Torre Sur', 'Departamento'),
+        ('102', '1', 'Torre Sur', 'Departamento'),
+        ('201', '2', 'Torre Sur', 'Departamento'),
+        ('202', '2', 'Torre Sur', 'Departamento'),
+        ('301', '3', 'Torre Sur', 'Departamento'),
+        ('302', '3', 'Torre Sur', 'Departamento')
+) AS datos(codigo, piso, edificio, tipo_unidad)
+JOIN edificios e
+    ON lower(btrim(e.nombre)) = lower(btrim(datos.edificio))
+JOIN tipo_unidad tu
+    ON lower(btrim(tu.nombre)) = lower(btrim(datos.tipo_unidad))
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM unidades existente
+    WHERE existente.codigo = datos.codigo
+      AND existente.id_edificio = e.id_edificio
+);
+
+-- Espacios comunes vinculados a cada edificio.
+INSERT INTO espacios_comunes (nombre, descripcion, capacidad, activo, id_edificio)
+SELECT datos.nombre, datos.descripcion, datos.capacidad, TRUE, e.id_edificio
+FROM (
+    VALUES
+        ('Salón de eventos', 'Espacio para reuniones y celebraciones de residentes.', 40, 'Torre Norte'),
+        ('Terraza con parrilla', 'Terraza equipada para reuniones familiares.', 20, 'Torre Norte'),
+        ('Gimnasio', 'Espacio para actividades físicas de los residentes.', 15, 'Torre Norte'),
+        ('Salón de eventos', 'Espacio para reuniones y celebraciones de residentes.', 40, 'Torre Sur'),
+        ('Terraza con parrilla', 'Terraza equipada para reuniones familiares.', 20, 'Torre Sur'),
+        ('Gimnasio', 'Espacio para actividades físicas de los residentes.', 15, 'Torre Sur')
+) AS datos(nombre, descripcion, capacidad, edificio)
+JOIN edificios e
+    ON lower(btrim(e.nombre)) = lower(btrim(datos.edificio))
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM espacios_comunes existente
+    WHERE lower(btrim(existente.nombre)) = lower(btrim(datos.nombre))
+      AND existente.id_edificio = e.id_edificio
+);
+
+-- Políticas de reserva para los espacios comunes de demostración.
+-- La combinación espacio + tipo de evento se mantiene única de forma lógica
+-- para que el seed pueda ejecutarse nuevamente sin crear duplicados.
+INSERT INTO politicas_reserva (
+    dias_anticipacion_min,
+    dias_anticipacion_max,
+    duracion_max_horas,
+    hora_apertura,
+    hora_cierre,
+    costo,
+    aforo_maximo,
+    deposito_garantia,
+    penalizaciones,
+    id_espacio_comun,
+    id_tipo_evento
+)
+SELECT
+    datos.dias_anticipacion_min,
+    datos.dias_anticipacion_max,
+    datos.duracion_max_horas,
+    datos.hora_apertura::TIME,
+    datos.hora_cierre::TIME,
+    datos.costo,
+    LEAST(datos.aforo_maximo, ec.capacidad),
+    datos.deposito_garantia,
+    datos.penalizaciones,
+    ec.id_espacio_comun,
+    te.id_tipo_evento
+FROM (
+    VALUES
+        ('Salón de eventos', 'Reunión familiar',     1, 30, 5, '08:00', '22:00', 50000, 40, 100000, 20000),
+        ('Salón de eventos', 'Cumpleaños',            1, 30, 5, '08:00', '22:00', 50000, 40, 100000, 20000),
+        ('Terraza con parrilla', 'Reunión familiar',  1, 15, 4, '09:00', '21:00', 30000, 20,  60000, 15000),
+        ('Terraza con parrilla', 'Cumpleaños',        1, 15, 4, '09:00', '21:00', 30000, 20,  60000, 15000),
+        ('Gimnasio', 'Actividad deportiva',           1,  7, 2, '07:00', '20:00', 20000, 15,  40000, 10000)
+) AS datos(
+    espacio,
+    tipo_evento,
+    dias_anticipacion_min,
+    dias_anticipacion_max,
+    duracion_max_horas,
+    hora_apertura,
+    hora_cierre,
+    costo,
+    aforo_maximo,
+    deposito_garantia,
+    penalizaciones
+)
+JOIN espacios_comunes ec
+    ON lower(btrim(ec.nombre)) = lower(btrim(datos.espacio))
+JOIN tipos_evento te
+    ON lower(btrim(te.nombre)) = lower(btrim(datos.tipo_evento))
+WHERE te.activo = TRUE
+  AND NOT EXISTS (
+      SELECT 1
+      FROM politicas_reserva existente
+      WHERE existente.id_espacio_comun = ec.id_espacio_comun
+        AND existente.id_tipo_evento = te.id_tipo_evento
+  );
 
 INSERT INTO tipos_incidencia (nombre, descripcion, activo)
 SELECT datos.nombre, datos.descripcion, TRUE
 FROM (
     VALUES
-        (
-            'Agua',
-            'Pérdidas de agua, cañerías, grifería y suministro.'
-        ),
-        (
-            'Electricidad',
-            'Problemas en instalaciones eléctricas e iluminación.'
-        ),
-        (
-            'Desagüe',
-            'Obstrucciones, filtraciones y problemas de drenaje.'
-        ),
-        (
-            'Infraestructura',
-            'Daños en paredes, techos, pisos y otras estructuras.'
-        ),
-        (
-            'Ascensores',
-            'Fallas de funcionamiento en ascensores.'
-        ),
-        (
-            'Accesos',
-            'Problemas con puertas, portones, cerraduras e intercomunicadores.'
-        ),
-        (
-            'Limpieza',
-            'Necesidades de limpieza y retiro de residuos.'
-        ),
-        (
-            'Áreas verdes',
-            'Mantenimiento de jardines, árboles y sistemas de riego.'
-        ),
-        (
-            'Seguridad',
-            'Problemas en cámaras, alarmas y otros equipos de seguridad.'
-        ),
-        (
-            'Otros',
-            'Otros problemas de mantenimiento.'
-        )
+        ('Agua', 'Pérdidas de agua, cañerías, grifería y suministro.'),
+        ('Electricidad', 'Problemas en instalaciones eléctricas e iluminación.'),
+        ('Desagüe', 'Obstrucciones, filtraciones y problemas de drenaje.'),
+        ('Infraestructura', 'Daños en paredes, techos, pisos y otras estructuras.'),
+        ('Ascensores', 'Fallas de funcionamiento en ascensores.'),
+        ('Accesos', 'Problemas con puertas, portones, cerraduras e intercomunicadores.'),
+        ('Limpieza', 'Necesidades de limpieza y retiro de residuos.'),
+        ('Áreas verdes', 'Mantenimiento de jardines, árboles y sistemas de riego.'),
+        ('Seguridad', 'Problemas en cámaras, alarmas y otros equipos de seguridad.'),
+        ('Otros', 'Otros problemas de mantenimiento.')
 ) AS datos(nombre, descripcion)
 WHERE NOT EXISTS (
     SELECT 1
     FROM tipos_incidencia existente
-    WHERE existente.nombre = datos.nombre
+    WHERE lower(btrim(existente.nombre)) = lower(btrim(datos.nombre))
 );
-
-
--- ============================================================
--- 5. ESTADOS DE INCIDENCIA
--- RECIBIDA es utilizado al crear una solicitud.
--- Los demás quedan disponibles para implementar su seguimiento.
--- ============================================================
 
 INSERT INTO estados_incidencia (nombre, descripcion)
 SELECT datos.nombre, datos.descripcion
 FROM (
     VALUES
-        (
-            'RECIBIDA',
-            'Solicitud recibida y pendiente de revisión.'
-        ),
-        (
-            'EN_REVISION',
-            'La administración está evaluando la solicitud.'
-        ),
-        (
-            'ASIGNADA',
-            'La solicitud tiene personal responsable asignado.'
-        ),
-        (
-            'EN_PROCESO',
-            'Se están realizando trabajos para resolver el problema.'
-        ),
-        (
-            'EN_ESPERA',
-            'La atención está pendiente de información, materiales o acceso.'
-        ),
-        (
-            'RESUELTA',
-            'Los trabajos finalizaron y el problema fue resuelto.'
-        ),
-        (
-            'CERRADA',
-            'La administración confirmó el cierre de la solicitud.'
-        ),
-        (
-            'RECHAZADA',
-            'La solicitud fue evaluada y no corresponde atenderla.'
-        ),
-        (
-            'CANCELADA',
-            'La solicitud fue cancelada.'
-        )
+        ('RECIBIDA', 'Solicitud recibida y pendiente de revisión.'),
+        ('EN_REVISION', 'La administración está evaluando la solicitud.'),
+        ('ASIGNADA', 'La solicitud tiene personal responsable asignado.'),
+        ('EN_PROCESO', 'Se están realizando trabajos para resolver el problema.'),
+        ('EN_ESPERA', 'La atención está pendiente de información, materiales o acceso.'),
+        ('RESUELTA', 'Los trabajos finalizaron y el problema fue resuelto.'),
+        ('CERRADA', 'La administración confirmó el cierre de la solicitud.'),
+        ('RECHAZADA', 'La solicitud fue evaluada y no corresponde atenderla.'),
+        ('CANCELADA', 'La solicitud fue cancelada.')
 ) AS datos(nombre, descripcion)
 WHERE NOT EXISTS (
     SELECT 1
     FROM estados_incidencia existente
-    WHERE existente.nombre = datos.nombre
+    WHERE lower(btrim(existente.nombre)) = lower(btrim(datos.nombre))
 );
-
-
--- ============================================================
--- 6. PRIORIDADES
--- Convención propuesta: mayor nivel = mayor urgencia.
--- Normal es utilizada por el servicio de creación de incidencias.
--- Los tiempos son objetivos iniciales, expresados en horas.
--- ============================================================
 
 INSERT INTO prioridades (
     nombre,
@@ -246,196 +247,70 @@ FROM (
 WHERE NOT EXISTS (
     SELECT 1
     FROM prioridades existente
-    WHERE existente.nombre = datos.nombre
+    WHERE lower(btrim(existente.nombre)) = lower(btrim(datos.nombre))
 );
-
-
--- ============================================================
--- 7. CARGOS DEL PERSONAL
--- Se asocian a los usuarios mediante usuario_cargos.
--- ============================================================
 
 INSERT INTO cargos_personal (nombre, descripcion)
 SELECT datos.nombre, datos.descripcion
 FROM (
     VALUES
-        (
-            'Encargado de mantenimiento',
-            'Coordina y supervisa las tareas de mantenimiento.'
-        ),
-        (
-            'Plomero',
-            'Atiende instalaciones de agua, cañerías y desagües.'
-        ),
-        (
-            'Electricista',
-            'Atiende instalaciones y equipos eléctricos.'
-        ),
-        (
-            'Técnico de ascensores',
-            'Realiza mantenimiento especializado de ascensores.'
-        ),
-        (
-            'Personal de limpieza',
-            'Realiza limpieza y gestión de residuos.'
-        ),
-        (
-            'Jardinero',
-            'Realiza mantenimiento de jardines y áreas verdes.'
-        ),
-        (
-            'Personal de seguridad',
-            'Realiza vigilancia y control de accesos.'
-        ),
-        (
-            'Mantenimiento general',
-            'Realiza reparaciones y tareas generales de mantenimiento.'
-        )
+        ('Encargado de mantenimiento', 'Coordina y supervisa las tareas de mantenimiento.'),
+        ('Plomero', 'Atiende instalaciones de agua, cañerías y desagües.'),
+        ('Electricista', 'Atiende instalaciones y equipos eléctricos.'),
+        ('Técnico de ascensores', 'Realiza mantenimiento especializado de ascensores.'),
+        ('Personal de limpieza', 'Realiza limpieza y gestión de residuos.'),
+        ('Jardinero', 'Realiza mantenimiento de jardines y áreas verdes.'),
+        ('Personal de seguridad', 'Realiza vigilancia y control de accesos.'),
+        ('Mantenimiento general', 'Realiza reparaciones y tareas generales de mantenimiento.')
 ) AS datos(nombre, descripcion)
 WHERE NOT EXISTS (
     SELECT 1
     FROM cargos_personal existente
-    WHERE existente.nombre = datos.nombre
+    WHERE lower(btrim(existente.nombre)) = lower(btrim(datos.nombre))
 );
-
-
--- ============================================================
--- 8. TIPOS DE EVENTO
--- Disponibles para el futuro módulo de reservas.
--- ============================================================
 
 INSERT INTO tipos_evento (nombre, descripcion, activo)
 SELECT datos.nombre, datos.descripcion, TRUE
 FROM (
     VALUES
-        (
-            'Reunión familiar',
-            'Encuentro privado de familiares y allegados.'
-        ),
-        (
-            'Cumpleaños',
-            'Celebración de cumpleaños.'
-        ),
-        (
-            'Asamblea de residentes',
-            'Reunión de residentes para tratar asuntos del condominio.'
-        ),
-        (
-            'Actividad deportiva',
-            'Encuentro o actividad deportiva.'
-        ),
-        (
-            'Actividad recreativa',
-            'Actividad de entretenimiento o convivencia.'
-        ),
-        (
-            'Otro',
-            'Evento que no corresponde a las categorías anteriores.'
-        )
+        ('Reunión familiar', 'Encuentro privado de familiares y allegados.'),
+        ('Cumpleaños', 'Celebración de cumpleaños.'),
+        ('Asamblea de residentes', 'Reunión de residentes para tratar asuntos del condominio.'),
+        ('Actividad deportiva', 'Encuentro o actividad deportiva.'),
+        ('Actividad recreativa', 'Actividad de entretenimiento o convivencia.'),
+        ('Otro', 'Evento que no corresponde a las categorías anteriores.')
 ) AS datos(nombre, descripcion)
 WHERE NOT EXISTS (
     SELECT 1
     FROM tipos_evento existente
-    WHERE existente.nombre = datos.nombre
+    WHERE lower(btrim(existente.nombre)) = lower(btrim(datos.nombre))
 );
-
-
--- ============================================================
--- 9. ESTADOS DE RESERVA
--- ============================================================
 
 INSERT INTO estado_reservas (nombre, descripcion)
 SELECT datos.nombre, datos.descripcion
 FROM (
     VALUES
-        (
-            'PENDIENTE',
-            'Reserva solicitada y pendiente de evaluación.'
-        ),
-        (
-            'CONFIRMADA',
-            'Reserva aprobada y confirmada.'
-        ),
-        (
-            'RECHAZADA',
-            'La solicitud de reserva no fue aprobada.'
-        ),
-        (
-            'CANCELADA',
-            'La reserva fue cancelada.'
-        ),
-        (
-            'FINALIZADA',
-            'El uso reservado del espacio finalizó.'
-        )
+        ('PENDIENTE', 'Reserva solicitada y pendiente de evaluación.'),
+        ('CONFIRMADA', 'Reserva aprobada y confirmada.'),
+        ('RECHAZADA', 'La solicitud de reserva no fue aprobada.'),
+        ('CANCELADA', 'La reserva fue cancelada.'),
+        ('FINALIZADA', 'El uso reservado del espacio finalizó.')
 ) AS datos(nombre, descripcion)
 WHERE NOT EXISTS (
     SELECT 1
     FROM estado_reservas existente
-    WHERE existente.nombre = datos.nombre
+    WHERE lower(btrim(existente.nombre)) = lower(btrim(datos.nombre))
 );
 
--- ============================================================
--- 10. RESIDENTE DE PRUEBA
--- Usuario demo con unidad vinculada para probar el módulo de reservas.
--- Requiere: migraciones hasta s3_006 (edificio 'Edificio Principal').
--- Email: residente.prueba@condominio.local · Contraseña: Residente123!
--- ============================================================
-
--- 1) Usuario con rol RESIDENTE (idempotente por email UNIQUE).
-INSERT INTO usuarios (nombre, apellido, email, telefono, password_hash, activo, id_rol)
-SELECT 'Juan', 'Pérez', 'residente.prueba@condominio.local', '0971000000',
-       '$2b$12$M.5J.qW0mgnlV1qFwKhOw.p84JmtWTd7jTFZZgkb2AxKIk6UXyOEy',
-       TRUE, r.id_rol
-FROM roles r
-WHERE r.nombre = 'RESIDENTE'
-ON CONFLICT (email) DO NOTHING;
-
--- 2) Unidad demo 'A-101' (Departamento) en el edificio de menor id, solo si no existe.
-INSERT INTO unidades (codigo, piso, created_at, id_edificio, id_tipo_unidad)
-SELECT 'A-101', '1', CURRENT_TIMESTAMP, e.id_edificio, tu.id_tipo_unidad
-FROM (
-    SELECT id_edificio
-    FROM edificios
-    ORDER BY id_edificio
-    LIMIT 1
-) e
-JOIN tipo_unidad tu ON tu.nombre = 'Departamento'
-WHERE NOT EXISTS (
-    SELECT 1 FROM unidades existente WHERE existente.codigo = 'A-101'
-);
-
--- 3) Vinculo residente ↔ unidad (idempotente por UNIQUE de la migracion 002).
-INSERT INTO residentes (id_unidad, id_usuario)
-SELECT u.id_unidad, us.id_usuario
-FROM usuarios us
-JOIN unidades u ON u.codigo = 'A-101'
-WHERE us.email = 'residente.prueba@condominio.local'
-ON CONFLICT (id_unidad, id_usuario) DO NOTHING;
+INSERT INTO especialidades (nombre, descripcion, activo)
+VALUES
+    ('Plomería', 'Agua, cañerías y desagües.', TRUE),
+    ('Electricidad', 'Instalaciones eléctricas e iluminación.', TRUE),
+    ('Ascensores', 'Mantenimiento de ascensores.', TRUE),
+    ('Limpieza', 'Limpieza y gestión de residuos.', TRUE),
+    ('Jardinería', 'Mantenimiento de áreas verdes.', TRUE),
+    ('Seguridad', 'Sistemas de seguridad y accesos.', TRUE),
+    ('Mantenimiento general', 'Reparaciones generales.', TRUE)
+ON CONFLICT DO NOTHING;
 
 COMMIT;
-
-
--- ============================================================
--- 11. COMPROBACIÓN
--- Muestra la cantidad total de registros de cada catálogo.
--- ============================================================
-
-SELECT 'roles' AS catalogo, COUNT(*) AS cantidad FROM roles
-UNION ALL
-SELECT 'tipo_edificio', COUNT(*) FROM tipo_edificio
-UNION ALL
-SELECT 'tipo_unidad', COUNT(*) FROM tipo_unidad
-UNION ALL
-SELECT 'tipos_incidencia', COUNT(*) FROM tipos_incidencia
-UNION ALL
-SELECT 'estados_incidencia', COUNT(*) FROM estados_incidencia
-UNION ALL
-SELECT 'prioridades', COUNT(*) FROM prioridades
-UNION ALL
-SELECT 'cargos_personal', COUNT(*) FROM cargos_personal
-UNION ALL
-SELECT 'tipos_evento', COUNT(*) FROM tipos_evento
-UNION ALL
-SELECT 'estado_reservas', COUNT(*) FROM estado_reservas
-ORDER BY catalogo;

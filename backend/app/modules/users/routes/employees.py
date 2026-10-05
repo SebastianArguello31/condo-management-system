@@ -9,13 +9,13 @@ from app.modules.users.services.accounts import delete_account
 
 employee_bp = Blueprint("employees", __name__, url_prefix="/employees")
 
-@employee_bp.get("", strict_slashes=False)
+@employee_bp.get("")
 @token_required
 @role_required("ADMIN")
 def list_employees():
     return jsonify(employees.list_employees())
 
-@employee_bp.post("", strict_slashes=False)
+@employee_bp.post("")
 @token_required
 @role_required("ADMIN")
 def create_employee():

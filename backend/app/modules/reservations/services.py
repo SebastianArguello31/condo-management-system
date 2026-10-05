@@ -98,6 +98,9 @@ def create_reserva(data, user_id):
         """, (data["id_espacio"], data["id_tipo_evento"]))
 
         politica = cursor.fetchone()
+        cursor.execute("SELECT 1 FROM tipos_evento WHERE id_tipo_evento = %s AND activo = TRUE", (data["id_tipo_evento"],))
+        if not cursor.fetchone():
+            raise Conflict("El tipo de evento no está disponible")
 
         if not politica:
             raise Conflict(
@@ -281,7 +284,8 @@ def cancel_reserva(reserva_id, user):
             FROM reservas r
             JOIN estado_reservas er
                 ON er.id_estado_reserva = r.id_estado_reserva
-            WHERE r.id_reserva = %s;
+            WHERE r.id_reserva = %s
+            FOR UPDATE OF r;
         """, (reserva_id,))
 
         reserva = cursor.fetchone()
@@ -344,7 +348,8 @@ def cambiar_estado_reserva(reserva_id, estado_nuevo):
             FROM reservas r
             JOIN estado_reservas er
                 ON er.id_estado_reserva = r.id_estado_reserva
-            WHERE r.id_reserva = %s;
+            WHERE r.id_reserva = %s
+            FOR UPDATE OF r;
         """, (reserva_id,))
 
         reserva = cursor.fetchone()
