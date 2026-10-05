@@ -18,6 +18,7 @@ export default function EmployeeProfile({ onProfileUpdated }) {
   });
 
   const [specialties, setSpecialties] = useState([]);
+  const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -33,7 +34,10 @@ export default function EmployeeProfile({ onProfileUpdated }) {
 
     async function loadProfile() {
       try {
-        const profile = await api(`${routes.employees}/me`);
+        const [profile, incidentRows] = await Promise.all([
+          api(`${routes.employees}/me`),
+          api(routes.incidents),
+        ]);
 
         if (!active) return;
 
@@ -45,6 +49,7 @@ export default function EmployeeProfile({ onProfileUpdated }) {
         });
 
         setSpecialties(profile.especialidades);
+        setIncidents(incidentRows || []);
         setReady(true);
       } catch (error) {
         if (active) setError(error.message);
@@ -170,6 +175,20 @@ export default function EmployeeProfile({ onProfileUpdated }) {
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+      )}
+
+      {ready && (
+        <div className="card">
+          <h2>Incidencias asignadas</h2>
+          {incidents.length === 0 ? <p>No tenés incidencias asignadas.</p> : (
+            <div className="mg-table-scroll"><table className="mg-table"><thead><tr>
+              <th>ID</th><th>Incidencia</th><th>Unidad</th><th>Estado</th>
+            </tr></thead><tbody>{incidents.map((incident) => <tr key={incident.id_incidencia}>
+              <td>#{incident.id_incidencia}</td><td><strong>{incident.titulo}</strong><span className="mg-muted">{incident.tipo_incidencia}</span></td>
+              <td>{incident.edificio ? `${incident.edificio} · ${incident.unidad}` : "—"}</td><td><span className={`status-badge status-${incident.estado}`}>{incident.estado}</span></td>
+            </tr>)}</tbody></table></div>
           )}
         </div>
       )}

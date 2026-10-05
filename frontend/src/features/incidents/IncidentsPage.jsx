@@ -1,219 +1,89 @@
+import { useCallback, useEffect, useState } from "react";
+import { api, downloadAttachment } from "../../services/api";
 import { routes } from "../../services/routes";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { api } from "../../services/api";
 import Icon from "../../components/ui/Icon";
+import Modal from "../../components/ui/Modal";
 
-const ESTADOS = ["PENDIENTE", "CONFIRMADA", "RECHAZADA", "CANCELADA", "FINALIZADA"];
-const ESTADOS_CANCELABLES = ["PENDIENTE", "CONFIRMADA"];
-const ESTADOS_APROBAR = ["PENDIENTE"];
+const EMPTY_FORM = { titulo: "", descripcion: "", id_unidad: "", id_tipo_incidencia: "", id_prioridad: "", archivos: [] };
+const TECHNICIAN_STATES = { ASIGNADA: ["EN_PROCESO"], EN_ESPERA: ["EN_PROCESO"], EN_PROCESO: ["EN_ESPERA", "RESUELTA"] };
 
-const EMPTY_FILTERS = { espacio: "", estado: "", fecha: "", residente: "" };
-
-export default function GestionReservasPage() {
+export default function IncidentsPage({ user }) {
+  const isResident = user.rol === "RESIDENTE";
+  const isTechnician = user.rol === "TECNICO";
+  const isAdmin = user.rol === "ADMIN";
   const [rows, setRows] = useState([]);
-  const [espacios, setEspacios] = useState([]);
-  const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
+  const [metadata, setMetadata] = useState({ tipos: [], unidades: [] });
+  const [priorities, setPriorities] = useState([]);
+  const [statuses, setStatuses] = useState([]);
+  const [technicians, setTechnicians] = useState([]);
+  const [detail, setDetail] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [interventions, setInterventions] = useState([]);
+  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [interventionResult, setInterventionResult] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
-    const params = new URLSearchParams();
-    if (filters.espacio) params.set("espacio", filters.espacio);
-    if (filters.estado) params.set("estado", filters.estado);
-    if (filters.fecha) params.set("fecha", filters.fecha);
-    if (filters.residente) params.set("residente", filters.residente);
-    const query = params.toString();
-    const [reservas, espacios] = await Promise.all([
-      api(`${routes.reservations}${query ? `?${query}` : ""}`),
-      api(`${routes.commonSpaces}`),
+    const [incidents, priorityRows, statusRows, incidentMetadata, technicianRows] = await Promise.all([
+      api(routes.incidents),
+      api(`${routes.incidents}/priorities`),
+      api(`${routes.incidents}/statuses`),
+      isResident ? api(`${routes.incidents}/metadata`) : Promise.resolve(null),
+      isAdmin ? api(`${routes.incidents}/technicians`) : Promise.resolve([]),
     ]);
-    setRows(reservas || []);
-    setEspacios(espacios || []);
-  }, [filters]);
+    setRows(incidents || []); setPriorities(priorityRows || []); setStatuses(statusRows || []);
+    setTechnicians(technicianRows || []); if (incidentMetadata) setMetadata(incidentMetadata);
+  }, [isResident, isAdmin]);
 
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError("");
-    load()
-      .catch((err) => {
-        if (active) setError(err.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [load]);
+  useEffect(() => { let active = true; setLoading(true); load().catch((e) => active && setError(e.message)).finally(() => active && setLoading(false)); return () => { active = false; }; }, [load]);
+  const update = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
 
-  function updateFilter(event) {
-    const { name, value } = event.target;
-    setFilters((previous) => ({ ...previous, [name]: value }));
-  }
-
-  async function cancelar(row) {
-    if (!window.confirm(`¿Cancelar la reserva #${row.id_reserva}?`)) return;
-    setBusy(true);
-    setError("");
-    setNotice("");
+  async function createIncident(event) {
+    event.preventDefault(); setBusy(true); setError("");
     try {
-      await api(`${routes.reservations}/${row.id_reserva}/status`, { method: "PATCH", body: { estado: "CANCELADA" } });
-      setNotice(`Reserva #${row.id_reserva} cancelada.`);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
+      const body = new FormData();
+      ["titulo", "descripcion", "id_unidad", "id_tipo_incidencia", "id_prioridad"].forEach((key) => body.append(key, form[key]));
+      form.archivos.forEach((file) => body.append("archivos", file));
+      await api(routes.incidents, { method: "POST", body }); setForm({ ...EMPTY_FORM }); setShowCreate(false); setNotice("Incidencia creada."); await load();
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
-  async function aprobar(row) {
-    if (!window.confirm(`¿Aprobar la reserva #${row.id_reserva}?`)) return;
-    setBusy(true);
-    setError("");
-    setNotice("");
+  async function openDetail(row) {
+    setBusy(true); setError("");
     try {
-      await api(`${routes.reservations}/${row.id_reserva}/status`, { method: "PATCH", body: { estado: "CONFIRMADA" } });
-      setNotice(`Reserva #${row.id_reserva} aprobada.`);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
+      const [incident, historyRows, assignmentRows, interventionRows] = await Promise.all([
+        api(`${routes.incidents}/${row.id_incidencia}`), api(`${routes.incidents}/${row.id_incidencia}/history`),
+        isResident ? Promise.resolve([]) : api(`${routes.incidents}/${row.id_incidencia}/assignments`),
+        api(`${routes.incidents}/${row.id_incidencia}/interventions`),
+      ]);
+      setDetail(incident); setHistory(historyRows || []); setAssignments(assignmentRows || []); setInterventions(interventionRows || []);
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
-  async function rechazar(row) {
-    if (!window.confirm(`¿Rechazar la reserva #${row.id_reserva}?`)) return;
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      await api(`${routes.reservations}/${row.id_reserva}/status`, { method: "PATCH", body: { estado: "RECHAZADA" } });
-      setNotice(`Reserva #${row.id_reserva} rechazada.`);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
+  async function updatePriority(event) {
+    const id = event.target.value; if (!id || !detail) return; setBusy(true);
+    try { const updated = await api(`${routes.incidents}/${detail.id_incidencia}/priority`, { method: "PATCH", body: { id_prioridad: Number(id) } }); setDetail(updated); await load(); } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
-  const filteredRows = useMemo(() => rows, [rows]);
+  async function assign(row, event) {
+    const id = event.target.value; if (!id) return; setBusy(true);
+    try { await api(`${routes.incidents}/${row.id_incidencia}/assignments`, { method: "POST", body: { id_personal_asignado: Number(id) } }); setNotice("Técnico asignado."); await load(); } catch (e) { setError(e.message); } finally { setBusy(false); }
+  }
 
-  return (
-    <section className="management-page">
-      <div className="mg-page-heading">
-        <div>
-          <p className="mg-eyebrow">GESTIÓN OPERATIVA</p>
-          <h1>Gestión de reservas</h1>
-          <p>Revisá todas las reservas del condominio, filtrá por espacio, estado, fecha o residente, y cancelá las que correspondan.</p>
-        </div>
-        <button className="mg-icon-button" title="Actualizar listado" aria-label="Actualizar listado" disabled={loading || busy} onClick={() => { setError(""); setNotice(""); load(); }}>
-          <Icon name="refresh" size={18} />
-        </button>
-      </div>
+  async function addIntervention(event) {
+    event.preventDefault(); if (!detail || !interventionResult.trim()) return; setBusy(true);
+    try { await api(`${routes.incidents}/${detail.id_incidencia}/interventions`, { method: "POST", body: { resultado: interventionResult.trim() } }); setInterventionResult(""); setInterventions(await api(`${routes.incidents}/${detail.id_incidencia}/interventions`)); await load(); } catch (e) { setError(e.message); } finally { setBusy(false); }
+  }
 
-      {error && <div className="mg-alert mg-alert-error" role="alert">{error}</div>}
-      {notice && <div className="mg-alert mg-alert-success" role="status">{notice}</div>}
-
-      <div className="mg-panel">
-        <div className="mg-toolbar">
-          <div className="mg-filters">
-            <label>
-              <span className="mg-sr-only">Filtrar por espacio</span>
-              <select name="espacio" value={filters.espacio} onChange={updateFilter}>
-                <option value="">Todos los espacios</option>
-                {espacios.map((espacio) => (
-                  <option key={espacio.id_espacio_comun} value={espacio.id_espacio_comun}>
-                    {espacio.nombre}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="mg-sr-only">Filtrar por estado</span>
-              <select name="estado" value={filters.estado} onChange={updateFilter}>
-                <option value="">Todos los estados</option>
-                {ESTADOS.map((estado) => (
-                  <option key={estado} value={estado}>{estado}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="mg-sr-only">Filtrar por fecha</span>
-              <input type="date" name="fecha" value={filters.fecha} onChange={updateFilter} />
-            </label>
-            <label>
-              <span className="mg-sr-only">Filtrar por residente (ID de usuario)</span>
-              <input type="number" name="residente" placeholder="ID de usuario" value={filters.residente} onChange={updateFilter} />
-            </label>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="mg-empty" role="status">Cargando reservas...</div>
-        ) : filteredRows.length === 0 ? (
-          <div className="mg-empty">
-            <h2>Sin reservas</h2>
-            <p>No hay reservas que coincidan con los filtros seleccionados.</p>
-          </div>
-        ) : (
-          <div className="mg-table-scroll">
-            <table className="mg-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Fecha</th>
-                  <th>Espacio</th>
-                  <th>Residente</th>
-                  <th>Tipo de evento</th>
-                  <th>Horario</th>
-                  <th>Personas</th>
-                  <th>Estado</th>
-                  <th className="mg-actions-heading">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((row) => (
-                  <tr key={row.id_reserva}>
-                    <td className="mg-muted">#{row.id_reserva}</td>
-                    <td className="mg-muted">{row.fecha}</td>
-                    <td><strong>{row.espacio}</strong></td>
-                    <td>{row.residente_nombre} {row.residente_apellido}</td>
-                    <td className="mg-muted">{row.tipo_evento}</td>
-                    <td>{row.hora_inicio} - {row.hora_fin}</td>
-                    <td>{row.cantidad_personas}</td>
-                    <td><span className={`status-badge status-${row.estado}`}>{row.estado}</span></td>
-                    <td>
-                      <div className="mg-row-actions">
-                        {ESTADOS_CANCELABLES.includes(row.estado) && (
-                          <button type="button" className="mg-icon-button" title="Cancelar reserva" aria-label="Cancelar reserva" disabled={busy} onClick={() => cancelar(row)}>
-                            <Icon name="trash" size={18} />
-                          </button>
-                        )}
-                        {row.estado === "PENDIENTE" && (
-                          <>
-                            <button type="button" className="mg-icon-button" title="Aprobar reserva" aria-label="Aprobar reserva" disabled={busy} onClick={() => aprobar(row)}>
-                              <Icon name="check" size={18} />
-                            </button>
-                            <button type="button" className="mg-icon-button" title="Rechazar reserva" aria-label="Rechazar reserva" disabled={busy} onClick={() => rechazar(row)}>
-                              <Icon name="trash" size={18} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </section>
-  );
+  return <section className="management-page"><div className="mg-page-heading"><div><p className="mg-eyebrow">GESTIÓN OPERATIVA</p><h1>{isAdmin ? "Gestión de incidencias" : isTechnician ? "Incidencias asignadas" : "Mis incidencias"}</h1><p>Consulta y gestiona el ciclo completo de las incidencias.</p></div>{isResident && <button className="mg-primary" onClick={() => setShowCreate(true)}><Icon name="plus" size={18} />Nueva incidencia</button>}</div>
+    {error && <div className="mg-alert mg-alert-error">{error}</div>}{notice && <div className="mg-alert mg-alert-success">{notice}</div>}
+    <div className="mg-panel">{loading ? <div className="mg-empty">Cargando...</div> : <div className="mg-table-scroll"><table className="mg-table"><thead><tr><th>ID</th><th>Título</th><th>Tipo</th><th>Prioridad</th><th>Estado</th><th>Detalle</th>{isAdmin && <th>Técnico</th>}</tr></thead><tbody>{rows.map((row) => <tr key={row.id_incidencia}><td>#{row.id_incidencia}</td><td>{row.titulo}</td><td>{row.tipo_incidencia || "Sin tipo"}</td><td>{row.prioridad}</td><td>{row.estado}</td><td><button className="mg-secondary" onClick={() => openDetail(row)}>Ver detalle</button></td>{isAdmin && <td><select value={row.id_personal_asignado || ""} onChange={(e) => assign(row, e)}><option value="">Seleccionar...</option>{technicians.map((t) => <option key={t.id_usuario} value={t.id_usuario}>{t.nombre} {t.apellido}</option>)}</select></td>}</tr>)}</tbody></table></div>}</div>
+    {showCreate && <Modal title="Nueva incidencia" busy={busy} onClose={() => setShowCreate(false)}><form onSubmit={createIncident}><fieldset disabled={busy} className="mg-form-body"><label>Título<input name="titulo" required minLength={5} value={form.titulo} onChange={update} /></label><label>Descripción<textarea name="descripcion" required minLength={10} value={form.descripcion} onChange={update} /></label><label>Unidad<select name="id_unidad" required value={form.id_unidad} onChange={update}><option value="">Seleccionar...</option>{metadata.unidades.map((u) => <option key={u.id_unidad} value={u.id_unidad}>{u.edificio} · {u.codigo}</option>)}</select></label><label>Tipo<select name="id_tipo_incidencia" required value={form.id_tipo_incidencia} onChange={update}><option value="">Seleccionar...</option>{metadata.tipos.map((t) => <option key={t.id_tipo_incidencia} value={t.id_tipo_incidencia}>{t.nombre}</option>)}</select></label><label>Prioridad<select name="id_prioridad" value={form.id_prioridad} onChange={update}><option value="">Normal</option>{priorities.map((p) => <option key={p.id_prioridad} value={p.id_prioridad}>{p.nombre}</option>)}</select></label><label>Evidencias<input type="file" multiple accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setForm((c) => ({ ...c, archivos: [...e.target.files] }))} /></label></fieldset><button className="mg-primary">Crear</button></form></Modal>}
+    {detail && <Modal title={`Incidencia #${detail.id_incidencia}`} busy={busy} onClose={() => setDetail(null)}><div className="mg-form-body"><p><strong>{detail.titulo}</strong></p><p>{detail.descripcion}</p><p>Tipo: {detail.tipo_incidencia || "Sin tipo"}</p>{isAdmin && <label>Prioridad<select value={detail.id_prioridad} onChange={updatePriority}>{priorities.map((p) => <option key={p.id_prioridad} value={p.id_prioridad}>{p.nombre}</option>)}</select></label>}<h3>Historial</h3><ul>{history.map((h) => <li key={h.id_historial_incidencia}>{h.fecha} · {h.estado}</li>)}</ul><h3>Asignaciones</h3><ul>{assignments.map((a) => <li key={a.id_asignacion}>{a.tecnico_nombre} {a.tecnico_apellido}</li>)}</ul><h3>Intervenciones</h3><ul>{interventions.map((i) => <li key={i.id_intervencion}>{i.fecha_inicio} · {i.resultado}</li>)}</ul>{isTechnician && <form onSubmit={addIntervention}><textarea required minLength={5} value={interventionResult} onChange={(e) => setInterventionResult(e.target.value)} placeholder="Detalle de lo realizado" /><button className="mg-primary">Registrar intervención</button></form>}{detail.adjuntos?.map((file) => <button key={file.id_adjuntos_incidencia} className="mg-secondary" onClick={() => downloadAttachment(file.id_adjuntos_incidencia, file.nombre_original)}>Descargar {file.nombre_original}</button>)}</div></Modal>}
+  </section>;
 }
