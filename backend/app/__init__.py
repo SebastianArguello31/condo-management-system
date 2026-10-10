@@ -2,78 +2,87 @@ from flask import Blueprint, Flask, jsonify
 from marshmallow import ValidationError
 from psycopg2.errors import ForeignKeyViolation, UniqueViolation
 from werkzeug.exceptions import HTTPException
-from pathlib import Path
 
 from app.core.config import Config
 from app.modules.auth.routes import auth_bp
-from app.modules.units.routes import units_bp
 from app.modules.users.routes import user_bp
+from app.modules.units.routes import units_bp
 from app.modules.incidents.routes import incidents_bp
-from app.modules.espacios_comunes.routes import espacios_bp
-from app.modules.reservations.routes import reservas_bp
+from app.modules.espacios_comunes.routes import common_spaces_bp
+from app.modules.reservations.routes import reservations_bp
 
-def create_app():
+def create_app(config=None):
     app = Flask(__name__)
-    app.config.from_object(Config)
+
+    configure_app(app, config)
+    register_routes(app)
+    register_errors(app)
+
+    return app
+
+def configure_app(app, config):
+    if config is None:
+        app.config.from_object(Config)
+    else:
+        app.config.from_mapping(config)
+
+    if not app.config.get("JWT_SECRET_KEY"):
+        raise RuntimeError("Debes configurar JWT_SECRET_KEY")
+
     app.url_map.strict_slashes = False
 
-    # Hasta 3 archivos de 5 MB, más los datos del formulario.
     app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
     app.config["MAX_FORM_MEMORY_SIZE"] = 64 * 1024
     app.config["MAX_FORM_PARTS"] = 20
 
-    upload_dir = Path(app.instance_path) / "uploads" / "incidents"
-    upload_dir.mkdir(parents=True, exist_ok=True)
 
-    app.config["INCIDENT_UPLOAD_DIR"] = str(upload_dir.resolve())
+def register_routes(app):
+    api = Blueprint("api", __name__, url_prefix="/condominio")
 
-    if not app.config["JWT_SECRET_KEY"]:
-        raise RuntimeError("Debes configurar JWT_SECRET_KEY")
+    blueprints = [auth_bp, user_bp, units_bp, incidents_bp, common_spaces_bp, reservations_bp,]
 
-    api_bp = Blueprint("api", __name__, url_prefix="/condominio")
-    api_bp.register_blueprint(auth_bp)
-    api_bp.register_blueprint(user_bp)
-    api_bp.register_blueprint(units_bp)
-    api_bp.register_blueprint(incidents_bp)
-    api_bp.register_blueprint(espacios_bp)
-    api_bp.register_blueprint(reservas_bp)
-    app.register_blueprint(api_bp)
+    for blueprint in blueprints:
+        api.register_blueprint(blueprint)
 
+    app.register_blueprint(api)
+
+    @app.get("/")
+    def index():
+        return {"message": "API de gestión de condominios funcionando"}
+
+def register_errors(app):
     @app.errorhandler(ValidationError)
-    def validation_error(error):
-        return jsonify({
-            "error": "Revisa los campos del formulario",
-            "errors": error.messages,
-        }), 400
+    def handle_validation_error(error):
+        return jsonify(
+            error="Revisa los campos del formulario",
+            errors=error.messages,
+        ), 400
 
     @app.errorhandler(UniqueViolation)
-    def unique_error(error):
-        return jsonify({
-            "error": "Ya existe un registro con ese valor único comprueba el email."
-        }), 409
+    def handle_duplicate_value(error):
+        return jsonify(
+            error="Ya existe un registro con uno de los valores que deben ser únicos."
+        ), 409
 
     @app.errorhandler(ForeignKeyViolation)
-    def foreign_key_error(error):
-        return jsonify({
-            "error": "La operación no es válida: hay registros relacionados o una referencia seleccionada ya no existe."
-        }), 409
+    def handle_invalid_reference(error):
+        return jsonify(
+            error=(
+                "La operación no es válida: existen registros relacionados o la referencia ya no existe."
+            )
+        ), 409
 
     @app.errorhandler(HTTPException)
-    def http_error(error):
+    def handle_http_error(error):
         response = error.get_response()
         response.data = app.json.dumps({"error": error.description})
         response.content_type = "application/json"
         return response
 
     @app.errorhandler(Exception)
-    def unexpected_error(error):
+    def handle_unexpected_error(error):
         app.logger.exception("Error no controlado")
-        return jsonify({
-            "error": "Ocurrió un error interno en el servidor"
-        }), 500
 
-    @app.get("/")
-    def index():
-        return {"message": "API de gestion de condominios funcionando"}
-
-    return app
+        return jsonify(
+            error="Ocurrió un error interno en el servidor"
+        ), 500
