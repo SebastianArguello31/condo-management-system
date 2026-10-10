@@ -68,9 +68,6 @@ def delete_record(table, primary_key, record_id, *, cursor=None):
         "DELETE FROM {table} "
         "WHERE {primary_key} = %s "
         "RETURNING {primary_key}"
-    ).format(
-        table=sql.Identifier(table),
-        primary_key=sql.Identifier(primary_key),
-    )
+    ).format(table=sql.Identifier(table), primary_key=sql.Identifier(primary_key))
 
     return query(statement, (record_id,), cursor=cursor)

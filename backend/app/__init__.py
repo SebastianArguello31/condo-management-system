@@ -54,22 +54,26 @@ def register_errors(app):
     @app.errorhandler(ValidationError)
     def handle_validation_error(error):
         return jsonify(
-            error="Revisa los campos del formulario",
-            errors=error.messages,
+            error="Revisa los campos del formulario", errors=error.messages
         ), 400
 
     @app.errorhandler(UniqueViolation)
     def handle_duplicate_value(error):
-        return jsonify(
-            error="Ya existe un registro con uno de los valores que deben ser únicos."
-        ), 409
+        messages = {
+            "uq_usuarios_correo_normalizado": "El correo ya pertenece a otra cuenta.",
+            "usuarios_email_key": "El correo ya pertenece a otra cuenta.",
+            "uq_especialidades_nombre": "Ya existe una especialidad con ese nombre.",
+        }
+        message = messages.get(
+            error.diag.constraint_name,
+            "Ya existe un registro con un valor que debe ser único.",
+        )
+        return jsonify(error=message), 409
 
     @app.errorhandler(ForeignKeyViolation)
     def handle_invalid_reference(error):
         return jsonify(
-            error=(
-                "La operación no es válida: existen registros relacionados o la referencia ya no existe."
-            )
+            error=("La operación no es válida: existen registros relacionados o la referencia ya no existe.")
         ), 409
 
     @app.errorhandler(HTTPException)
