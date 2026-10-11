@@ -7,6 +7,7 @@ from app.modules.incidents.repositories import incidents as incident_repo
 from app.modules.incidents.repositories import attachments as attachments_repo
 from app.modules.incidents.repositories import activity as activity_repo
 from app.modules.incidents.rules import require_role, get_allowed_statuses, validate_access, validate_transition
+from app.modules.incidents.rules import can_register_intervention
 
 def list_priorities():
     return catalogs.list_priorities()
@@ -43,6 +44,7 @@ def _get_detail(incident_id, user, *, cursor):
         raise NotFound("Incidencia no encontrada")
 
     incident["estados_permitidos"] = get_allowed_statuses(incident, user)
+    incident["puede_registrar_intervencion"] = can_register_intervention(incident, user)
 
     incident["adjuntos"] = attachments_repo.list_attachments(incident_id, cursor=cursor)
 
@@ -263,7 +265,7 @@ def create_intervention(incident_id, data, user):
         if incident["id_personal_asignado"] is None:
             raise BadRequest("La incidencia debe tener un técnico asignado")
 
-        if incident["estado"] not in {"ASIGNADA","EN_PROCESO", "EN_ESPERA",}:
+        if not can_register_intervention(incident, user):
             raise BadRequest("Solo puedes intervenir una incidencia asignada o en atención")
 
         intervention = activity_repo.insert_intervention(

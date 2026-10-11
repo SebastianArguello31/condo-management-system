@@ -16,6 +16,16 @@ TECHNICIAN_STATUSES = {"EN_PROCESO", "EN_ESPERA", "RESUELTA", "CERRADA",}
 
 ASSIGNMENT_REQUIRED_STATUSES = {"ASIGNADA", "EN_PROCESO", "EN_ESPERA", "RESUELTA", "CERRADA",}
 
+INTERVENTION_STATUSES = {"ASIGNADA", "EN_PROCESO", "EN_ESPERA"}
+
+def can_register_intervention(incident, user):
+    validate_access(incident, user)
+    return (
+        user["rol"] in {"ADMIN", "TECNICO"}
+        and incident["id_personal_asignado"] is not None
+        and incident["estado"] in INTERVENTION_STATUSES
+    )
+
 def require_role(user, *roles):
     if user.get("rol") not in roles:
         raise Forbidden("No tienes permiso para realizar esta operación")

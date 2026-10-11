@@ -16,7 +16,7 @@ $env:RUN_DB_TESTS = "0"
 py -B -m unittest discover -s backend/tests -t backend -p "test_*.py" -v
 ```
 
-Actualmente se detectan 46 tests: 30 pueden ejecutarse sin PostgreSQL
+Actualmente se detectan 55 tests: 39 pueden ejecutarse sin PostgreSQL
 y 16 se omiten.
 
 ## 3. Preparar la base de pruebas
