@@ -5,7 +5,6 @@ from werkzeug.exceptions import Conflict, Forbidden
 
 from app.modules.reservations import rules
 
-
 class TestReservationRules(unittest.TestCase):
     def setUp(self):
         self.hoy = date(2030, 1, 10)
