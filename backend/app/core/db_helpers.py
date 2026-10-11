@@ -1,10 +1,8 @@
 from contextlib import contextmanager
-
 from psycopg2 import sql
 from werkzeug.exceptions import BadRequest
 
 from app.core.database import get_connection, get_cursor
-
 
 @contextmanager
 def transaction():
@@ -17,47 +15,59 @@ def transaction():
     finally:
         connection.close()
 
-def query(statement, params=(), *, many=False):
-    with transaction() as cursor:
-        cursor.execute(statement, params)
+def _execute(cursor, statement, params, many):
+    cursor.execute(statement, params)
 
-        if many:
-            return cursor.fetchall()
+    if cursor.description is None:
+        return None
 
-        return cursor.fetchone()
+    if many:
+        return cursor.fetchall()
 
-def update_record(table, pk, record_id, data, allowed_fields):
-    if not data or not set(data).issubset(allowed_fields):
-        raise BadRequest("Campos de actualización inválidos")
+    return cursor.fetchone()
 
-    assignments = sql.SQL(", ").join(
-        sql.SQL("{} = %s").format(sql.Identifier(field))
-        for field in data
+def query(statement, params=(), *, many=False, cursor=None):
+    if cursor is not None:
+        return _execute(cursor, statement, params, many)
+
+    with transaction() as new_cursor:
+        return _execute(new_cursor, statement, params, many)
+
+def update_record(table, primary_key, record_id, data, allowed_fields, *, cursor=None,):
+    if not data:
+        raise BadRequest("Debes indicar los campos que deseas actualizar")
+
+    for field in data:
+        if field not in allowed_fields:
+            raise BadRequest(f"Campo no permitido: {field}")
+
+    assignments = []
+
+    for field in data:
+        assignment = sql.SQL("{} = %s").format(sql.Identifier(field))
+        assignments.append(assignment)
+
+    statement = sql.SQL(
+        "UPDATE {table} "
+        "SET {assignments} "
+        "WHERE {primary_key} = %s "
+        "RETURNING {primary_key}"
+    ).format(
+        table=sql.Identifier(table),
+        assignments=sql.SQL(", ").join(assignments),
+        primary_key=sql.Identifier(primary_key),
     )
 
-    statement = sql.SQL("""
-        UPDATE {}
-        SET {}
-        WHERE {} = %s
-        RETURNING {};
-    """).format(
-        sql.Identifier(table),
-        assignments,
-        sql.Identifier(pk),
-        sql.Identifier(pk),
-    )
+    params = list(data.values())
+    params.append(record_id)
 
-    return query(statement, (*data.values(), record_id))
+    return query(statement, params, cursor=cursor)
 
-def delete_record(table, pk, record_id):
-    statement = sql.SQL("""
-        DELETE FROM {}
-        WHERE {} = %s
-        RETURNING {};
-    """).format(
-        sql.Identifier(table),
-        sql.Identifier(pk),
-        sql.Identifier(pk),
-    )
+def delete_record(table, primary_key, record_id, *, cursor=None):
+    statement = sql.SQL(
+        "DELETE FROM {table} "
+        "WHERE {primary_key} = %s "
+        "RETURNING {primary_key}"
+    ).format(table=sql.Identifier(table), primary_key=sql.Identifier(primary_key))
 
-    return query(statement, (record_id,))
+    return query(statement, (record_id,), cursor=cursor)

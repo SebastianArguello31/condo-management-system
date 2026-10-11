@@ -1,16 +1,16 @@
 import psycopg2
-
+from flask import current_app
 from psycopg2.extras import RealDictCursor
 
-from app.core.config import Config
-
 def get_connection():
+    config = current_app.config
     return psycopg2.connect(
-        host=Config.DB_HOST,
-        port=Config.DB_PORT,
-        database=Config.DB_NAME,
-        user=Config.DB_USER,
-        password=Config.DB_PASSWORD
+        host=config["DB_HOST"],
+        port=config["DB_PORT"],
+        dbname=config["DB_NAME"],
+        user=config["DB_USER"],
+        password=config["DB_PASSWORD"],
+        connect_timeout=5,
     )
 
 def get_cursor(connection):

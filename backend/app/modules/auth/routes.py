@@ -11,7 +11,8 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/auth",)
 @auth_bp.post("/login")
 def login():
     data = read_json(LoginSchema())
-    result = authenticate_user(**data)
+
+    result = authenticate_user(data["email"], data["password"])
 
     if result is None:
         raise Unauthorized("Credenciales inválidas")
@@ -20,5 +21,5 @@ def login():
 
 @auth_bp.get("/me")
 @token_required
-def me():
+def get_session():
     return jsonify(g.current_user)

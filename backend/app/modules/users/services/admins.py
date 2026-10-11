@@ -1,27 +1,31 @@
 from werkzeug.exceptions import BadRequest
+from app.modules.users.repositories import accounts as accounts_repo
+from app.modules.users.schemas.accounts import UserCreateSchema
 from app.core.db_helpers import transaction
-from .accounts import create_account, list_accounts, lock_accounts, require_admin, update_managed_account
 
-def create_admin(data, actor_id):
-    with transaction() as cursor:
-        lock_accounts(cursor)
-        require_admin(cursor, actor_id)
-        return create_account(cursor, role_name="ADMIN", **data)
-
-def create_user(nombre, apellido, email, telefono, password, id_rol, activo=True):
-    """Entrada local que conserva create_admin.py; no está expuesta como ruta."""
-    with transaction() as cursor:
-        cursor.execute("SELECT nombre FROM roles WHERE id_rol = %s", (id_rol,))
-        role = cursor.fetchone()
-        if not role or role["nombre"] != "ADMIN":
-            raise BadRequest("Este script solo permite crear administradores")
-        return create_account(cursor, nombre=nombre, apellido=apellido, email=email, telefono=telefono, password=password, role_name="ADMIN", activo=activo)
+from .accounts import update_managed_account, lock_management, create_account, list_accounts, prepare_account_data
 
 def list_admins():
     return list_accounts("ADMIN")
 
+def create_admin(data, actor_id):
+    prepared_data = prepare_account_data(data)
+
+    with transaction() as cursor:
+        lock_management(cursor, actor_id)
+
+        return create_account(cursor, prepared_data, "ADMIN")
+
 def update_admin(user_id, data, actor_id):
     return update_managed_account(user_id, data, actor_id, "ADMIN")
 
-def deactivate_admin(user_id, actor_id):
-    update_managed_account(user_id, {"activo": False}, actor_id, "ADMIN")
+def create_user(**data):
+    data = UserCreateSchema().load(data)
+    role_id = data.pop("id_rol")
+    prepared_data = prepare_account_data(data)
+
+    with transaction() as cursor:
+        role = accounts_repo.find_role("ADMIN", cursor=cursor)
+        if role is None or role["id_rol"] != role_id:
+            raise BadRequest("Este script solo permite crear administradores")
+        return create_account(cursor, prepared_data, "ADMIN")
