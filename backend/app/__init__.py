@@ -8,7 +8,7 @@ from app.modules.auth.routes import auth_bp
 from app.modules.users.routes import user_bp
 from app.modules.units.routes import units_bp
 from app.modules.incidents.routes import incidents_bp
-from app.modules.espacios_comunes.routes import common_spaces_bp
+from app.modules.common_spaces.routes import common_spaces_bp
 from app.modules.reservations.routes import reservations_bp
 
 def create_app(config=None):
