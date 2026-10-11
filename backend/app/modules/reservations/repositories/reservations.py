@@ -62,7 +62,9 @@ def list_reservations(*, user_id=None, space=None, status=None, reservation_date
     if conditions:
         statement += " WHERE " + " AND ".join(conditions)
 
-    statement += """ORDER BY r.fecha DESC, r.hora_inicio DESC, r.id_reserva DESC"""
+    statement += """
+        ORDER BY r.fecha DESC, r.hora_inicio DESC, r.id_reserva DESC
+    """
 
     return query(statement, tuple(params), many=True, cursor=cursor)
 
