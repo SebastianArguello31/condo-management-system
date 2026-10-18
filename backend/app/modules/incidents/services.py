@@ -37,6 +37,11 @@ def _get_context(incident_id, user, *, for_update=False, cursor):
 
     return incident
 
+
+def get_incident_context(incident_id, user, *, for_update=False, cursor):
+    """Obtiene una incidencia y valida que el usuario pueda acceder a ella."""
+    return _get_context(incident_id, user, for_update=for_update, cursor=cursor)
+
 def _get_detail(incident_id, user, *, cursor):
     incident = incident_repo.get_incident(incident_id, cursor=cursor)
 

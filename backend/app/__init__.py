@@ -10,6 +10,7 @@ from app.modules.units.routes import units_bp
 from app.modules.incidents.routes import incidents_bp
 from app.modules.common_spaces.routes import common_spaces_bp
 from app.modules.reservations.routes import reservations_bp
+from app.modules.maintenance.routes import maintenance_bp
 
 def create_app(config=None):
     app = Flask(__name__)
@@ -39,7 +40,7 @@ def configure_app(app, config):
 def register_routes(app):
     api = Blueprint("api", __name__, url_prefix="/condominio")
 
-    blueprints = [auth_bp, user_bp, units_bp, incidents_bp, common_spaces_bp, reservations_bp,]
+    blueprints = [auth_bp, user_bp, units_bp, incidents_bp, common_spaces_bp, reservations_bp, maintenance_bp]
 
     for blueprint in blueprints:
         api.register_blueprint(blueprint)
