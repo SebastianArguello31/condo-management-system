@@ -125,6 +125,20 @@ function HashSection() {
   );
 }
 
+function HashEspejo() {
+  const { path, params } = useHashRoute();
+
+  useEffect(() => {
+    log(`espejo (2ª instancia) → path="${path}" params=${JSON.stringify(params)}`);
+  }, [path, params]);
+
+  return (
+    <p style={{ margin: "0 0 4px", color: "var(--ink-3)" }}>
+      espejo 2ª instancia: path=&quot;{path}&quot; · params={JSON.stringify(params)}
+    </p>
+  );
+}
+
 function QuerySection() {
   const [mode, setMode] = useState(0);
   const corridas = useRef(0);
@@ -339,6 +353,7 @@ function HooksSmoke() {
         Trazas con prefijo [arnés] en consola
       </p>
       <HashSection />
+      <HashEspejo />
       <QuerySection />
       <QueryEnabledSection />
       <QueryDesmontableSection />

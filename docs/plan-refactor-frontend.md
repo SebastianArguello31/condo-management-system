@@ -127,8 +127,8 @@ obligatorias):
 | CP | Contenido | Estado |
 |---|---|---|
 | CP1 | `styles/tokens.css` + `styles/base.css` + fuentes (imports) + `scripts/check-contrast.mjs` | **Hecho y verificado por el dueño.** Build OK (solo woff2 latin/latin-ext); check-contrast exit 0, 62 pares PASA (peor par: --ink-3 sobre tinte danger 4.58:1). Commit hecho. |
-| CP2 | Hooks: `useQuery`, `useMutation`, `useConfirm`, `useHashRoute` | **Implementado, sin uso** (se conecta en CP3-CP5). Creados en `frontend/src/hooks/` (+ `index.js`) y arnés temporal `frontend/src/dev/hooks-smoke.jsx` para verificar sin UI (ELIMINAR en CP6). Pendiente: verificación del dueño + commit. |
-| CP3 | UI básicos: Button, Alert, Toast (aria-live), StatusBadge (glifo+texto), Field/Input/Select/Textarea/Checkbox (error por campo, aria-invalid/aria-describedby), SearchInput, EmptyState, ErrorState, Spinner/Skeleton, PageHeader | Sin iniciar |
+| CP2 | Hooks: `useQuery`, `useMutation`, `useConfirm`, `useHashRoute` | **Hecho.** Commit del dueño. Ajustes incluidos: `navigate(path, params, { replace })` (replaceState + re-dispara `hashchange`), `useQuery(fetcher, deps, { enabled })`, descarte de data por deps (reload conserva), parse con `indexOf`. Arnés temporal `frontend/src/dev/hooks-smoke.jsx` (ELIMINAR en CP6). |
+| CP3 | UI básicos: Button, Alert, Toast (aria-live), StatusBadge (glifo+texto), Field/Input/Select/Textarea/Checkbox (error por campo, aria-invalid/aria-describedby), SearchInput, EmptyState, ErrorState, Spinner/Skeleton, PageHeader | **Implementado, sin uso.** En `frontend/src/components/ui/` con ui.css (solo tokens; animaciones desactivadas con prefers-reduced-motion) + arnés temporal `frontend/src/dev/ui-smoke.jsx` (ELIMINAR en CP6). Pendiente: verificación del dueño + commit. |
 | CP4 | UI compuestos: Section (ficha), DefinitionList, Timeline, RowActionsMenu, Modal ampliado (footer, backdrop opt-in, foco atrapado/devuelto, Esc), ConfirmDialog (reemplaza los 6 window.confirm al migrar), DataTable (caption oculta, th scope, tarjetas apiladas <640px, estados integrados), FilterBar, Pagination | Sin iniciar |
 | CP5 | Router por hash + config declarativa de roles/menú + AppShell nuevo (sidebar con `inert` en drawer cerrado) | Sin iniciar |
 | CP6 | Página `#/ui` (solo `import.meta.env.DEV`, guía visual viva) + `validations/` (reglas leídas de los schemas reales del backend, solo lectura) + `api.js` conservando estructura `errors: campo→mensajes` en el objeto de error | Sin iniciar |
@@ -160,9 +160,11 @@ finales de AppShell/navegación se consolidan aquí.)
       PASA con margen ≥4.5:1).
 - [ ] `npm audit` (Solo lectura, dueño): identificar paquete origen de la
       vulnerabilidad high reportada; NO ejecutar `npm audit fix` sin revisar.
-- [ ] CP2 en verificación del dueño (arnés `frontend/src/dev/hooks-smoke.jsx`,
+- [ ] CP3 en verificación del dueño (arnés `frontend/src/dev/ui-smoke.jsx`,
       ver STATUS.md); commitear tras pasar el checklist.
-- [ ] CP3–CP6 (ver tabla de estado).
+- [ ] CP4–CP6 (ver tabla de estado).
+- [ ] Al cierre (CP6): eliminar los arneses `frontend/src/dev/hooks-smoke.jsx`
+      y `frontend/src/dev/ui-smoke.jsx`.
 - [ ] Al crear `validations/` (CP6): **leer los schemas del backend**
       (marshmallow/pydantic o equivalentes en `backend/`, solo lectura) para no
       asumir reglas. Pendiente de confirmar: minLength password real del backend

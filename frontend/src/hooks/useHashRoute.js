@@ -12,7 +12,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
  * - Claves repetidas llegan como array de strings ({ lista: ["a", "b"] }).
  *
  * Puede usarse en varios componentes a la vez: cada uno escucha "hashchange"
- * y mantiene su estado según el hash actual.
+ * y mantiene su estado según el hash actual. Con { replace: true } se usa
+ * history.replaceState (que no dispara "hashchange") y el hook lo vuelve a
+ * disparar a mano para que TODAS las instancias montadas se actualicen por
+ * el mismo canal.
  *
  * Ejemplo:
  * const { path, params, navigate } = useHashRoute();
@@ -94,7 +97,7 @@ export function useHashRoute() {
     const target = `#${path.startsWith("/") ? path : `/${path}`}${serializeParams(params)}`;
     if (replace) {
       window.history.replaceState(null, "", target);
-      setRoute(parseHash());
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
       return;
     }
     if (window.location.hash === target) {
