@@ -85,6 +85,10 @@ obligatorias):
   de tiempo en mono, estado y autor).
 - Movimiento: solo transiciones color/opacidad 120–160ms; respetar
   `prefers-reduced-motion`; sin animaciones de entrada.
+- Breakpoints (convención): **640px** (tablas → tarjetas apiladas, fichas
+  y PageHeader a una columna), **900px**, **1150px** (contenedor completo).
+  No son tokens (las custom properties no funcionan en media queries);
+  las media queries solo usan esos tres valores.
 - Microcopy concreto y sobrio.
 
 ## 4. Reglas de ejecución
@@ -128,8 +132,8 @@ obligatorias):
 |---|---|---|
 | CP1 | `styles/tokens.css` + `styles/base.css` + fuentes (imports) + `scripts/check-contrast.mjs` | **Hecho y verificado por el dueño.** Build OK (solo woff2 latin/latin-ext); check-contrast exit 0, 62 pares PASA (peor par: --ink-3 sobre tinte danger 4.58:1). Commit hecho. |
 | CP2 | Hooks: `useQuery`, `useMutation`, `useConfirm`, `useHashRoute` | **Hecho.** Commit del dueño. Ajustes incluidos: `navigate(path, params, { replace })` (replaceState + re-dispara `hashchange`), `useQuery(fetcher, deps, { enabled })`, descarte de data por deps (reload conserva), parse con `indexOf`. Arnés temporal `frontend/src/dev/hooks-smoke.jsx` (ELIMINAR en CP6). |
-| CP3 | UI básicos: Button, Alert, Toast (aria-live), StatusBadge (glifo+texto), Field/Input/Select/Textarea/Checkbox (error por campo, aria-invalid/aria-describedby), SearchInput, EmptyState, ErrorState, Spinner/Skeleton, PageHeader | **Implementado, sin uso.** En `frontend/src/components/ui/` con ui.css (solo tokens; animaciones desactivadas con prefers-reduced-motion) + arnés temporal `frontend/src/dev/ui-smoke.jsx` (ELIMINAR en CP6). Pendiente: verificación del dueño + commit. |
-| CP4 | UI compuestos: Section (ficha), DefinitionList, Timeline, RowActionsMenu, Modal ampliado (footer, backdrop opt-in, foco atrapado/devuelto, Esc), ConfirmDialog (reemplaza los 6 window.confirm al migrar), DataTable (caption oculta, th scope, tarjetas apiladas <640px, estados integrados), FilterBar, Pagination | Sin iniciar |
+| CP3 | UI básicos: Button, Alert, Toast (aria-live), StatusBadge (glifo+texto), Field/Input/Select/Textarea/Checkbox (error por campo, aria-invalid/aria-describedby), SearchInput, EmptyState, ErrorState, Spinner/Skeleton, PageHeader | **Hecho.** Commit del dueño. Ajustes: Alert controlado (visible/onDismiss del padre), Toast con región assertive para danger, breakpoints 640/900/1150 documentados como convención, PageHeader apila <640px. Checkbox standalone y StatusBadge presets provisionales (se ajustan al migrar). |
+| CP4 | UI compuestos: Section (ficha), DefinitionList, Timeline, RowActionsMenu, Modal ampliado (footer, backdrop opt-in, foco atrapado/devuelto, Esc), ConfirmDialog (enchufado a useConfirm/useConfirmResponder), DataTable (caption oculta, th scope, tarjetas apiladas <640px, estados integrados), FilterBar | **Implementado, sin uso.** En `frontend/src/components/ui/` (Modal extendido con `<dialog>` nativo, conservando el API anterior). Arnés de UI extendido con una sección por componente (y ConfirmProvider/ConfirmDialog montados). Pendiente: verificación del dueño + commit. |
 | CP5 | Router por hash + config declarativa de roles/menú + AppShell nuevo (sidebar con `inert` en drawer cerrado) | Sin iniciar |
 | CP6 | Página `#/ui` (solo `import.meta.env.DEV`, guía visual viva) + `validations/` (reglas leídas de los schemas reales del backend, solo lectura) + `api.js` conservando estructura `errors: campo→mensajes` en el objeto de error | Sin iniciar |
 
@@ -160,9 +164,14 @@ finales de AppShell/navegación se consolidan aquí.)
       PASA con margen ≥4.5:1).
 - [ ] `npm audit` (Solo lectura, dueño): identificar paquete origen de la
       vulnerabilidad high reportada; NO ejecutar `npm audit fix` sin revisar.
-- [ ] CP3 en verificación del dueño (arnés `frontend/src/dev/ui-smoke.jsx`,
+- [x] CP3 hecho y commiteado (ajustes: Alert controlado, Toast assertive en
+      danger, breakpoints 640/900/1150 como convención).
+- [ ] CP4 en verificación del dueño (arnés `frontend/src/dev/ui-smoke.jsx`,
       ver STATUS.md); commitear tras pasar el checklist.
-- [ ] CP4–CP6 (ver tabla de estado).
+- [ ] Paginación: quedó fuera del alcance CP4 (no estaba en la lista del
+      dueño). DECIDIR si se agrega como DataTable/pager en la migración o
+      como CP4b.
+- [ ] CP5–CP6 (ver tabla de estado).
 - [ ] Al cierre (CP6): eliminar los arneses `frontend/src/dev/hooks-smoke.jsx`
       y `frontend/src/dev/ui-smoke.jsx`.
 - [ ] Al crear `validations/` (CP6): **leer los schemas del backend**

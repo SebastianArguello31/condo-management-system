@@ -52,24 +52,35 @@ export function ToastProvider({ children }) {
   );
 
   const value = useMemo(() => ({ show, dismiss }), [show, dismiss]);
+  const normales = toasts.filter((toast) => toast.tone !== "danger");
+  const urgentes = toasts.filter((toast) => toast.tone === "danger");
+
+  const fila = (toast) => (
+    <div key={toast.id} className={`ui-toast ui-toast-${toast.tone}`}>
+      <span>{toast.message}</span>
+      <button
+        type="button"
+        className="ui-toast-close"
+        aria-label="Cerrar aviso"
+        onClick={() => dismiss(toast.id)}
+      >
+        ×
+      </button>
+    </div>
+  );
 
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="ui-toasts" role="status" aria-live="polite">
-        {toasts.map((toast) => (
-          <div key={toast.id} className={`ui-toast ui-toast-${toast.tone}`}>
-            <span>{toast.message}</span>
-            <button
-              type="button"
-              className="ui-toast-close"
-              aria-label="Cerrar aviso"
-              onClick={() => dismiss(toast.id)}
-            >
-              ×
-            </button>
+      <div className="ui-toasts">
+        {urgentes.length > 0 && (
+          <div className="ui-toasts-group" aria-live="assertive">
+            {urgentes.map(fila)}
           </div>
-        ))}
+        )}
+        <div className="ui-toasts-group" role="status" aria-live="polite">
+          {normales.map(fila)}
+        </div>
       </div>
     </ToastContext.Provider>
   );

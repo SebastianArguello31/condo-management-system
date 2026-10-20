@@ -1,13 +1,14 @@
 /* ==========================================================================
- * TEMPORAL — Arnés de prueba de los componentes ui (CP3). ELIMINAR EN CP6.
- * No está importado por la aplicación: para probarlo, con `npm run dev`
- * corriendo, ejecutar en la consola del navegador:
+ * TEMPORAL — Arnés de prueba de los componentes ui (CP3 + CP4).
+ * ELIMINAR EN CP6. No está importado por la aplicación: para probarlo, con
+ * `npm run dev` corriendo, ejecutar en la consola del navegador:
  *
  *   await import("/src/dev/ui-smoke.jsx").then((m) => m.mountUiSmoke())
  *
  * Abre una capa a pantalla completa con una demo de cada componente; los
- * toasts del ToastProvider del arnés aparecen arriba de la capa. Desmontar
- * con __uiSmokeUnmount() en consola o el botón "Quitar arnés".
+ * toasts del ToastProvider del arnés aparecen arriba de la capa y el
+ * ConfirmDialog queda enchufado a su ConfirmProvider. Desmontar con
+ * __uiSmokeUnmount() en consola o el botón "Quitar arnés".
  * ========================================================================== */
 
 import React, { useEffect, useRef, useState } from "react";
@@ -16,20 +17,29 @@ import {
   Alert,
   Button,
   Checkbox,
+  ConfirmDialog,
+  DataTable,
+  DefinitionList,
   EmptyState,
   ErrorState,
   Field,
+  FilterBar,
   Input,
+  Modal,
   PageHeader,
+  RowActionsMenu,
   SearchInput,
+  Section,
   Select,
   Skeleton,
   Spinner,
   StatusBadge,
   Textarea,
+  Timeline,
   ToastProvider,
   useToast,
 } from "../components/ui";
+import { ConfirmProvider, useConfirm } from "../hooks/useConfirm";
 
 function logU(message) {
   console.log(`[arnés-ui] ${message}`);
@@ -51,7 +61,7 @@ const contenidoStyle = {
   color: "var(--ink)",
 };
 
-function Section({ titulo, children }) {
+function Bloque({ titulo, children }) {
   return (
     <section
       style={{
@@ -74,7 +84,7 @@ function Fila({ children }) {
 function BotonesSection() {
   const [busy, setBusy] = useState(false);
   return (
-    <Section titulo="Button">
+    <Bloque titulo="Button">
       <Fila>
         <Button>Primario</Button>
         <Button variant="quiet">Quiet</Button>
@@ -99,24 +109,38 @@ function BotonesSection() {
       <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
         Recorre con Tab: el foco visible es el anillo de 2px (var(--focus-ring)).
       </p>
-    </Section>
+    </Bloque>
   );
 }
 
 const TONOS = ["neutral", "info", "success", "warning", "danger", "muted"];
 
 function AlertsSection() {
+  const [dangerVisible, setDangerVisible] = useState(true);
   return (
-    <Section titulo="Alert (persistentes)">
+    <Bloque titulo="Alert (persistentes, controlado por el padre)">
       {TONOS.map((tone) => (
         <Alert key={tone} tone={tone} title={`Tono ${tone}`}>
           Texto del aviso con detalle suficiente. {tone === "danger" ? 'role="alert".' : ""}
         </Alert>
       ))}
-      <Alert tone="danger" title="Aviso descartable" onDismiss={() => logU("alert cerrado")}>
-        Usa la × para cerrarme (se descarta hasta remontar el arnés).
-      </Alert>
-    </Section>
+      <Fila>
+        <Alert
+          tone="danger"
+          title="Aviso descartable"
+          visible={dangerVisible}
+          onDismiss={() => {
+            setDangerVisible(false);
+            logU("alert cerrado (el padre quedó sin él)");
+          }}
+        >
+          Ciérralo con la × y vuelve a mostrarlo con el botón.
+        </Alert>
+        <Button variant="quiet" onClick={() => setDangerVisible((v) => !v)}>
+          {dangerVisible ? "Ocultar aviso" : "Mostrar aviso"}
+        </Button>
+      </Fila>
+    </Bloque>
   );
 }
 
@@ -125,7 +149,7 @@ const TONOS_TOAST = ["neutral", "info", "success", "warning", "danger"];
 function ToastsSection() {
   const show = useToast();
   return (
-    <Section titulo="Toast (efímeros, aria-live=polite)">
+    <Bloque titulo="Toast (efímeros, aria-live=polite)">
       <Fila>
         {TONOS_TOAST.map((tone) => (
           <Button
@@ -140,13 +164,13 @@ function ToastsSection() {
           </Button>
         ))}
       </Fila>
-    </Section>
+    </Bloque>
   );
 }
 
 function EstadosSection() {
   return (
-    <Section titulo="StatusBadge (glifo + texto)">
+    <Bloque titulo="StatusBadge (glifo + texto)">
       <Fila>
         <StatusBadge estado="RECIBIDA" />
         <StatusBadge estado="EN PROCESO" />
@@ -157,14 +181,14 @@ function EstadosSection() {
         <StatusBadge estado="SIN ESTADO" />
         <StatusBadge estado="Custom" tone="warning" glyph="triangle" />
       </Fila>
-    </Section>
+    </Bloque>
   );
 }
 
 function CamposSection() {
   const [conError, setConError] = useState(false);
   return (
-    <Section titulo="Field + controles (aria-invalid / aria-describedby)">
+    <Bloque titulo="Field + controles (aria-invalid / aria-describedby)">
       <Field label="Nombre del espacio" required help="Texto visible que ayuda a comprender el campo.">
         <Input placeholder="Sin error" />
       </Field>
@@ -190,14 +214,14 @@ function CamposSection() {
         <Checkbox />
       </Field>
       <Checkbox label="Checkbox standalone (sin Field)" />
-    </Section>
+    </Bloque>
   );
 }
 
 function BusquedaSection() {
   const [valor, setValor] = useState("");
   return (
-    <Section titulo="SearchInput (Borrar con botón y Esc)">
+    <Bloque titulo="SearchInput (Borrar con botón y Esc)">
       <SearchInput
         value={valor}
         onChange={(nuevo) => setValor(nuevo)}
@@ -210,14 +234,14 @@ function BusquedaSection() {
       <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
         valor actual: {valor === "" ? "(vacío)" : `"${valor}"`}
       </p>
-    </Section>
+    </Bloque>
   );
 }
 
 function EstadosVaciosSection() {
   const intentos = useRef(0);
   return (
-    <Section titulo="EmptyState / ErrorState / Spinner / Skeleton">
+    <Bloque titulo="EmptyState / ErrorState / Spinner / Skeleton">
       <EmptyState
         title="Sin reservas todavía"
         description="Cuando un residente reserve, aparecerá aquí."
@@ -242,13 +266,13 @@ function EstadosVaciosSection() {
         <Spinner label="Cargando torres…" />
         <Skeleton lines={3} />
       </Fila>
-    </Section>
+    </Bloque>
   );
 }
 
 function CabezaSection() {
   return (
-    <Section titulo="PageHeader">
+    <Bloque titulo="PageHeader">
       <PageHeader
         title="Gestión de reservas"
         meta="12 registros · actualizado 2026-10-20 09:31"
@@ -258,7 +282,254 @@ function CabezaSection() {
           </Button>
         }
       />
-    </Section>
+    </Bloque>
+  );
+}
+
+function SectionFichaSection() {
+  return (
+    <Bloque titulo="Section (ficha) + DefinitionList">
+      <Section
+        title="Datos de la unidad"
+        actions={
+          <RowActionsMenu
+            actions={[
+              { label: "Editar unidad", onSelect: () => logU("ficha: editar") },
+              { label: "Eliminar unidad", danger: true, onSelect: () => logU("ficha: eliminar") },
+            ]}
+          />
+        }
+      >
+        <DefinitionList
+          columns={2}
+          items={[
+            { term: "Código", detail: <span className="ui-mono">B1-101</span> },
+            { term: "Torre", detail: "Aurora" },
+            { term: "Metros cuadrados", detail: <span className="ui-mono">78</span> },
+            { term: "Estado", detail: <StatusBadge estado="OCUPADA" /> },
+          ]}
+        />
+      </Section>
+      <Section title="Resumen económico">
+        <DefinitionList
+          items={[
+            { term: "Cuota mensual", detail: <span className="ui-mono">G. 350.000</span> },
+            { term: "Saldo pendiente", detail: <span className="ui-mono">G. 150.000</span> },
+          ]}
+        />
+      </Section>
+      <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
+        En 375px la ficha pasa a una columna (título arriba, contenido abajo).
+      </p>
+    </Bloque>
+  );
+}
+
+function TimelineSection() {
+  return (
+    <Bloque titulo="Timeline (bitácora de historial)">
+      <Timeline
+        entries={[
+          {
+            id: "t1",
+            time: "2026-10-18 09:12",
+            title: "Incidencia recibida",
+            meta: "RECIBIDA · reportado por residente, torre B",
+            detail: "Fuga de agua en el baño común del pasillo 1.",
+            tone: "info",
+          },
+          {
+            id: "t2",
+            time: "2026-10-18 11:40",
+            title: "Técnico asignado",
+            meta: "EN_PROCESO · técnico: J. Ramírez",
+            tone: "warning",
+          },
+          {
+            id: "t3",
+            time: "2026-10-19 16:05",
+            title: "Reparación completada",
+            meta: "RESUELTA · ejecutar ronda de control el 21/10",
+            detail: "Se cambió la junta del lavamanos.",
+            tone: "success",
+          },
+        ]}
+      />
+    </Bloque>
+  );
+}
+
+function ModalSection() {
+  const [abierto, setAbierto] = useState(null); // null | "footer" | "simple"
+  if (!abierto) {
+    return (
+      <Bloque titulo="Modal (footer, foco atrapado/devuelto, Esc, backdrop opt-in)">
+        <Fila>
+          <Button onClick={() => setAbierto("footer")}>Modal con footer + backdrop</Button>
+          <Button variant="quiet" onClick={() => setAbierto("simple")}>
+            Modal sin backdrop
+          </Button>
+        </Fila>
+      </Bloque>
+    );
+  }
+  return (
+    <Bloque titulo="Modal abierto (cerrar con Esc / × / backdrop si está activo)">
+      <Modal
+        title={abierto === "footer" ? "Nueva reserva" : "Confirmación sin backdrop"}
+        description={
+          abierto === "footer"
+            ? "El foco queda atrapado; al cerrar vuelve al botón que lo abrió."
+            : "Sin overlay: el fondo no se oscurece; Esc y × siguen cerrando."
+        }
+        busy={false}
+        onClose={() => {
+          setAbierto(null);
+          logU("modal cerrado");
+        }}
+        backdrop={abierto === "footer"}
+        footer={
+          <>
+            <Button variant="quiet" onClick={() => setAbierto(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                setAbierto(null);
+                logU("modal confirmado");
+              }}
+            >
+              Guardar
+            </Button>
+          </>
+        }
+      >
+        <Field label="Espacio" required>
+          <Input placeholder="Parrilla 2" />
+        </Field>
+        <Field label="Observaciones">
+          <Textarea placeholder="Detalle opcional…" />
+        </Field>
+      </Modal>
+    </Bloque>
+  );
+}
+
+function ConfirmSection() {
+  const confirm = useConfirm();
+  const [resultado, setResultado] = useState("(aún sin responder)");
+  return (
+    <Bloque titulo="ConfirmDialog (enchufado a useConfirm)">
+      <Fila>
+        <Button
+          onClick={async () => {
+            const ok = await confirm({ title: "Reservar parrilla", message: "Se notificará al residente. ¿Seguimos?" });
+            setResultado(`normal: ${ok}`);
+          }}
+        >
+          Confirmar normal
+        </Button>
+        <Button
+          variant="danger"
+          onClick={async () => {
+            const ok = await confirm({
+              title: "Eliminar reserva",
+              message: "La reserva se cancelará y no habrá vuelta atrás.",
+              danger: true,
+              confirmLabel: "Eliminar",
+            });
+            setResultado(`danger: ${ok}`);
+          }}
+        >
+          Confirmar danger
+        </Button>
+      </Fila>
+      <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
+        Última respuesta: {resultado}
+      </p>
+    </Bloque>
+  );
+}
+
+const FILAS_DEMO = [
+  { id: "u1", codigo: "B1-101", estado: "OCUPADA", residente: "M. López", saldo: "G. 0" },
+  { id: "u2", codigo: "B1-102", estado: "RESERVADA", residente: "—", saldo: "G. 60.000" },
+  { id: "u3", codigo: "B2-201", estado: "LIBRE", residente: "—", saldo: "G. 350.000" },
+];
+
+function DataTableSection() {
+  const [modo, setModo] = useState("data");
+  const columnas = [
+    {
+      key: "codigo",
+      header: "Código",
+      render: (fila) => <span className="ui-mono">{fila.codigo}</span>,
+    },
+    { key: "estado", header: "Estado", render: (fila) => <StatusBadge estado={fila.estado} /> },
+    { key: "residente", header: "Residente" },
+    { key: "saldo", header: "Saldo", render: (fila) => <span className="ui-mono">{fila.saldo}</span> },
+    {
+      key: "acciones",
+      header: "Acciones",
+      render: (fila) => (
+        <RowActionsMenu
+          actions={[
+            { label: "Ver ficha", onSelect: () => logU(`fila ${fila.codigo}: ficha`) },
+            { label: "Asignar residente", disabled: fila.estado === "OCUPADA", onSelect: () => logU(`fila ${fila.codigo}: asignar`) },
+            { label: "Eliminar unidad", danger: true, onSelect: () => logU(`fila ${fila.codigo}: eliminar`) },
+          ]}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <Bloque titulo="DataTable (estados integrados + menú por fila) y FilterBar">
+      <Fila>
+        {["data", "loading", "error", "empty"].map((valor) => (
+          <Button key={valor} variant="quiet" onClick={() => setModo(valor)}>
+            estado {valor}
+          </Button>
+        ))}
+      </Fila>
+      <FilterBar onReset={() => logU("filterbar: reset")}>
+        <SearchInput
+          label="Buscar unidad"
+          value=""
+          onChange={() => {}}
+          onClear={() => {}}
+          placeholder="Código o residente…"
+        />
+        <Field label="Estado">
+          <Select>
+            <option>Todos</option>
+          </Select>
+        </Field>
+        <Button>Aplicar</Button>
+      </FilterBar>
+      <DataTable
+        columns={columnas}
+        rows={modo === "data" ? FILAS_DEMO : []}
+        rowKey={(fila) => fila.id}
+        caption="Listado de unidades del condominio"
+        loading={modo === "loading"}
+        error={modo === "error" ? { message: "Falló el servicio de unidades (demo)." } : null}
+        emptyTitle="Sin unidades"
+        emptyDescription="Ajusta los filtros o registra la primera unidad."
+        emptyAction={
+          <Button variant="quiet" onClick={() => logU("tabla vacía: acción")}>
+            Registrar unidad
+          </Button>
+        }
+        onRetry={() => {
+          setModo("data");
+          logU("tabla: reintento");
+        }}
+      />
+      <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
+        Bajo 640px las filas se apilan en tarjetas con el nombre de la columna.
+      </p>
+    </Bloque>
   );
 }
 
@@ -272,13 +543,13 @@ function UiSmoke() {
       <div style={contenidoStyle}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBlock: "var(--space-4)" }}>
           <strong style={{ fontSize: "var(--fs-13)" }}>
-            Arnés de UI (CP3) — temporal, eliminar en CP6
+            Arnés de UI (CP3+CP4) — temporal, eliminar en CP6
           </strong>
           <Button variant="quiet" onClick={() => window.__uiSmokeUnmount?.()}>
             Quitar arnés
           </Button>
         </div>
-        <PageHeader title="Componentes básicos" meta="CP3 · solo tokens" />
+        <PageHeader title="Componentes del sistema" meta="CP3 + CP4 · solo tokens" />
         <BotonesSection />
         <AlertsSection />
         <ToastsSection />
@@ -287,6 +558,12 @@ function UiSmoke() {
         <BusquedaSection />
         <EstadosVaciosSection />
         <CabezaSection />
+        <SectionFichaSection />
+        <TimelineSection />
+        <ModalSection />
+        <ConfirmSection />
+        <DataTableSection />
+        <ConfirmDialog />
       </div>
     </div>
   );
@@ -305,9 +582,11 @@ export function mountUiSmoke() {
   uiRoot = ReactDOM.createRoot(host);
   uiRoot.render(
     <React.StrictMode>
-      <ToastProvider>
-        <UiSmoke />
-      </ToastProvider>
+      <ConfirmProvider>
+        <ToastProvider>
+          <UiSmoke />
+        </ToastProvider>
+      </ConfirmProvider>
     </React.StrictMode>
   );
   window.__uiSmokeUnmount = unmountUiSmoke;

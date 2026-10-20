@@ -1,8 +1,6 @@
-/* Aviso persistente en pantalla. tone: neutral | info | success | warning |
- * danger | muted. danger usa role="alert" (interruptivo); el resto role="status".
- * onDismiss opcional muestra el botón cerrar.
+/* Aviso persistente CONTROLADO: el padre decide visibilidad con `visible`
+ * y recibe onDismiss al cerrarlo. danger usa role="alert"; el resto "status".
  */
-import { useState } from "react";
 import "./ui.css";
 
 const ALIVE = {
@@ -14,10 +12,15 @@ const ALIVE = {
   danger: "alert",
 };
 
-export default function Alert({ tone = "neutral", title, onDismiss, children, className = "" }) {
-  const [closed, setClosed] = useState(false);
-
-  if (closed) return null;
+export default function Alert({
+  tone = "neutral",
+  visible = true,
+  title,
+  onDismiss,
+  children,
+  className = "",
+}) {
+  if (!visible) return null;
 
   return (
     <div
@@ -33,10 +36,7 @@ export default function Alert({ tone = "neutral", title, onDismiss, children, cl
           type="button"
           className="ui-alert-close"
           aria-label="Cerrar aviso"
-          onClick={() => {
-            setClosed(true);
-            onDismiss();
-          }}
+          onClick={onDismiss}
         >
           ×
         </button>

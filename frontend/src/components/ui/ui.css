@@ -1,7 +1,9 @@
 /* ==========================================================================
-   ui.css — estilos de los componentes básicos (CP3).
-   Solo consume tokens de styles/tokens.css; prohibido hex o px hardcodeados.
+   ui.css — estilos de los componentes básicos (CP3) y compuestos (CP4).
+   Solo consume tokens de styles/tokens.css; prohibido hex o px hardcodeados
+   (salvo las líneas de 1px/2px que el plan permite).
    Transiciones solo de color/opacidad; respeta prefers-reduced-motion.
+   Breakpoints por convención (no tokens): 640 / 900 / 1150px.
    ========================================================================== */
 
 /* -- Utilidades ---------------------------------------------------------- */
@@ -206,7 +208,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  width: min(52ch, 100%);
+  width: min(calc(var(--space-12) * 9), 100%);
   max-width: 100%;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
@@ -220,6 +222,12 @@
 
 .ui-toast > span {
   flex: 1;
+}
+
+.ui-toasts-group {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: center;
 }
 
 .ui-toast-danger { border-color: var(--status-danger-fg); }
@@ -412,7 +420,7 @@ textarea.ui-control {
 
 .ui-empty-description {
   margin: var(--space-2) auto 0;
-  max-width: 48ch;
+  max-width: calc(var(--space-12) * 10);
   font-size: var(--fs-13);
 }
 
@@ -477,13 +485,467 @@ textarea.ui-control {
   flex: none;
 }
 
+@media (max-width: 640px) {
+  .ui-page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* =====================================================================
+   Compuestos (CP4). Breakpoints convención: 640 / 900 / 1150 px.
+   ===================================================================== */
+
+/* -- Sección tipo "ficha" (título izquierda, contenido derecha) ------------ */
+.ui-section {
+  display: grid;
+  grid-template-columns: minmax(auto, calc(var(--space-12) * 5)) 1fr;
+  gap: var(--space-4) var(--space-8);
+  padding-block: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--line);
+}
+
+.ui-section-title {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ui-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.ui-section-body {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (max-width: 640px) {
+  .ui-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ui-section > :last-child {
+  margin-bottom: 0;
+}
+
+.ui-section-body > :first-child {
+  margin-top: 0;
+}
+
+/* -- Lista de definiciones -------------------------------------------------- */
+.ui-dl {
+  margin: 0;
+  display: grid;
+}
+
+.ui-dl-2 {
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--space-6);
+}
+
+.ui-dl-row {
+  display: grid;
+  grid-template-columns: minmax(auto, calc(var(--space-12) * 4)) 1fr;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.ui-dl-2 .ui-dl-row:last-child {
+  border-bottom: 0;
+}
+
+.ui-dl dt {
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+  padding-top: 0;
+}
+
+.ui-dl dd {
+  margin: 0;
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .ui-dl-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .ui-dl-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+}
+
+/* -- Timeline "bitácora" ------------------------------------------------------ */
+.ui-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-timeline-entry {
+  position: relative;
+  padding-left: var(--space-5);
+  padding-block: var(--space-3);
+}
+
+.ui-timeline-entry::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--space-2) / 2 - 0.5px);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+
+.ui-timeline-entry:first-child::before {
+  top: var(--space-3);
+}
+
+.ui-timeline-entry:last-child::before {
+  bottom: calc(100% - var(--space-4));
+}
+
+.ui-timeline-dot {
+  position: absolute;
+  left: 0;
+  top: var(--space-3);
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 50%;
+  background: var(--line-control);
+}
+
+.ui-timeline-dot-info { background: var(--status-info-fg); }
+.ui-timeline-dot-success { background: var(--status-success-fg); }
+.ui-timeline-dot-warning { background: var(--status-warning-fg); }
+.ui-timeline-dot-danger { background: var(--status-danger-fg); }
+.ui-timeline-dot-brand { background: var(--brand); }
+
+.ui-timeline-time {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-timeline-title {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.ui-timeline-meta {
+  margin: 0;
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+}
+
+.ui-timeline-detail {
+  margin-top: var(--space-2);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink-2);
+}
+
+/* -- Menú de acciones de fila ------------------------------------------------- */
+.ui-row-actions {
+  position: relative;
+  display: inline-flex;
+}
+
+.ui-row-actions-trigger {
+  border: 0;
+  background: none;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--brand);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition:
+    color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+
+.ui-row-actions-trigger:hover {
+  background: var(--bg);
+  text-decoration-color: currentColor;
+}
+
+.ui-menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: var(--z-modal);
+  min-width: calc(var(--space-12) * 4);
+  padding: var(--space-1);
+  display: grid;
+  background: var(--surface);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-md);
+}
+
+.ui-menuitem {
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+
+.ui-menuitem:hover:not([aria-disabled="true"]) {
+  background: var(--bg);
+}
+
+.ui-menuitem-danger {
+  color: var(--status-danger-fg);
+}
+
+.ui-menuitem[aria-disabled="true"] {
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+/* -- Modal ampliado (sobre <dialog> nativo; clases ui-* aplican solo cuando
+      ui.css está cargado — las pantallas legacy solo usan mg-modal) --------- */
+.ui-modal {
+  padding: 0;
+  width: min(calc(var(--space-11) * 15), calc(100vw - var(--space-8)));
+  max-height: calc(100dvh - var(--space-10));
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+.ui-modal::backdrop {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.ui-modal[data-backdrop="true"]::backdrop {
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+.ui-modal .ui-modal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.ui-modal .ui-modal-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-20);
+  line-height: var(--lh-20);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ui-modal .ui-modal-desc {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+.ui-modal .ui-modal-close {
+  border: 0;
+  background: none;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease;
+}
+
+.ui-modal .ui-modal-close:hover {
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.ui-modal-body {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+}
+
+.ui-modal .ui-btn {
+  font-family: var(--font-ui);
+  font-weight: 500;
+}
+
+.mg-modal.ui-modal :focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ui-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: 0;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--line);
+}
+
+.ui-confirm-message {
+  margin: 0;
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--ink-2);
+}
+
+/* -- Tabla de datos ----------------------------------------------------------- */
+.ui-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink);
+}
+
+.ui-table th {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--line-control);
+}
+
+.ui-table td {
+  padding: var(--space-2) var(--space-3);
+  height: var(--row-h);
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.ui-table tbody tr {
+  transition: background-color var(--motion-fast) ease;
+}
+
+.ui-table tbody tr:hover {
+  background: var(--bg);
+}
+
+.ui-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .ui-table thead {
+    display: none;
+  }
+
+  .ui-table,
+  .ui-table tbody,
+  .ui-table tr,
+  .ui-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .ui-table tbody tr {
+    border: 1px solid var(--line-control);
+    border-radius: var(--radius-md);
+    margin-block: var(--space-2);
+    padding-block: var(--space-2);
+    background: var(--surface);
+  }
+
+  .ui-table td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    height: auto;
+    min-height: 0;
+    border-bottom: 1px solid var(--line);
+    padding-inline: var(--space-3);
+  }
+
+  .ui-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .ui-table td::before {
+    content: attr(data-label);
+    flex: none;
+    font-size: var(--fs-12);
+    line-height: var(--lh-12);
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  .ui-table td > :only-child {
+    text-align: right;
+  }
+}
+
+/* -- Barra de filtros --------------------------------------------------------- */
+.ui-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding-block: var(--space-3) 0;
+}
+
 /* -- Movimiento reducido --------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   .ui-btn,
   .ui-control,
   .ui-search-clear,
   .ui-alert-close,
-  .ui-toast-close {
+  .ui-toast-close,
+  .ui-row-actions-trigger,
+  .ui-menuitem,
+  .ui-table tbody tr,
+  .ui-modal .ui-modal-close {
     transition: none;
   }
 
