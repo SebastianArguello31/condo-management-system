@@ -1,49 +1,99 @@
-import { useState } from "react";
+/* AppShell "Bitácora": recibe los grupos ya resueltos para el rol
+ * (config/routing.js) — sin claves de módulos ni grupos hardcodeados.
+ * Ítem activo = aria-current="page" + línea de 2px a la izquierda (CSS).
+ * Drawer móvil (≤760px, breakpoint legado): `inert` cuando está cerrado,
+ * foco al primer ítem al abrir y de vuelta al botón de menú al cerrar
+ * (overlay, Esc o toggle). Sin breadcrumb duplicado.
+ */
+import { useEffect, useRef, useState } from "react";
 import Icon from "./ui/Icon";
+import "./shell.css";
 
-const labels = { ADMIN: "Administrador", TECNICO: "Empleado", RESIDENTE: "Residente" };
-const people = new Set(["users", "employees", "specialties", "admins", "residents", "residentHome", "profile"]);
+const drawerQuery = window.matchMedia("(max-width: 760px)");
 
-export default function AppShell({ user, pages, selected, onNavigate, onLogout, children }) {
+const ROLE_LABELS = { ADMIN: "Administrador", TECNICO: "Empleado", RESIDENTE: "Residente" };
+
+export default function AppShell({ user, groups, activePath, onNavigate, onLogout, children }) {
   const [open, setOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(drawerQuery.matches);
+  const menuButtonRef = useRef(null);
+  const sidebarRef = useRef(null);
+  const mainRef = useRef(null);
+
+  useEffect(() => {
+    function onMedia(event) {
+      setIsMobile(event.matches);
+      if (!event.matches) setOpen(false);
+    }
+    drawerQuery.addEventListener("change", onMedia);
+    return () => drawerQuery.removeEventListener("change", onMedia);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) return;
+    setOpen(false);
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (!isMobile || !open) return;
+    sidebarRef.current?.querySelector("button, a")?.focus();
+  }, [open, isMobile]);
+
+  function closeDrawer() {
+    setOpen(false);
+    menuButtonRef.current?.focus();
+  }
+
+  function goTo(path) {
+    onNavigate(path);
+    setOpen(false);
+    mainRef.current?.focus();
+  }
+
+  const drawerClosed = isMobile && !open;
+  const roleLabel = ROLE_LABELS[user.rol] || user.rol;
   const initials = `${user.nombre?.[0] || ""}${user.apellido?.[0] || ""}`.toUpperCase();
-  function navigate(key) { onNavigate(key); setOpen(false); }
 
   return <div className="app-shell">
     <a className="shell-skip" href="#main-content">Ir al contenido</a>
-    {open && <button className="shell-overlay" aria-label="Cerrar navegación" onClick={() => setOpen(false)} />}
-    <aside className={`shell-sidebar ${open ? "is-open" : ""}`} id="main-navigation">
+    {open && <button className="shell-overlay" aria-label="Cerrar navegación" onClick={closeDrawer} />}
+    <aside ref={sidebarRef} className={`shell-sidebar ${open ? "is-open" : ""}`} id="main-navigation"
+      inert={drawerClosed}
+      onKeyDown={(event) => { if (event.key === "Escape") closeDrawer(); }}>
       <div className="shell-brand"><span className="shell-brand-icon"><Icon name="buildings" size={24} /></span>
         <div><strong>Condominio</strong><small>Gestión de comunidad</small></div>
       </div>
       <nav className="shell-navigation" aria-label="Navegación principal">
-        {[["PERSONAS", true], ["COMUNIDAD", false]].map(([label, isPeople]) => {
-          const items = pages.filter((page) => people.has(page.key) === isPeople);
-          return items.length > 0 && <div className="shell-nav-group" key={label}>
-            <p>{label}</p>
-            {items.map(({ key, label: name }) => <button type="button" key={key}
-              className={selected?.key === key ? "is-current" : ""}
-              aria-current={selected?.key === key ? "page" : undefined} onClick={() => navigate(key)}>
-              <Icon name={key} /><span>{name}</span>{selected?.key === key && <span className="shell-active-dot" />}
-            </button>)}
-          </div>;
-        })}
+        {groups.map((group) => (
+          <div className="shell-nav-group" key={group.label}>
+            <p>{group.label}</p>
+            {group.items.map((item) => {
+              const current = item.path === activePath;
+              return <button type="button" key={item.path}
+                className={current ? "is-current" : undefined}
+                aria-current={current ? "page" : undefined}
+                onClick={() => goTo(item.path)}>
+                <Icon name={item.icon} /><span>{item.label}</span>
+              </button>;
+            })}
+          </div>
+        ))}
       </nav>
       <div className="shell-account">
         <div className="shell-account-info"><span className="mg-avatar">{initials}</span>
-          <div><strong>{user.nombre} {user.apellido}</strong><small>{labels[user.rol] || user.rol}</small></div>
+          <div><strong>{user.nombre} {user.apellido}</strong><small>{roleLabel}</small></div>
         </div>
         <button type="button" onClick={onLogout}><Icon name="logout" size={17} />Cerrar sesión</button>
       </div>
     </aside>
     <div className="shell-workspace">
       <header className="shell-header">
-        <button type="button" className="shell-menu mg-icon-button" aria-label="Abrir navegación"
-          aria-controls="main-navigation" aria-expanded={open} onClick={() => setOpen(!open)}><Icon name="menu" /></button>
-        <div className="shell-breadcrumb"><span>Panel de gestión</span><Icon name="arrow" size={14} /><strong>{selected?.label || "Inicio"}</strong></div>
-        <span className="shell-role"><span />{labels[user.rol] || user.rol}</span>
+        <button ref={menuButtonRef} type="button" className="shell-menu mg-icon-button" aria-label="Abrir navegación"
+          aria-controls="main-navigation" aria-expanded={open}
+          onClick={() => { if (open) closeDrawer(); else setOpen(true); }}><Icon name="menu" /></button>
+        <span className="shell-role"><span />{roleLabel}</span>
       </header>
-      <main className="shell-content" id="main-content" tabIndex={-1}>{children}</main>
+      <main ref={mainRef} className="shell-content" id="main-content" tabIndex={-1}>{children}</main>
       <footer className="shell-footer">Condominio <span>Administración de la comunidad</span></footer>
     </div>
   </div>;

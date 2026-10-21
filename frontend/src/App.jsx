@@ -1,47 +1,45 @@
-import { useEffect, useState } from "react";
+/* Router por hash + config declarativa (config/routing.js):
+ * - Ruta del hash conocida Y permitida para el rol → esa pantalla.
+ * - Hash vacío, inválido o sin permiso → pantalla por defecto del rol con
+ *   navigate(..., { replace: true }) (nunca pantalla en blanco).
+ * - Anclas de la página (p. ej. #main-content del skip link, sin "/" inicial)
+ *   NO son rutas: no disparan el fallback, se conserva la pantalla actual.
+ * - Tras login se respeta el hash de la URL si el rol lo permite (volver a
+ *   lo solicitado); al cerrar sesión y en "session-expired" el hash se
+ *   limpia con replace.
+ * Las pantallas son los componentes legacy; reciben user y
+ * onProfileUpdated igual que antes y se remontan al cambiar de ruta.
+ */
+import { useCallback, useEffect, useRef, useState } from "react";
 import Login from "./features/auth/Login";
-import { pagesForRole } from "./features/auth/navigation";
-import UsersPage from "./features/users/UsersPage";
-import BuildingsPage from "./features/units/BuildingsPage";
-import UnitsPage from "./features/units/UnitsPage";
-import IncidentsPage from "./features/incidents/IncidentsPage";
-import EmployeesPage from "./features/users/EmployeesPage";
-import AdminsPage from "./features/users/AdminsPage";
-import SpecialtiesPage from "./features/users/SpecialtiesPage";
-import EmployeeProfile from "./features/users/EmployeeProfile";
-import ResidentsPage from "./features/users/ResidentsPage";
-import ResidentHome from "./features/users/ResidentHome";
-import EspaciosPage from "./features/espacios-comunes/EspaciosPage";
-import MisReservasPage from "./features/reservas/MisReservasPage";
-import GestionReservasPage from "./features/reservas/GestionReservasPage";
+import { useHashRoute } from "./hooks/useHashRoute";
+import {
+  defaultRouteFor,
+  navigationForRole,
+  routeForPath,
+} from "./config/routing";
 import { setAccessToken } from "./services/api";
 import AppShell from "./components/AppShell";
 import "./styles/users-ui.css";
 
-const pageComponents = {
-  users: UsersPage, employees: EmployeesPage, admins: AdminsPage,
-  specialties: SpecialtiesPage, buildings: BuildingsPage, units: UnitsPage,
-  incidents: IncidentsPage, profile: EmployeeProfile,
-  residents: ResidentsPage, residentHome: ResidentHome,
-  espacios: EspaciosPage, misReservas: MisReservasPage,
-  gestionReservas: GestionReservasPage,
-};
-
 export default function App() {
   const [user, setUser] = useState(null);
-  const [page, setPage] = useState(null);
+  const { path, navigate } = useHashRoute();
 
-  function logout() { setAccessToken(null); setUser(null); setPage(null); }
+  const logout = useCallback(() => {
+    setAccessToken(null);
+    setUser(null);
+    navigate("/", null, { replace: true });
+  }, [navigate]);
 
   useEffect(() => {
     window.addEventListener("session-expired", logout);
     return () => window.removeEventListener("session-expired", logout);
-  }, []);
+  }, [logout]);
 
   function login(result) {
     setAccessToken(result.access_token);
     setUser(result.user);
-    setPage(result.user.rol === "ADMIN" ? "users" : pagesForRole(result.user.rol)[0]?.key ?? null);
   }
 
   function updateProfile(profile) {
@@ -50,13 +48,39 @@ export default function App() {
       : current);
   }
 
+  const groups = user ? navigationForRole(user.rol) : [];
+  const fallback = user ? defaultRouteFor(user.rol) : null;
+  const route = routeForPath(path);
+  const active = route && groups.some((group) => group.items.includes(route)) ? route : null;
+
+  const lastActiveRef = useRef(null);
+  useEffect(() => {
+    if (active) lastActiveRef.current = active;
+  }, [active]);
+
+  /* Hash con ancla de página (no empieza con "#/"): no es ruta → se conserva
+   * la última pantalla (el skip link no debe navegar). Si no hay nada que
+   * mostrar (hash vacío, "#/desconocida", o ancla tras F5), el efecto de
+   * abajo lleva a la pantalla por defecto con replace. */
+  const shown = active ?? (window.location.hash.startsWith("#/") ? null : lastActiveRef.current);
+
+  useEffect(() => {
+    if (user && fallback && !shown) navigate(fallback.path, null, { replace: true });
+  }, [user, fallback, shown, navigate]);
+
   if (!user) return <Login onLogin={login} />;
 
-  const allowedPages = pagesForRole(user.rol);
-  const selected = allowedPages.find((item) => item.key === page) ?? allowedPages[0];
-  const Page = selected ? pageComponents[selected.key] : null;
+  if (!fallback) {
+    return <AppShell user={user} groups={[]} activePath={null} onNavigate={() => {}} onLogout={logout}>
+      <p>Tu cuenta no tiene pantallas habilitadas.</p>
+    </AppShell>;
+  }
 
-  return <AppShell user={user} pages={allowedPages} selected={selected} onNavigate={setPage} onLogout={logout}>
-    {Page ? <Page key={selected.key} user={user} onProfileUpdated={updateProfile} /> : <p>Tu cuenta no tiene pantallas habilitadas.</p>}
+  if (!shown) return null;
+
+  const Page = shown.component;
+
+  return <AppShell user={user} groups={groups} activePath={shown.path} onNavigate={(target) => navigate(target)} onLogout={logout}>
+    <Page key={shown.path} user={user} onProfileUpdated={updateProfile} />
   </AppShell>;
 }

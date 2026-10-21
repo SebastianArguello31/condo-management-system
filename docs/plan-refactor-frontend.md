@@ -133,8 +133,8 @@ obligatorias):
 | CP1 | `styles/tokens.css` + `styles/base.css` + fuentes (imports) + `scripts/check-contrast.mjs` | **Hecho y verificado por el dueño.** Build OK (solo woff2 latin/latin-ext); check-contrast exit 0, 62 pares PASA (peor par: --ink-3 sobre tinte danger 4.58:1). Commit hecho. |
 | CP2 | Hooks: `useQuery`, `useMutation`, `useConfirm`, `useHashRoute` | **Hecho.** Commit del dueño. Ajustes incluidos: `navigate(path, params, { replace })` (replaceState + re-dispara `hashchange`), `useQuery(fetcher, deps, { enabled })`, descarte de data por deps (reload conserva), parse con `indexOf`. Arnés temporal `frontend/src/dev/hooks-smoke.jsx` (ELIMINAR en CP6). |
 | CP3 | UI básicos: Button, Alert, Toast (aria-live), StatusBadge (glifo+texto), Field/Input/Select/Textarea/Checkbox (error por campo, aria-invalid/aria-describedby), SearchInput, EmptyState, ErrorState, Spinner/Skeleton, PageHeader | **Hecho.** Commit del dueño. Ajustes: Alert controlado (visible/onDismiss del padre), Toast con región assertive para danger, breakpoints 640/900/1150 documentados como convención, PageHeader apila <640px. Checkbox standalone y StatusBadge presets provisionales (se ajustan al migrar). |
-| CP4 | UI compuestos: Section (ficha), DefinitionList, Timeline, RowActionsMenu, Modal ampliado (footer, backdrop opt-in, foco atrapado/devuelto, Esc), ConfirmDialog (enchufado a useConfirm/useConfirmResponder), DataTable (caption oculta, th scope, tarjetas apiladas <640px, estados integrados), FilterBar | **Implementado, sin uso.** En `frontend/src/components/ui/` (Modal extendido con `<dialog>` nativo, conservando el API anterior). Arnés de UI extendido con una sección por componente (y ConfirmProvider/ConfirmDialog montados). Pendiente: verificación del dueño + commit. |
-| CP5 | Router por hash + config declarativa de roles/menú + AppShell nuevo (sidebar con `inert` en drawer cerrado) | Sin iniciar |
+| CP4 | UI compuestos: Section (ficha), DefinitionList, Timeline, RowActionsMenu, Modal ampliado (footer, backdrop opt-in, foco atrapado/devuelto, Esc), ConfirmDialog (enchufado a useConfirm/useConfirmResponder), DataTable (caption oculta, th scope, tarjetas apiladas <640px, estados integrados), FilterBar | **Hecho.** Commit del dueño; modales legacy verificados a mano. Paginación fuera del alcance por decisión del dueño (comprobación de backend en Pendientes). |
+| CP5 | Router por hash + config declarativa de roles/menú + AppShell nuevo (sidebar con `inert` en drawer cerrado) | **Implementado.** `config/routing.js` (única fuente: ítems con path/label/icon/component/roles + grupos por rol; AppShell sin claves de módulos), `App.jsx` con `useHashRoute` + fallback a la pantalla por defecto del rol (`replace`), redirect tras login respeta el hash permitido, logout/session-expired limpian el hash con replace, `AppShell.jsx` nuevo (foco del drawer, `inert`, sin breadcrumb, ícono distinto por ítem, ítem activo con línea 2px + peso 600 en `shell.css`), `Icon.jsx` ampliado, `features/auth/navigation.js` eliminado. Pantallas legacy intactas. Pendiente: verificación por rol del dueño + commit. |
 | CP6 | Página `#/ui` (solo `import.meta.env.DEV`, guía visual viva) + `validations/` (reglas leídas de los schemas reales del backend, solo lectura) + `api.js` conservando estructura `errors: campo→mensajes` en el objeto de error | Sin iniciar |
 
 Condiciones: cada checkpoint debe dejar el proyecto compilando y funcionando
@@ -168,10 +168,18 @@ finales de AppShell/navegación se consolidan aquí.)
       danger, breakpoints 640/900/1150 como convención).
 - [ ] CP4 en verificación del dueño (arnés `frontend/src/dev/ui-smoke.jsx`,
       ver STATUS.md); commitear tras pasar el checklist.
-- [ ] Paginación: quedó fuera del alcance CP4 (no estaba en la lista del
-      dueño). DECIDIR si se agrega como DataTable/pager en la migración o
-      como CP4b.
-- [ ] CP5–CP6 (ver tabla de estado).
+- [x] CP4 hecho (commit del dueño; modales legacy verificados a mano).
+- [x] Paginación: comprobada en solo lectura contra el backend — **ningún
+      endpoint pagina**: todos los listados devuelven arrays completos (los
+      `LIMIT` existen solo como `LIMIT 1`, búsquedas puntuales); los schemas
+      de query (reservas/common_spaces/maintenance) filtran pero no paginan.
+      La paginación quedará como feature futura del backend; en el front
+      decidir la UI (pager + DataTable) al migrar esos listados.
+- [x] Iconos de "Perfil" y "Reservas" separados (CP5: Icon.jsx ampliado con
+      residentHome, reservations, reservationsGestion y espacios).
+- [ ] CP5 en verificación del dueño: prueba por rol (ver STATUS.md); commitear
+      tras pasar el checklist.
+- [ ] CP6 (ver tabla de estado).
 - [ ] Al cierre (CP6): eliminar los arneses `frontend/src/dev/hooks-smoke.jsx`
       y `frontend/src/dev/ui-smoke.jsx`.
 - [ ] Al crear `validations/` (CP6): **leer los schemas del backend**

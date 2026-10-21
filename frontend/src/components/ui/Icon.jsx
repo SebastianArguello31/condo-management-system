@@ -19,6 +19,10 @@ const paths = {
   logout: "M9 3H3v18h6m5-14 5 5-5 5m-7-5h14",
   menu: "M3 6h18M3 12h18M3 18h18", check: "m5 12 4 4L19 6",
   arrow: "m9 5 7 7-7 7", refresh: "M20 7V2m0 5h-5M4 17v5m0-5h5M4 8a8 8 0 0 1 14-3l2 2M4 17l2 2a8 8 0 0 0 14-3",
+  reservations: "M5 6h14v14H5V6Zm0 4h14M9 2v6m6-6v6",
+  reservationsGestion: "M5 6h14v14H5V6Zm0 4h14M9 2v6m6-6v6M8.5 14l2 2 4-4",
+  espacios: "M4 4h16v16H4V4Zm0 8h16M12 4v16",
+  residentHome: "M4 21V9l8-6 8 6v12H4ZM13.9 12a1.9 1.9 0 1 1-3.8 0 1.9 1.9 0 0 1 3.8 0ZM8.5 21v-1a3.5 3.5 0 0 1 7 0v1",
 };
 
 export default function Icon({ name, size = 20 }) {
