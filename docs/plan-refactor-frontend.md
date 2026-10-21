@@ -135,7 +135,8 @@ obligatorias):
 | CP3 | UI básicos: Button, Alert, Toast (aria-live), StatusBadge (glifo+texto), Field/Input/Select/Textarea/Checkbox (error por campo, aria-invalid/aria-describedby), SearchInput, EmptyState, ErrorState, Spinner/Skeleton, PageHeader | **Hecho.** Commit del dueño. Ajustes: Alert controlado (visible/onDismiss del padre), Toast con región assertive para danger, breakpoints 640/900/1150 documentados como convención, PageHeader apila <640px. Checkbox standalone y StatusBadge presets provisionales (se ajustan al migrar). |
 | CP4 | UI compuestos: Section (ficha), DefinitionList, Timeline, RowActionsMenu, Modal ampliado (footer, backdrop opt-in, foco atrapado/devuelto, Esc), ConfirmDialog (enchufado a useConfirm/useConfirmResponder), DataTable (caption oculta, th scope, tarjetas apiladas <640px, estados integrados), FilterBar | **Hecho.** Commit del dueño; modales legacy verificados a mano. Paginación fuera del alcance por decisión del dueño (comprobación de backend en Pendientes). |
 | CP5 | Router por hash + config declarativa de roles/menú + AppShell nuevo (sidebar con `inert` en drawer cerrado) | **Implementado.** `config/routing.js` (única fuente: ítems con path/label/icon/component/roles + grupos por rol; AppShell sin claves de módulos), `App.jsx` con `useHashRoute` + fallback a la pantalla por defecto del rol (`replace`), redirect tras login respeta el hash permitido, logout/session-expired limpian el hash con replace, `AppShell.jsx` nuevo (foco del drawer, `inert`, sin breadcrumb, ícono distinto por ítem, ítem activo con línea 2px + peso 600 en `shell.css`), `Icon.jsx` ampliado, `features/auth/navigation.js` eliminado. Pantallas legacy intactas. Pendiente: verificación por rol del dueño + commit. |
-| CP6 | Página `#/ui` (solo `import.meta.env.DEV`, guía visual viva) + `validations/` (reglas leídas de los schemas reales del backend, solo lectura) + `api.js` conservando estructura `errors: campo→mensajes` en el objeto de error | Sin iniciar |
+| CP6a | `validations/` (reglas REALES leídas de los schemas Marshmallow, solo lectura) + `api.js` aditivo (signal, err.status, err.errors; message intacto) + `downloadAttachment` a `utils/` + arnés `dev/validations-smoke.jsx` | **Implementado, sin conectar a pantallas.** Reglas espejo de: accounts (cuenta, 8 chars/72 bytes), auth LoginSchema (login 1–200), EmployeeProfile/ResidentProfileUpdate (perfiles), incidents (incidencia creación, prioridad, intervención), reservations (reserva), specialties. `validate(form, schema) → {campo: mensaje}` en español neutro, trim como el pre_load del backend. Arnés temporal `dev/validations-smoke.jsx` (suite local 20 casos + api en vivo: err.errors y AbortController) — ELIMINAR en CP6b. Pendiente: verificación del dueño + commit. |
+| CP6b | Página `#/ui` (solo `import.meta.env.DEV`, guía visual viva) consolidando los arneses + eliminación de arneses y dead code aprobado | Sin iniciar |
 
 Condiciones: cada checkpoint debe dejar el proyecto compilando y funcionando
 igual que antes (coexistencia controlada; CSS viejo solo se borra si es dead
@@ -177,17 +178,17 @@ finales de AppShell/navegación se consolidan aquí.)
       decidir la UI (pager + DataTable) al migrar esos listados.
 - [x] Iconos de "Perfil" y "Reservas" separados (CP5: Icon.jsx ampliado con
       residentHome, reservations, reservationsGestion y espacios).
-- [ ] CP5 en verificación del dueño: prueba por rol (ver STATUS.md); commitear
-      tras pasar el checklist.
-- [ ] CP6 (ver tabla de estado).
-- [ ] Al cierre (CP6): eliminar los arneses `frontend/src/dev/hooks-smoke.jsx`
-      y `frontend/src/dev/ui-smoke.jsx`.
-- [ ] Al crear `validations/` (CP6): **leer los schemas del backend**
-      (marshmallow/pydantic o equivalentes en `backend/`, solo lectura) para no
-      asumir reglas. Pendiente de confirmar: minLength password real del backend
-      (front usa 8 chars y 72 bytes), máximos por campo del backend.
-- [ ] Pendiente de confirmar: icono específico para "Perfil" y "Reservas" en
-      `Icon.jsx` (hoy comparten paths) — decidirse en CP5.
+- [x] CP5 hecho y commiteado (verificado por rol). Decisión: RESIDENTE y
+      TECNICO aterrizan en #/incidencias (ya así en config/routing.js).
+- [ ] CP6a en verificación del dueño (arnés `frontend/src/dev/validations-smoke.jsx`,
+      ver STATUS.md); commitear tras pasar el checklist.
+- [ ] CP6b (ver tabla de estado).
+- [ ] Al cierre (CP6b): eliminar los arneses `frontend/src/dev/hooks-smoke.jsx`,
+      `frontend/src/dev/ui-smoke.jsx` y `frontend/src/dev/validations-smoke.jsx`.
+- [x] Reglas del backend leídas (marshmallow, solo lectura) en CP6a; confirmado:
+      minLength password ≥8 caracteres y ≤72 bytes UTF-8
+      (backend/app/core/passwords.py) — el front ya usaba 8 chars/72 bytes.
+      Máximos por campo reflejados en validations/schemas.js con su origen.
 - [ ] Fuente de datos del historial de incidencias del residente/técnico: el
       front usa GET `/incidents` (backend filtra por usuario; suposición no
       verificada contra el backend).
