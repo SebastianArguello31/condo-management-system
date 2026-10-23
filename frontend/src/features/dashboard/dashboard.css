@@ -1,0 +1,838 @@
+/* ==========================================================================
+   Dashboard & Analytics Styles — DEV 3
+   ========================================================================== */
+
+.dash-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --------------------------------------------------------------------------
+   Header & Action Bar
+   -------------------------------------------------------------------------- */
+.dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.dash-title-group h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dash-title-group p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.dash-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dash-demo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.dash-demo-badge.is-live {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.dash-demo-badge .badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.dash-demo-badge.is-live .badge-dot {
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+/* --------------------------------------------------------------------------
+   Filter Panel
+   -------------------------------------------------------------------------- */
+.dash-filters-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 22px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.dash-filters-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.dash-filters-top h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #334155;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-presets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dash-preset-btn {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dash-preset-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.dash-preset-btn.is-active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+.dash-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.dash-filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dash-filter-item label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.dash-filter-item input,
+.dash-filter-item select {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.88rem;
+  transition: border-color 0.15s ease;
+}
+
+.dash-filter-item input:focus,
+.dash-filter-item select:focus {
+  border-color: #2563eb;
+  background: white;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.dash-filter-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   KPIs Grid — Simétrico 3 arriba y 3 abajo
+   -------------------------------------------------------------------------- */
+.dash-kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 960px) {
+  .dash-kpis-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .dash-kpis-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dash-kpi-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 176px;
+  height: 176px;
+  box-sizing: border-box;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.dash-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  border-color: #93c5fd;
+}
+
+.dash-kpi-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #cbd5e1;
+}
+
+.dash-kpi-card.kpi-blue::before { background: #2563eb; }
+.dash-kpi-card.kpi-green::before { background: #10b981; }
+.dash-kpi-card.kpi-amber::before { background: #f59e0b; }
+.dash-kpi-card.kpi-red::before { background: #ef4444; }
+.dash-kpi-card.kpi-purple::before { background: #8b5cf6; }
+
+.dash-kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 28px;
+}
+
+.dash-kpi-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.dash-kpi-icon-wrap {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.kpi-blue .dash-kpi-icon-wrap { background: #eff6ff; color: #2563eb; }
+.kpi-green .dash-kpi-icon-wrap { background: #ecfdf5; color: #059669; }
+.kpi-amber .dash-kpi-icon-wrap { background: #fffbeb; color: #d97706; }
+.kpi-red .dash-kpi-icon-wrap { background: #fef2f2; color: #dc2626; }
+.kpi-purple .dash-kpi-icon-wrap { background: #f5f3ff; color: #7c3aed; }
+
+.dash-kpi-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  height: 38px;
+}
+
+.dash-kpi-value {
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.dash-kpi-unit {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.dash-kpi-footer {
+  font-size: 0.78rem;
+  color: #64748b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 6px;
+  height: 30px;
+  box-sizing: border-box;
+}
+
+.dash-kpi-drilldown-hint {
+  color: #2563eb;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Progress Bars
+   -------------------------------------------------------------------------- */
+.dash-progress-track {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 4px 0;
+  flex-shrink: 0;
+}
+
+.dash-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease-out;
+}
+
+.dash-progress-fill.fill-green { background: #10b981; }
+.dash-progress-fill.fill-blue { background: #2563eb; }
+.dash-progress-fill.fill-amber { background: #f59e0b; }
+.dash-progress-fill.fill-purple { background: #8b5cf6; }
+.dash-progress-fill.fill-red { background: #ef4444; }
+
+/* --------------------------------------------------------------------------
+   Dashboard Main Sections Grid — Paneles perfectamente simétricos
+   -------------------------------------------------------------------------- */
+.dash-section-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+}
+
+.dash-col-12 { grid-column: span 12; }
+.dash-col-6 { grid-column: span 6; }
+
+@media (max-width: 960px) {
+  .dash-col-6 {
+    grid-column: span 12;
+  }
+}
+
+.dash-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* Cabeceras simétricas con altura fija uniforme para alinear el inicio del contenido */
+.dash-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 74px;
+  min-height: 74px;
+  max-height: 74px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  box-sizing: border-box;
+}
+
+.dash-card-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+}
+
+.dash-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.3;
+}
+
+.dash-card-subtitle {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.dash-card-header-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.dash-header-pill {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.dash-header-action-btn {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.dash-header-action-btn:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+/* --------------------------------------------------------------------------
+   Timeline Chart — Altura sincronizada con Distribución por Estado
+   -------------------------------------------------------------------------- */
+.dash-chart-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 420px;
+  min-height: 420px;
+  box-sizing: border-box;
+}
+
+.dash-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.78rem;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.dash-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.dash-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.dash-timeline-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 380px;
+  min-height: 380px;
+  flex: 1;
+  padding-top: 24px;
+  border-bottom: 1px solid #cbd5e1;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.dash-bar-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+  min-width: 32px;
+}
+
+.dash-bar-pair {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 100%;
+  width: 100%;
+  justify-content: center;
+}
+
+.dash-bar {
+  width: 14px;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.3s ease;
+  position: relative;
+}
+
+.dash-bar.bar-reported { background: #3b82f6; }
+.dash-bar.bar-resolved { background: #10b981; }
+
+.dash-bar:hover {
+  opacity: 0.85;
+  filter: brightness(1.1);
+}
+
+.dash-bar-label {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Distribución por Estado (9 estados fijos simétricos con espacio preparado)
+   -------------------------------------------------------------------------- */
+.dash-breakdown-list-9 {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 420px;
+  min-height: 420px;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.dash-breakdown-list-9 .dash-breakdown-row {
+  height: 38px;
+  min-height: 38px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   Lista simétrica de 4 filas con altura y espaciado idénticos
+   (Carga por Prioridad & Intervenciones por Personal Técnico)
+   -------------------------------------------------------------------------- */
+.dash-breakdown-equal-grid {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 320px;
+  min-height: 320px;
+  overflow-y: auto;
+  gap: 16px;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.dash-breakdown-equal-grid .dash-breakdown-row {
+  min-height: 64px;
+  height: 64px;
+  max-height: 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.dash-breakdown-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dash-breakdown-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 28px;
+  line-height: 28px;
+}
+
+.dash-breakdown-name {
+  font-weight: 500;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+}
+
+.dash-tec-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #f3e8ff;
+  color: #7c3aed;
+  font-weight: 700;
+  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d8b4fe;
+  flex-shrink: 0;
+}
+
+.dash-tec-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+}
+
+.dash-meta-sub {
+  font-size: 0.76rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.dash-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dash-breakdown-stat {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 0.84rem;
+}
+
+.dash-breakdown-pct {
+  color: #64748b;
+  font-weight: 400;
+  font-size: 0.78rem;
+  margin-left: 6px;
+}
+
+/* Priority Badges */
+.dash-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  height: 24px;
+  box-sizing: border-box;
+}
+
+.badge-urgente { background: #fee2e2; color: #991b1b; }
+.badge-alta { background: #ffedd5; color: #9a3412; }
+.badge-normal { background: #eff6ff; color: #1e40af; }
+.badge-baja { background: #f0fdf4; color: #166534; }
+
+/* --------------------------------------------------------------------------
+   Tables for Inventory & Technicians
+   -------------------------------------------------------------------------- */
+.dash-table-wrap {
+  overflow-x: auto;
+  flex: 1;
+}
+
+.dash-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.dash-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  height: 38px;
+  box-sizing: border-box;
+}
+
+.dash-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+  height: 48px;
+  box-sizing: border-box;
+}
+
+.dash-table tr:hover td {
+  background: #f8fafc;
+}
+
+.dash-table .text-right { text-align: right; }
+.dash-table .text-center { text-align: center; }
+
+.dash-stock-alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Drilldown Modal Dialog
+   -------------------------------------------------------------------------- */
+.dash-modal-table-wrap {
+  max-height: 440px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-top: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   Active Filter Chips Bar
+   -------------------------------------------------------------------------- */
+.dash-active-filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.dash-active-filters-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.dash-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.dash-chip-remove {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.dash-chip-remove:hover {
+  color: #1d4ed8;
+}
+
+.dash-filter-results-summary {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: #059669;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Table Action Buttons & Redirections
+   -------------------------------------------------------------------------- */
+.dash-table-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.dash-table-btn:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+.dash-modal-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.dash-modal-search {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  width: 240px;
+}
+
