@@ -18,6 +18,7 @@ import {
   defaultRouteFor,
   navigationForRole,
   routeForPath,
+  rutaDesdeClavePantalla,
   rutaSoloDev,
 } from "./config/routing";
 import { setAccessToken } from "./services/api";
@@ -59,6 +60,19 @@ function AppRoutes() {
   function login(result) {
     setAccessToken(result.access_token);
     setUser(result.user);
+  }
+
+  /* Adaptador para las pantallas de otros devs (legado de develop): reciben
+   * onNavigate(clave) y navegan por hash a la ruta equivalente de
+   * config/routing.js (DashboardPage llama onNavigate("incidents") y
+   * ("employees")). AppShell sigue recibiendo su onNavigate por PATH (para el
+   * menú); las pantallas reciben ESTA función, igual que el App.jsx de
+   * develop se la pasaba a todas. El aterrizaje por rol lo sigue decidiendo
+   * defaultRouteFor (config/routing.js); tras login se respeta el hash
+   * solicitado si el rol lo permite. */
+  function navegarPantalla(clave, params) {
+    const ruta = rutaDesdeClavePantalla(clave, params);
+    if (ruta) navigate(ruta);
   }
 
   function updateProfile(profile) {
@@ -106,7 +120,7 @@ function AppRoutes() {
 
   return <AppShell user={user} groups={groups} activePath={shown.path} onNavigate={(target) => navigate(target)} onLogout={logout}>
     <Suspense fallback={<p>Cargando…</p>}>
-      <Page key={shown.path} user={user} onProfileUpdated={updateProfile} />
+      <Page key={shown.path} user={user} onProfileUpdated={updateProfile} onNavigate={navegarPantalla} />
     </Suspense>
   </AppShell>;
 }

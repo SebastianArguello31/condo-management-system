@@ -24,12 +24,21 @@ import IncidentsPage from "../features/incidents/IncidentsPage";
 import EspaciosPage from "../features/espacios-comunes/EspaciosPage";
 import MisReservasPage from "../features/reservas/MisReservasPage";
 import GestionReservasPage from "../features/reservas/GestionReservasPage";
+import DashboardPage from "../features/dashboard/DashboardPage";
+import MaintenancePage from "../features/maintenance/MaintenancePage";
 
 const ADMIN = "ADMIN";
 const RESIDENTE = "RESIDENTE";
 const TECNICO = "TECNICO";
 
 const ITEMS = {
+  dashboard: {
+    path: "/dashboard",
+    label: "Dashboard e Indicadores",
+    icon: "dashboard",
+    component: DashboardPage,
+    roles: [ADMIN, TECNICO],
+  },
   incidencias: {
     path: "/incidencias",
     label: "Incidencias",
@@ -121,14 +130,24 @@ const ITEMS = {
     component: GestionReservasPage,
     roles: [ADMIN],
   },
+  /* Insumos (Dev 2, estilo legado de develop): clave de pantalla "maintenance",
+   * icono con el mismo nombre (path ya preexistente en el kit de iconos). */
+  insumos: {
+    path: "/insumos",
+    label: "Insumos",
+    icon: "maintenance",
+    component: MaintenancePage,
+    roles: [ADMIN, TECNICO],
+  },
 };
 
-/* Pantalla por defecto por rol (igual que el comportamiento anterior: el
- * ADMIN entra a Usuarios y accesos; los demás, a Incidencias). */
+/* Pantalla por defecto por rol (decisión actualizada en la integración con
+ * develop: el ADMIN y el TECNICO aterrizan en el Dashboard; el residente
+ * sigue en Incidencias). */
 const RUTA_INICIAL = {
-  [ADMIN]: "usuarios",
+  [ADMIN]: "dashboard",
   [RESIDENTE]: "incidencias",
-  [TECNICO]: "incidencias",
+  [TECNICO]: "dashboard",
 };
 
 const GRUPOS = {
@@ -139,7 +158,7 @@ const GRUPOS = {
     },
     {
       label: "Comunidad",
-      items: ["incidencias", "edificios", "unidades", "espacios", "gestionReservas"],
+      items: ["dashboard", "incidencias", "insumos", "edificios", "unidades", "espacios", "gestionReservas"],
     },
   ],
   [RESIDENTE]: [
@@ -148,7 +167,7 @@ const GRUPOS = {
   ],
   [TECNICO]: [
     { label: "Personas", items: ["perfil"] },
-    { label: "Comunidad", items: ["incidencias"] },
+    { label: "Comunidad", items: ["dashboard", "incidencias", "insumos"] },
   ],
 };
 
@@ -167,6 +186,40 @@ export function routeForPath(path) {
 
 export function defaultRouteFor(rol) {
   return ITEMS[RUTA_INICIAL[rol]] ?? null;
+}
+
+/* Clave de pantalla estilo legado (la que usaba el App.jsx de develop y que
+ * las pantallas de otros devs pasan a onNavigate, p. ej. DashboardPage llama
+ * onNavigate("incidents") / onNavigate("employees")) → id de ITEMS de este
+ * router. Las claves cuyo id ya coincide con ITEMS (dashboard, misReservas,
+ * espacios, gestionReservas, profile…) van directo por el fallback. */
+const CLAVE_PANTALLA = {
+  dashboard: "dashboard",
+  incidents: "incidencias",
+  maintenance: "insumos",
+  users: "usuarios",
+  employees: "empleados",
+  specialties: "especialidades",
+  admins: "administradores",
+  residents: "residentes",
+  buildings: "edificios",
+  units: "unidades",
+  residentHome: "miPerfil",
+  misReservas: "misReservas",
+  espacios: "espacios",
+  gestionReservas: "gestionReservas",
+  profile: "perfil",
+};
+
+/* Adaptador para onNavigate(clave) de las pantallas de develop: traduce la
+ * clave a la ruta hash de este router. `params` (opcional, no lo usa ninguna
+ * pantalla hoy) se serializa como query string, igual que el resto del
+ * router (#/<ruta>?clave=valor). */
+export function rutaDesdeClavePantalla(clave, params) {
+  const item = ITEMS[CLAVE_PANTALLA[clave] ?? clave] ?? null;
+  if (!item) return null;
+  const query = params ? new URLSearchParams(params).toString() : "";
+  return query ? `${item.path}?${query}` : item.path;
 }
 
 /* Ruta SOLO DEV: #/ui — guía visual viva de los componentes (ADMIN).

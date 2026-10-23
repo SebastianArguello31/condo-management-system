@@ -11,6 +11,7 @@ const paths = {
   buildings: "M4 21V3h12v18M16 9h4v12M8 7h4M8 11h4M8 15h4M2 21h20",
   units: "m3 10 9-7 9 7v11H3V10Zm6 11v-8h6v8",
   incidents: "M5 3h14v18H5V3Zm4 5h6m-6 4h6m-6 4h4",
+  maintenance: "M4 7l8-4 8 4-8 4-8-4Zm0 0v10l8 4m8-14v10l-8 4m0-10v10",
   profile: "M20 21v-2a7 7 0 0 0-14 0v2M17 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z",
   search: "m21 21-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z",
   plus: "M12 5v14M5 12h14", close: "m6 6 12 12M6 18 18 6",
@@ -24,6 +25,14 @@ const paths = {
   espacios: "M4 4h16v16H4V4Zm0 8h16M12 4v16",
   residentHome: "M4 21V9l8-6 8 6v12H4ZM13.9 12a1.9 1.9 0 1 1-3.8 0ZM8.5 21v-1a3.5 3.5 0 0 1 7 0v1",
   dots: "M12 4h0m0 8h0m0 8h0",
+  dashboard: "M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z",
+  chart: "M3 3v18h18M7 16h2M11 11h2M15 7h2",
+  calendar: "M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18",
+  tool: "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z",
+  box: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12",
+  clock: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2",
+  trendUp: "M23 6l-9.5 9.5-5-5L1 18",
+  alertTriangle: "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4m0 4h.01",
 };
 
 /* strokeWidth por nombre: los "dots" son subpaths de longitud cero que, con

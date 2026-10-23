@@ -40,8 +40,10 @@ Entregables: frontend refactorizado con base compartida, navegación clara,
 4. Un único archivo de configuración declarativa
    (`frontend/src/config/routing.js`: Ítems → groups por rol). AppShell y App
    no conocen claves de módulos. `features/auth/navigation.js` fue eliminado.
-5. **Aterrizaje por rol:** ADMIN → `#/usuarios`; **RESIDENTE y TECNICO →
-   `#/incidencias`** (decisión del dueño con CP5).
+5. **Aterrizaje por rol:** ADMIN y TECNICO → `#/dashboard`; **RESIDENTE →
+   `#/incidencias`** (actualizado en la integración con develop, que trae el
+   cambio del equipo: la decisión original del dueño con CP5 era ADMIN →
+   `#/usuarios` y RESIDENTE/TECNICO → `#/incidencias`).
 6. Token solo en memoria (sin persistencia): refresh cierra sesión. Igual que
    antes. 401 → evento "session-expired" → logout + hash limpio con replace.
 7. Copy en español neutro (tuteo) para todo lo nuevo.
@@ -348,6 +350,36 @@ terminado un paso mientras sus bugs sigan abiertos.
 | B10 | Unidades (admin) | "Tipo de unidad" solo acepta números | Verificada: `UnitsPage.jsx:11` declara `type: "number"` → input numérico en `CrudPage.jsx:299`; el backend SÍ expone el catálogo `GET /unit-types` (`backend/app/modules/units/routes.py:16-20`). Debería ser select con lookup (como Edificios, `BuildingsPage.jsx:12-19`). **NO lo causó CP6b:** `git diff HEAD~1 HEAD` prueba que la versión anterior ya usaba `type: "number"`; el cambio solo borró la rama `buildings`/detalle/timeout | F2-2 (select del catálogo unitTypes) |
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
+
+> **ACTUALIZACIÓN de integración (2026-10-23):** el `merge --no-commit
+> origin/develop` en `feature/refactor-frontend-base` fue resuelto:
+>
+> - Conflicto en `components/ui/Icon.jsx` resuelto conservando AMBOS juegos de
+>   iconos (los del kit Dev 1 + `dashboard`, `chart`, `calendar`, `tool`,
+>   `box`, `clock`, `trendUp`, `alertTriangle` de develop). Sin marcadores ni
+>   claves duplicadas; cada icono se exporta igual (componente único
+>   `<Icon name=...>`).
+> - `features/auth/navigation.js` quedó eliminado y `App.jsx` con la versión
+>   Dev 1 (router por hash): SIN referencias residuales a navigation.js.
+> - Pantallas de otros devs registradas en `config/routing.js`: **dashboard**
+>   (`#/dashboard`, "Dashboard e Indicadores", icono `dashboard`, roles
+>   ADMIN/TECNICO) e **insumos** (`#/insumos`, "Insumos", icono
+>   `maintenance`, roles ADMIN/TECNICO), en el grupo "Comunidad" (coherente
+>   con el split PERSONAS/COMUNIDAD de su shell), en el orden de su `develop`.
+> - Aterrizaje por rol: **ADMIN y TECNICO → dashboard; RESIDENTE →
+>   /incidencias** (RUTA_INICIAL actualizada; §2.5 también).
+> - DashboardPage recibe `onNavigate(clave)` vía adaptador en `App.jsx`
+>   (`rutaDesdeClavePantalla` en `config/routing.js`: clave legada → ruta
+>   hash, con soporte de query opcional; DashboardPage usa "incidents" y
+>   "employees"). No se modificó DashboardPage.
+> - CSS revisado: `dashboard.css` (838 líneas) es todo `.dash-*`, sin `:root`
+>   ni variables del kit, sin selectores de elemento globales → no pisa
+>   tokens; `base.css`/`tokens.css` no rompen sus pantallas (sus botones
+>   siempre definen color por clase). No fue necesario acotar nada.
+> - `IncidentsPage.jsx` conserva MI import de `downloadAttachment`
+>   (`utils/`) Y su `InterventionMaterials` de Dev 2. Nota para **F2-5**:
+>   al refactorizar la pantalla se debe conservar `InterventionMaterials`.
+> - Siguiente paso: **F2-1b** (sin cambios de plan).
 
 Orden fijado por el dueño: PRIMERO F2-1b (y opcionalmente F2-2 si queda
 tiempo y el dueño lo autoriza); la integración con el equipo va DESPUÉS.
