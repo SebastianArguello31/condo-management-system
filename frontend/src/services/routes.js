@@ -14,4 +14,5 @@ export const routes = Object.freeze({
   incidents: "/incidents",
   reservations: "/reservations",
   commonSpaces: "/common-spaces",
+  maintenance: "/maintenance",
 });

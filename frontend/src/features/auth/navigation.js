@@ -1,5 +1,6 @@
 export const navigation = [
   { key: "incidents", label: "Incidencias", roles: ["ADMIN", "RESIDENTE", "TECNICO"] },
+  { key: "maintenance", label: "Insumos", roles: ["ADMIN", "TECNICO"] },
   { key: "residentHome", label: "Mi perfil y unidad", roles: ["RESIDENTE"] },
   { key: "misReservas", label: "Mis reservas", roles: ["RESIDENTE"] },
   { key: "profile", label: "Mi perfil", roles: ["TECNICO"] },
