@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import Icon from "../../components/ui/Icon";
@@ -102,8 +102,6 @@ export default function GestionReservasPage() {
     }
   }
 
-  const filteredRows = useMemo(() => rows, [rows]);
-
   return (
     <section className="management-page">
       <div className="mg-page-heading">
@@ -156,7 +154,7 @@ export default function GestionReservasPage() {
 
         {loading ? (
           <div className="mg-empty" role="status">Cargando reservas...</div>
-        ) : filteredRows.length === 0 ? (
+        ) : rows.length === 0 ? (
           <div className="mg-empty">
             <h2>Sin reservas</h2>
             <p>No hay reservas que coincidan con los filtros seleccionados.</p>
@@ -178,7 +176,7 @@ export default function GestionReservasPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredRows.map((row) => (
+                {rows.map((row) => (
                   <tr key={row.id_reserva}>
                     <td className="mg-muted">#{row.id_reserva}</td>
                     <td className="mg-muted">{row.fecha}</td>

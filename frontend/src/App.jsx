@@ -10,13 +10,14 @@
  * Las pantallas son los componentes legacy; reciben user y
  * onProfileUpdated igual que antes y se remontan al cambiar de ruta.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Login from "./features/auth/Login";
 import { useHashRoute } from "./hooks/useHashRoute";
 import {
   defaultRouteFor,
   navigationForRole,
   routeForPath,
+  rutaSoloDev,
 } from "./config/routing";
 import { setAccessToken } from "./services/api";
 import AppShell from "./components/AppShell";
@@ -50,8 +51,13 @@ export default function App() {
 
   const groups = user ? navigationForRole(user.rol) : [];
   const fallback = user ? defaultRouteFor(user.rol) : null;
-  const route = routeForPath(path);
-  const active = route && groups.some((group) => group.items.includes(route)) ? route : null;
+  /* Rutas: la normal apunta a ITEMS; #/ui (SOLO DEV) sale de rutaSoloDev y
+   * exige rol ADMIN (en producción esa ruta no existe → cae al fallback). */
+  const route = routeForPath(path) ?? (rutaSoloDev?.path === path ? rutaSoloDev : null);
+  const active = route
+    && (route.devOnly ? user?.rol === "ADMIN" : groups.some((group) => group.items.includes(route)))
+    ? route
+    : null;
 
   const lastActiveRef = useRef(null);
   useEffect(() => {
@@ -81,6 +87,8 @@ export default function App() {
   const Page = shown.component;
 
   return <AppShell user={user} groups={groups} activePath={shown.path} onNavigate={(target) => navigate(target)} onLogout={logout}>
-    <Page key={shown.path} user={user} onProfileUpdated={updateProfile} />
+    <Suspense fallback={<p>Cargando…</p>}>
+      <Page key={shown.path} user={user} onProfileUpdated={updateProfile} />
+    </Suspense>
   </AppShell>;
 }

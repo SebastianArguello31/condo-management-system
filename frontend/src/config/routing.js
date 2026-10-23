@@ -9,6 +9,8 @@
  * resuelven por rol; AppShell no conoce claves de módulos).
  * ========================================================================== */
 
+import { lazy } from "react";
+
 import UsersPage from "../features/users/UsersPage";
 import EmployeesPage from "../features/users/EmployeesPage";
 import AdminsPage from "../features/users/AdminsPage";
@@ -166,3 +168,21 @@ export function routeForPath(path) {
 export function defaultRouteFor(rol) {
   return ITEMS[RUTA_INICIAL[rol]] ?? null;
 }
+
+/* Ruta SOLO DEV: #/ui — guía visual viva de los componentes (ADMIN).
+ * Registrada en ESTA config pero nunca en GRUPOS: invisible en el menú y
+ * desconocida para la resolución normal de rutas. El componente va en
+ * import dinámico: en el build de producción import.meta.env.DEV es false,
+ * la rama muere y el módulo NO entra al bundle (Vite no genera su chunk). */
+const UiGuideDev = import.meta.env.DEV ? lazy(() => import("../dev/ui-guide.jsx")) : null;
+
+export const rutaSoloDev = UiGuideDev
+  ? {
+      path: "/ui",
+      label: "Guía de UI",
+      icon: "espacios",
+      component: UiGuideDev,
+      roles: [ADMIN],
+      devOnly: true,
+    }
+  : null;

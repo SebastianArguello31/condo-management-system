@@ -1,12 +1,12 @@
 # Plan de refactorización del frontend — Dev 1 (Sprint 4, Grupo 6 IS2 FP-UNA)
 
 Documento de persistencia del plan. La próxima sesión debe retomar desde aquí
-y de `STATUS.md`.
+y de `STATUS.md` (ver también la sección "Prompt de arranque" al final).
 
 ## 1. Objetivo y alcance
 
 **Dev 1 (Sprint 4):** Refactorización y normalización del frontend
-(React + Vite, estructura feature-based en `frontend/src/features/*`):
+(React 19 + Vite 8, estructura feature-based en `frontend/src/features/*`):
 1. Unificar estilos, componentes, formularios, tablas, filtros y mensajes.
 2. Extraer componentes reutilizables y reducir código duplicado.
 3. Normalizar estados de carga, error, éxito y vacío.
@@ -15,180 +15,268 @@ y de `STATUS.md`.
 5. Unificar validaciones y experiencia consistente en móvil y escritorio.
 6. Mantener TODAS las funcionalidades existentes durante la refactorización.
 
-Entregable: frontend refactorizado con base compartida, navegación clara,
-historiales separados y documentación de convenciones
-(`frontend/AGENTS.md` + `docs/convenciones-frontend.md` — fase final).
+Entregables: frontend refactorizado con base compartida, navegación clara,
+`docs/convenciones-frontend.md` + `frontend/AGENTS.md` completos (fase final).
 
 **Otros devs (no pisar):**
 - Dev 2: mantenimiento — integrará **insumos dentro de las intervenciones de
-  incidencias** (`features/maintenance/`, hoy vacío, `.gitkeep`). IncidentsPage
-  se refactoriza ANTES que reservas para habilitarlo.
-- Dev 3: reportes/dashboard (`features/dashboard/`, hoy vacío). El dashboard
+  incidencias** (`features/maintenance/`, hoy vacío). IncidentsPage se
+  refactoriza ANTES que reservas para habilitarlo.
+- Dev 3: reportes/dashboard (`features/dashboard/` vacío). El dashboard
   enlazará a listados filtrados vía query params del router por hash.
 - Dev 4: espacios/reservas (completo en develop; `GestionReservasPage` se
   migra después de IncidentsPage, coordinar antes de tocarlo).
-- Nota: roles en el sistema hoy: ADMIN / RESIDENTE / TECNICO.
+- Roles reales del sistema: ADMIN / RESIDENTE / TECNICO.
 
-## 2. Decisiones tomadas (aprobadas por el dueño del sprint)
+## 2. Decisiones tomadas (aprobadas por el dueño)
 
-1. Rol "gestor" **no existe aún**; la config de navegación/permisos es
+1. Rol "gestor" no existe aún; la config de navegación/permisos es
    declarativa por rol para agregarlo sin tocar AppShell.
-2. Navegación: estado + sincronización con `location.hash` (0 dependencias),
-   con **query params** (`#/incidencias?estado=RECIBIDA&prioridad=ALTA`) vía
-   hook `useHashRoute()` → `{ path, params, navigate(path, params) }`.
+2. Navegación por hash (0 dependencias) con query params
+   (`#/incidencias?estado=RECIBIDA`) vía `hooks/useHashRoute.js`.
 3. Tras login, redirigir al hash solicitado si el rol lo permite; si no, a la
    pantalla por defecto del rol. Hash desconocido o sin permiso → pantalla por
-   defecto (nunca pantalla en blanco).
-4. Un único archivo de configuración declarativa (rol → grupos → ítems →
-   ruta, icono, etiqueta). AppShell no conoce claves de módulos.
-5. Eliminar dead code confirmado: `features/users/managementConfig.js`,
-   `features/users/EmployeeSpecialties.jsx`, rama `buildings` de
-   `UnitsPage.jsx`, CSS muerto (`index.css`: `.topbar`, `nav/.actions` viejo,
-   `.incident-*`, `.filter-bar`, `.detail-grid/-section`, `.timeline*`,
-   `.priority-badge`), `filteredRows` de `GestionReservasPage`,
-   `setTimeout` sin cleanup de `UnitsPage`.
-6. Token solo en memoria (sin persistencia): refresh de página cierra sesión.
-   Se deja igual.
-7. Copy: español neutro (tuteo). Eliminar el voseo en todo el frontend.
-8. Contraste WCAG AA estricto: 4.5:1 texto, 3:1 bordes de controles y glifos.
-9. STATUS.md se limpia: dejar solo "Dev 1 — refactor FE" (hecho).
+   defecto (nunca pantalla en blanco), con `navigate(..., { replace: true })`.
+4. Un único archivo de configuración declarativa
+   (`frontend/src/config/routing.js`: Ítems → groups por rol). AppShell y App
+   no conocen claves de módulos. `features/auth/navigation.js` fue eliminado.
+5. **Aterrizaje por rol:** ADMIN → `#/usuarios`; **RESIDENTE y TECNICO →
+   `#/incidencias`** (decisión del dueño con CP5).
+6. Token solo en memoria (sin persistencia): refresh cierra sesión. Igual que
+   antes. 401 → evento "session-expired" → logout + hash limpio con replace.
+7. Copy en español neutro (tuteo) para todo lo nuevo.
+8. Contraste WCAG AA estricto: 4.5:1 texto, 3:1 bordes de controles y glifos;
+   verificación con `frontend/scripts/check-contrast.mjs`.
+9. STATUS.md se limpia al final: dejar solo "Dev 1 — refactor FE".
 10. El dueño rediseña también las pantallas nuevas de los demás devs: la base
     debe cubrir listados, fichas, formularios, gráficos, filtros.
-11. Única dependencia nueva aprobada: @fontsource (ibm-plex-sans,
-    ibm-plex-mono, source-serif-4), subconjuntos latin + latin-ext.
-12. Sin Vitest ni tests frontend: verificación = `npm run build` +
-    checklist manual por pantalla.
+11. Única dependencia nueva: @fontsource (ibm-plex-sans/mono, source-serif-4,
+    subconjuntos latin + latin-ext, autoalojados).
+12. Sin Vitest ni tests frontend: verificación = `npm run build` + checklist
+    manual por pantalla + guía `#/ui` en DEV.
+13. **Paginación fuera de Fase 1** (decisión con CP4). Comprobado contra el
+    backend: **ningún endpoint pagina** (los `LIMIT` son `LIMIT 1`; los
+    schemas de query solo filtran). La paginación será feature futura del
+    backend; su UI (pager + DataTable) se decide al migrar esos listados.
+14. **validations/ espeja los schemas Marshmallow reales** del backend
+    (solo lectura) — nada inventado; mensajes de contraseña EXACTOS del
+    backend; mínimo de contraseña confirmado: ≥8 caracteres y ≤72 bytes UTF-8.
+15. **api.js aditivo:** `signal` opcional → fetch; el Error conserva el
+    mismo `message` de siempre y añade `err.status` y `err.errors`
+    (objeto campo → mensajes; el backend lo envía como `{ error, errors }`
+    con HTTP 400 en errores de marshmallow). 401/login intactos.
+16. Los arneses temporales se reemplazaron por la **guía viva `#/ui`**
+    (solo DEV, solo ADMIN; fuera del bundle de producción) en CP6b.
+17. Dead code JS aprobado y eliminado en CP6b (ver §5). El CSS legado NO se
+    borra todavía: solo se lista lo sin referencias (ver §8).
 
-## 3. Dirección visual: "Bitácora técnica"
+## 3. Dirección visual y convenciones fijas ("Bitácora técnica")
 
 Fuente de verdad visual: **`frontend/src/styles/tokens.css`** (prohibido hex
-hardcodeado fuera de ese archivo). Resumen de restricciones (todas
-obligatorias):
-- Radios: 4px controles, 6px paneles. Nunca > 8px.
-- Sin sombras decorativas (solo overlays). Jerarquía con líneas de 1px y
-  fondos tonales. Sin gradientes, glassmorphism, Emojis ni iconos en círculos
-  de color. Sin tarjetas dentro de tarjetas.
-- Secciones tipo "ficha": título de sección a la izquierda, contenido a la
-  derecha, separadas por reglas horizontales (1 columna en móvil).
-- PageHeader: título + una línea de metadatos opcional + acciones. SIN eyebrow
-  ni breadcrumb duplicado.
-- Tablas densas: cabecera sin fondo en versalitas pequeñas, filas ~44px,
-  IDs/códigos/fechas en mono con `tabular-nums`. Una acción primaria como
-  enlace de texto por fila; secundarias en menú de fila accesible
-  ("Más acciones", navegable por teclado, Esc cierra).
-- Estados (incidencias/reservas) = glifo de forma distinta + texto, colores
-  atenuados desde tokens. Nunca solo color.
-- Sidebar: ítem activo con línea de 2px a la izquierda + peso 600; sin
-  píldora ni punto. Icono distinto por ítem (hoy Perfil y Reservas comparten
-  en `Icon.jsx` — corregir).
-- Timeline "bitácora" para historiales/auditoría (línea vertical fina, marcas
-  de tiempo en mono, estado y autor).
-- Movimiento: solo transiciones color/opacidad 120–160ms; respetar
-  `prefers-reduced-motion`; sin animaciones de entrada.
-- Breakpoints (convención): **640px** (tablas → tarjetas apiladas, fichas
-  y PageHeader a una columna), **900px**, **1150px** (contenedor completo).
-  No son tokens (las custom properties no funcionan en media queries);
-  las media queries solo usan esos tres valores.
-- Microcopy concreto y sobrio.
+o px hardcodeados fuera de ese archivo; las líneas de 1px/2px son la excepción
+del plan). Restricciones y convenciones YA FIJADAS:
 
-## 4. Reglas de ejecución
+- Radios 4px controles / 6px paneles; nunca > 8px. Sin sombras decorativas
+  (solo overlays). Sin gradientes, glassmorphism, emojis, iconos en círculos
+  de color, ni tarjetas dentro de tarjetas.
+- Breakpoints (convención, no tokens): **640px** (tablas → tarjetas apiladas,
+  fichas y PageHeader a una columna), **900px**, **1150px** (contenedor
+  completo). Las media queries solo usan esos tres valores.
+  *Excepción legada marcada:* el drawer del shell sigue en 760px (CSS viejo)
+  hasta la limpieza final (ver §8).
+- Estados y avisos:
+  - `Alert` es CONTROLADO: `visible` + `onDismiss` los maneja el padre (sin
+    estado interno). El tono danger usa `role="alert"`.
+  - `Toast`: región `aria-live="polite"` y una región aparte
+    `aria-live="assertive"` reservada para tono danger.
+  - Estado de error de campo: `aria-invalid` + `aria-describedby` vía `<Field>`.
+  - `DataTable` integra loading (Skeleton), error (ErrorState + Reintentar) y
+    vacío (EmptyState con acción). Filas ~44px, código/fechas/montos en mono
+    con `tabular-nums`, `th scope="col"`.
+  - Sección tipo "ficha" (`Section`): título a la izquierda, contenido a la
+    derecha, regla de 1px; 1 columna <640px.
+  - Timeline "bitácora" para historiales: línea de 1px, marcador con tono,
+    hora en mono, estado y autor en meta.
+- Sidebar: ítem activo = `aria-current="page"` + línea de 2px a la izquierda
+  + peso 600 (sin píldora, sin punto). Icono distinto por ítem en `Icon.jsx`.
+- Movimiento: solo transiciones de color/opacidad 120–160ms; respeta
+  `prefers-reduced-motion` (ui.css apaga transiciones y spinner).
+- Router de hash: `#/ruta?a=1&b=2`; anclas internas (p. ej. `#main-content`
+  del skip link) NO son rutas — se conserva la pantalla actual.
 
-- SE PUEDE: leer todo el repo; crear/editar código en `frontend/` según el
-  checkpoint en curso; `STATUS.md` (raíz) es la única excepción fuera de
-  `frontend/`; `docs/plan-refactor-frontend.md` y `frontend/AGENTS.md`
-  autorizados explícitamente.
-- PROHIBIDO ejecutar: git (add/commit/push/pull/checkout/switch/stash/reset/
-  merge), npm (install/ci/uninstall/run), node, o cualquier comando que
-  modifique repo/dependencias/entorno. Solo lectura (ls, cat, grep, git
-  status/diff/log).
-- PROHIBIDO modificar: `package.json`, `package-lock.json`, `.gitignore`,
-  `opencode.json`, `.env`, `backend/`, `database/`. Si algo requiere cambios
-  ahí: indicarlo exactamente y el dueño lo aplica.
-- Todo comando (instalar, compilar, correr scripts, commitear) se entrega ya
-  escrito, listo para copiar/pegar en **CMD**, en orden exacto.
-- Trabajo por CHECKPOINTS pequeños. No avanzar al siguiente hasta que el dueño
-  responda "ok CPn".
-- No cambiar contratos de API ni backend; reportar lo que los requiera.
-- No migrar pantallas en Fase 1 salvo lo mínimo para que el shell nuevo
-  funcione.
+## 4. Arquitectura de datos y servicios (convenciones API)
 
-## 5. Formato obligatorio del reporte al cerrar CADA checkpoint
+- `frontend/src/services/api.js`: `api(path, { method, body, responseType,
+  signal })`. Injecta `Authorization: Bearer` del token en memoria. En error
+  lanza `Error` con `message` legado (sin cambiar) + `status` + `errors`
+  cuando el backend envía `{ error, errors }`. `responseType: "blob"` para
+  binarios; 204 → null.
+- `frontend/src/services/routes.js`: rutas canónicas del backend
+  (`API_BASE = "/condominio"`).
+- `frontend/src/validations/`: `validate(form, schema) → { campo: mensaje }`
+  (trim como el `pre_load` del backend, excepto password; primer mensaje por
+  campo). `schemas.js` espeja los schemas Marshmallow (origen citado por
+  bloque): `cuenta` (+`cuentaAdmin`/`cuentaResidente`/`cuentaEmpleado`),
+  `login` (password 1–200, sin política), `perfilEmpleado` (email requerido) /
+  `perfilResidente` (email opcional), `contrasenaNueva`, `incidenciaCrear`,
+  `incidenciaPrioridad`, `intervencionCrear`, `reservaCrear`,
+  `especialidadCrear`. `rules.js` tiene las primitivas. Todavía no conectado a
+  pantallas (conectar al migrar cada pantalla).
+- `frontend/src/utils/downloadAttachment.js`: descarga de adjuntos (blob +
+  `<a download>`). Importar desde aquí.
 
-1. Archivos creados / modificados / eliminados (ruta + una línea de qué hace).
-2. Comandos para el dueño, en bloque único y en orden (instalación si aplica,
-   build, script de contraste si aplica, cómo levantar el proyecto).
-3. Checklist manual con casillas `- [ ]`: pantalla/ruta a abrir, acción y
-   resultado esperado; tamaños 375px / 768px / 1280px si hay UI; navegación
-   por teclado (Tab/Enter/Esc); qué funcionalidad existente podría haberse
-   roto y cómo comprobarlo.
-4. Riesgos y decisiones pendientes (o "ninguno").
-5. Commit sugerido: mensaje convencional + comandos git para que el DUEÑO los
-   ejecute; aclarar si conviene commitear ya o esperar.
-6. Pregunta final: "¿ok CPn para continuar con CP(n+1)?"
-
-## 6. Checkpoints de la Fase 1 (estado actual)
+## 5. Checkpoints de la Fase 1 — TODOS COMPLETOS
 
 | CP | Contenido | Estado |
 |---|---|---|
-| CP1 | `styles/tokens.css` + `styles/base.css` + fuentes (imports) + `scripts/check-contrast.mjs` | **Hecho y verificado por el dueño.** Build OK (solo woff2 latin/latin-ext); check-contrast exit 0, 62 pares PASA (peor par: --ink-3 sobre tinte danger 4.58:1). Commit hecho. |
-| CP2 | Hooks: `useQuery`, `useMutation`, `useConfirm`, `useHashRoute` | **Hecho.** Commit del dueño. Ajustes incluidos: `navigate(path, params, { replace })` (replaceState + re-dispara `hashchange`), `useQuery(fetcher, deps, { enabled })`, descarte de data por deps (reload conserva), parse con `indexOf`. Arnés temporal `frontend/src/dev/hooks-smoke.jsx` (ELIMINAR en CP6). |
-| CP3 | UI básicos: Button, Alert, Toast (aria-live), StatusBadge (glifo+texto), Field/Input/Select/Textarea/Checkbox (error por campo, aria-invalid/aria-describedby), SearchInput, EmptyState, ErrorState, Spinner/Skeleton, PageHeader | **Hecho.** Commit del dueño. Ajustes: Alert controlado (visible/onDismiss del padre), Toast con región assertive para danger, breakpoints 640/900/1150 documentados como convención, PageHeader apila <640px. Checkbox standalone y StatusBadge presets provisionales (se ajustan al migrar). |
-| CP4 | UI compuestos: Section (ficha), DefinitionList, Timeline, RowActionsMenu, Modal ampliado (footer, backdrop opt-in, foco atrapado/devuelto, Esc), ConfirmDialog (enchufado a useConfirm/useConfirmResponder), DataTable (caption oculta, th scope, tarjetas apiladas <640px, estados integrados), FilterBar | **Hecho.** Commit del dueño; modales legacy verificados a mano. Paginación fuera del alcance por decisión del dueño (comprobación de backend en Pendientes). |
-| CP5 | Router por hash + config declarativa de roles/menú + AppShell nuevo (sidebar con `inert` en drawer cerrado) | **Implementado.** `config/routing.js` (única fuente: ítems con path/label/icon/component/roles + grupos por rol; AppShell sin claves de módulos), `App.jsx` con `useHashRoute` + fallback a la pantalla por defecto del rol (`replace`), redirect tras login respeta el hash permitido, logout/session-expired limpian el hash con replace, `AppShell.jsx` nuevo (foco del drawer, `inert`, sin breadcrumb, ícono distinto por ítem, ítem activo con línea 2px + peso 600 en `shell.css`), `Icon.jsx` ampliado, `features/auth/navigation.js` eliminado. Pantallas legacy intactas. Pendiente: verificación por rol del dueño + commit. |
-| CP6a | `validations/` (reglas REALES leídas de los schemas Marshmallow, solo lectura) + `api.js` aditivo (signal, err.status, err.errors; message intacto) + `downloadAttachment` a `utils/` + arnés `dev/validations-smoke.jsx` | **Implementado, sin conectar a pantallas.** Reglas espejo de: accounts (cuenta, 8 chars/72 bytes), auth LoginSchema (login 1–200), EmployeeProfile/ResidentProfileUpdate (perfiles), incidents (incidencia creación, prioridad, intervención), reservations (reserva), specialties. `validate(form, schema) → {campo: mensaje}` en español neutro, trim como el pre_load del backend. Arnés temporal `dev/validations-smoke.jsx` (suite local 20 casos + api en vivo: err.errors y AbortController) — ELIMINAR en CP6b. Pendiente: verificación del dueño + commit. |
-| CP6b | Página `#/ui` (solo `import.meta.env.DEV`, guía visual viva) consolidando los arneses + eliminación de arneses y dead code aprobado | Sin iniciar |
+| CP1 | `styles/tokens.css` + `base.css` + fuentes + `scripts/check-contrast.mjs` | **Hecho y verificado.** Build OK (solo woff2 latin/latin-ext); check-contrast exit 0, 62 pares PASA (peor: --ink-3 sobre tinte danger 4.58:1). |
+| CP2 | Hooks: `useQuery`, `useMutation`, `useConfirm`, `useHashRoute` | **Hecho** (commit del dueño). `navigate(path, params, { replace })` re-dispara `hashchange`; `useQuery(fetcher, deps, { enabled })`; descarte de data por deps. |
+| CP3 | UI básicos: Button, Alert controlado, Toast (assertive en danger), StatusBadge, Field/Input/Select/Textarea/Checkbox, SearchInput, EmptyState, ErrorState, Spinner/Skeleton, PageHeader | **Hecho** (commit del dueño). |
+| CP4 | UI compuestos: Section, DefinitionList, Timeline, RowActionsMenu, Modal (footer + backdrop opt-in + foco), ConfirmDialog, DataTable, FilterBar | **Hecho** (commit del dueño). Paginación fuera del alcance (decisión §2.13). |
+| CP5 | Router por hash + config declarativa + AppShell nuevo | **Hecho** (verificado por rol, commit del dueño). Aterrizaje §2.5. Icono Perfil/Reservas separado; clases ui-* sobre mg-modal; drawer móvil con `inert`. |
+| CP6a | `api.js` aditivo (signal/status/errors) + `validations/` + `utils/downloadAttachment` | **Hecho** (verificado a mano por el dueño: login, listado, guardado, error de servidor, descarga, sesión expirada; commit). |
+| CP6b | Página `#/ui` solo DEV (guía viva) + eliminación de arneses + dead code JS | **Implementado.** Pendiente: verificación del dueño + commit (ver STATUS.md). |
 
-Condiciones: cada checkpoint debe dejar el proyecto compilando y funcionando
-igual que antes (coexistencia controlada; CSS viejo solo se borra si es dead
-code confirmado / al final).
+## 6. Mapa de carpetas del frontend (Fase 1)
 
-## 7. Plan de migración posterior a la Fase 1 (orden vigente)
+```
+frontend/src/
+├── App.jsx                    Router por hash + config (resolución por rol,
+│                              fallback con replace, login/logout, Suspense).
+├── main.jsx                   Fuentes @fontsource + tokens/base + App.
+├── index.css                  CSS legado (solo lectura; limpieza final).
+├── config/
+│   └── routing.js             ÚNICA config de rutas/roles/grupos + ruta
+│                              solo DEV #/ui (lazy, no entra al bundle prod).
+├── hooks/                     (barrel index.js)
+│   ├── useHashRoute.js        {path, params, navigate(path, params, {replace})}.
+│   ├── useQuery.js            AbortController, cancels, {enabled}, reload.
+│   ├── useMutation.js         dedupe por promesa en vuelo; rethrow.
+│   └── useConfirm.jsx         contexto + ConfirmProvider + useConfirmResponder.
+├── components/
+│   ├── AppShell.jsx           Shell Bitácora (grupos por rol, drawer inert).
+│   ├── shell.css              Ajustes Bitácora del shell (solo tokens).
+│   ├── CrudPage.jsx           CRUD genérico legacy (pantallas aún por migrar).
+│   ├── ui/                    Componentes base (ui.css = único CSS del kit)
+│   │   ├── Button / Alert / Toast / StatusBadge / Field + Input + Select +
+│   │   │   Textarea + Checkbox / SearchInput / EmptyState / ErrorState /
+│   │   │   Loading (Spinner/Skeleton) / PageHeader
+│   │   ├── Section / DefinitionList / Timeline / RowActionsMenu /
+│   │   │   Modal / ConfirmDialog / DataTable / FilterBar
+│   │   ├── ui.css             tokens-only; es la única fuente de estilos ui.
+│   │   └── Icon.jsx           íconos (paths SVG); Perfil≠Reservas.
+│   └── (Icon.jsx vive en components/ui).
+├── validations/               rules.js + schemas.js + validate.js + index.js.
+├── services/                  api.js + routes.js.
+├── utils/
+│   └── downloadAttachment.js  Descarga de adjuntos.
+├── styles/
+│   ├── tokens.css             Única fuente de valores visuales.
+│   ├── base.css               Reset/base/utilidades (carga al final).
+│   └── users-ui.css           CSS legado de shell/pantallas (se borra al final).
+├── dev/
+│   └── ui-guide.jsx           Guía viva #/ui (solo DEV; lazy, ADMIN).
+└── features/
+    ├── auth/                  Login.jsx (login.css; rediseño en fase 2).
+    ├── units/                 BuildingsPage.jsx, UnitsPage.jsx.
+    ├── users/                 UsersPage, EmployeesPage, AdminsPage,
+    │                          SpecialtiesPage, ResidentsPage, ResidentHome,
+    │                          EmployeeProfile, ManagementPage, CreateAccount,
+    │                          ResidentUnits.
+    ├── incidents/             IncidentsPage.jsx (modal de detalle legacy).
+    ├── espacios-comunes/      EspaciosPage.jsx, SpacePolicies.jsx.
+    └── reservas/              MisReservasPage.jsx, GestionReservasPage.jsx,
+                               CreateReservation.jsx.
+```
 
-1. `refactor:` SpecialtiesPage, BuildingsPage, UnitsPage → CrudPage + ui (CRUD puro, riesgo bajo).
-2. `refactor:` ManagementPage + ResidentsPage + CreateAccount (+ `validations/`, relación residentes-unidades).
+Eliminados en CP6b (dead code aprobado, probado con grep cero imports):
+`features/users/managementConfig.js`, `features/users/EmployeeSpecialties.jsx`,
+rama `buildings` + `setTimeout` sin cleanup de `UnitsPage.jsx`,
+`filteredRows` de `GestionReservasPage.jsx`, arneses `dev/hooks-smoke.jsx`,
+`dev/ui-smoke.jsx` y `dev/validations-smoke.jsx` (la guía `#/ui` absorbe al
+ último).
+
+## 7. Plan restante (Fase 2) — orden vigente
+
+1. `refactor:` SpecialtiesPage, BuildingsPage, UnitsPage → CrudPage + ui
+   (CRUD puro, riesgo bajo; conecta validations/especialidadCrear).
+2. `refactor:` ManagementPage + ResidentsPage + CreateAccount
+   (+ `validations/` cuenta/perfiles; relación residentes-unidades).
 3. `refactor:` EspaciosPage / SpacePolicies (subvistas y relaciones).
-4. `refactor:` MisReservas / GestionReservas / CreateReservation — **coordinar con Dev 4 antes** (riesgo alto).
-5. `refactor:` IncidentsPage → subcomponentes (tabla, form de creación, modal de detalle, timeline) — **antes que reservas**, habilita a Dev 2 (insumos en intervenciones).
-6. `refactor:` Profiles: split historiales (ResidentHome → Perfil = solo datos+unidades; historiales a pantallas propias "Mis incidencias"/"Mis reservas"; EmployeeProfile → datos + especialidades).
-7. `feat:` navegación por hash + grupos por rol + AppShell final.
-8. `style:` pasada responsive + a11y (contraste, aria-invalid, dialog/inert).
-9. `chore:` borrar dead code + CSS viejo + `docs/convenciones-frontend.md` + `frontend/AGENTS.md` completo + limpieza final de STATUS.md.
+4. `refactor:` IncidentsPage → subcomponentes (tabla, form de creación,
+   modal de detalle, timeline) — **antes que reservas**, habilita a Dev 2
+   (insumos en intervenciones).
+5. `refactor:` MisReservas / GestionReservas / CreateReservation —
+   **coordinar con Dev 4 antes** (riesgo alto; aquí se decide UI de
+   paginación si Dev 3/4 la necesitan).
+6. `refactor:` Profiles: split historiales — ResidentHome → Perfil
+   (solo datos+unidades) y pantallas propias "Mis incidencias"/"Mis
+   reservas"; EmployeeProfile → datos + especialidades.
+7. `feat:` navegación final + AppShell consolidado (ya existe; consolidar
+   breakpoints y drawer a convención 640px).
+8. `style:` pasada responsive + a11y (contraste final, aria-invalid,
+   dialog/inert revisados).
+9. `feat:` Rediseño del Login (login.css nuevo sobre tokens; mantener
+  `onLogin(result)` intacto).
+10. `chore:` borrar dead code restante + CSS legado sin referencias
+   (lista en §8) + `docs/convenciones-frontend.md` + limpieza final de
+   STATUS.md y frontend/AGENTS.md.
 
-(En Fase 1 el anillo base CP5/CP6 puede adelantar partes de 7; los pasos
-finales de AppShell/navegación se consolidan aquí.)
+## 8. Pendientes y hallazgos abiertos
 
-## 8. Pendientes abiertos
+**Producto de Dev 1:**
+- [ ] Verificación final de CP6b: guía `#/ui` (STATUS.md tiene las casillas).
+- [ ] **Adjuntos grandes:** el backend responde 413 al superar el límite
+      (16 MB) y la UI actual solo muestra un error genérico. Al migrar
+      IncidentsPage: validación de tamaño/tipo en cliente + mensaje claro
+      (413) y/o Alert explicativo.
+- [ ] **`StatusBadge` con presets provisionales:** alinearlos con los estados
+      reales al migrar cada pantalla.
+- [ ] **Fuente de datos del historial** de incidencias residente/técnico: el
+      front usa GET `/incidents` (backend filtra por usuario); suposición sin
+      verificar — confirmar con backend al migrar.
+- [ ] Drawer del shell sigue con breakpoint 760px (CSS legado); al consolidar
+      AppShell final pasarlo a la convención (640px).
+- [ ] ⭐ Paginación (§2.13): decidir UI (pager + DataTable) al migrar
+      listados; el backend no pagina hoy.
 
-- [x] Ejecutar `check-contrast` tras el fix (hecho por el dueño): exit 0, 62
-      pares PASA; peor margen de texto `--ink-3` sobre tinte danger 4.58:1.
-- [x] Confirmar contraste de los pares nuevos con tinte (verificado: 62 pares
-      PASA con margen ≥4.5:1).
-- [ ] `npm audit` (Solo lectura, dueño): identificar paquete origen de la
-      vulnerabilidad high reportada; NO ejecutar `npm audit fix` sin revisar.
-- [x] CP3 hecho y commiteado (ajustes: Alert controlado, Toast assertive en
-      danger, breakpoints 640/900/1150 como convención).
-- [ ] CP4 en verificación del dueño (arnés `frontend/src/dev/ui-smoke.jsx`,
-      ver STATUS.md); commitear tras pasar el checklist.
-- [x] CP4 hecho (commit del dueño; modales legacy verificados a mano).
-- [x] Paginación: comprobada en solo lectura contra el backend — **ningún
-      endpoint pagina**: todos los listados devuelven arrays completos (los
-      `LIMIT` existen solo como `LIMIT 1`, búsquedas puntuales); los schemas
-      de query (reservas/common_spaces/maintenance) filtran pero no paginan.
-      La paginación quedará como feature futura del backend; en el front
-      decidir la UI (pager + DataTable) al migrar esos listados.
-- [x] Iconos de "Perfil" y "Reservas" separados (CP5: Icon.jsx ampliado con
-      residentHome, reservations, reservationsGestion y espacios).
-- [x] CP5 hecho y commiteado (verificado por rol). Decisión: RESIDENTE y
-      TECNICO aterrizan en #/incidencias (ya así en config/routing.js).
-- [ ] CP6a en verificación del dueño (arnés `frontend/src/dev/validations-smoke.jsx`,
-      ver STATUS.md); commitear tras pasar el checklist.
-- [ ] CP6b (ver tabla de estado).
-- [ ] Al cierre (CP6b): eliminar los arneses `frontend/src/dev/hooks-smoke.jsx`,
-      `frontend/src/dev/ui-smoke.jsx` y `frontend/src/dev/validations-smoke.jsx`.
-- [x] Reglas del backend leídas (marshmallow, solo lectura) en CP6a; confirmado:
-      minLength password ≥8 caracteres y ≤72 bytes UTF-8
-      (backend/app/core/passwords.py) — el front ya usaba 8 chars/72 bytes.
-      Máximos por campo reflejados en validations/schemas.js con su origen.
-- [ ] Fuente de datos del historial de incidencias del residente/técnico: el
-      front usa GET `/incidents` (backend filtra por usuario; suposición no
-      verificada contra el backend).
+**Pruebas NO ejecutadas** (los arneses se borraron en CP6b; probar en uso
+real a medida que se migren pantallas):
+- Suite `validate()` de 20 casos del arnés CP6a (el dueño solo verificó a
+  mano: login, listado, guardado, error de servidor, descarga de adjunto
+  pequeño, sesión expirada).
+- `err.errors` renderizado por campo en un formulario real (solo se probó con
+  el login vacío).
+- `useQuery` con `signal`/`{ enabled }` y `useMutation` con dedupe en uso
+  real (los casos del arnés CP2 sí se verificaron en su momento).
+- Casos de hash del arnés CP2 (vacío, malformado, encoding %) en pantallas
+  reales con filtros en la URL.
+- Pruebas visuales manuales de CP1: Login y pantallas internas a 375px y
+  1280px (tipografía IBM Plex visible, layout igual), teclado (Tab anillo
+  2px en módulos legacy), prefers-reduced-motion.
+
+**Ambiente/deuda técnica:**
+- [ ] `npm audit`: 1 vulnerabilidad high sin revisar (solo lectura; NO
+      ejecutar `npm audit fix` sin análisis del dueño).
+- [ ] CSS legado SIN referencias en JSX (inventario del barrido CP6b; borrar
+      en la limpieza final): de `index.css`: `.topbar`, `.container`,
+      `.table-container`, `.detail-grid`, `.detail-section`, `.filter-bar`,
+      `.incident-*` (item, description, field, toolbar, attachment, status),
+      `.timeline*` (header, item, body), `.priority-badge`, `.status-*`
+      (ASIGNADA, CANCELADA, CERRADA, EN_ESPERA, EN_PROCESO, EN_REVISION,
+      RECHAZADA, RECIBIDA, RESUELTA), `.login-container`, `.login-form`;
+      de `users-ui.css`: `.shell-breadcrumb`, `.shell-active-dot`,
+      `.mg-stats`, `.mg-stat-icon`, `.mg-identity`, `.mg-you`, `.mg-tag`,
+      `.mg-tags`, `.mg-description`, `.mg-required`,
+      `.mg-specialty-picker` (+ `is-selected`), `.mg-delete-button`,
+      `.mg-delete-summary`, `.mg-pagination`, `.mg-bottom-note`,
+      `.mg-spinner`, `.mg-avatar-square`. (`.tabular-nums` de base.css no
+      tiene consumidores como CLASE, pero el valor CSS
+      `font-variant-numeric: tabular-nums` sí se usa en ui.css: decidir en la
+      limpieza.)
+
+## 9. Prompt de arranque
+
+"Lee docs/plan-refactor-frontend.md y STATUS.md. Resume en 5 líneas dónde
+estamos, qué falta verificar y cuál es el siguiente paso. No cambies nada
+hasta que yo confirme."

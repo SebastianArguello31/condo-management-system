@@ -1,18 +1,13 @@
 /* ==========================================================================
- * TEMPORAL — Arnés de prueba de los componentes ui (CP3 + CP4).
- * ELIMINAR EN CP6. No está importado por la aplicación: para probarlo, con
- * `npm run dev` corriendo, ejecutar en la consola del navegador:
- *
- *   await import("/src/dev/ui-smoke.jsx").then((m) => m.mountUiSmoke())
- *
- * Abre una capa a pantalla completa con una demo de cada componente; los
- * toasts del ToastProvider del arnés aparecen arriba de la capa y el
- * ConfirmDialog queda enchufado a su ConfirmProvider. Desmontar con
- * __uiSmokeUnmount() en consola o el botón "Quitar arnés".
+ * Guía de UI viva (CP3 + CP4) — ruta SOLO DEV: #/ui (solo ADMIN).
+ * Importada dinámicamente desde config/routing.js bajo import.meta.env.DEV:
+ * en producción la rama desaparece y el módulo NO entra al bundle.
+ * Sustituye al arnés ui-smoke.jsx (eliminado en CP6b). Une una sección por
+ * componente con todos sus estados; los avisos de la consola usan el
+ * prefijo [ui-guide] como ayuda durante la revisión.
  * ========================================================================== */
 
-import React, { useEffect, useRef, useState } from "react";
-import ReactDOM from "react-dom/client";
+import { useRef, useState } from "react";
 import {
   Alert,
   Button,
@@ -42,24 +37,8 @@ import {
 import { ConfirmProvider, useConfirm } from "../hooks/useConfirm";
 
 function logU(message) {
-  console.log(`[arnés-ui] ${message}`);
+  console.log(`[ui-guide] ${message}`);
 }
-
-const capaStyle = {
-  position: "fixed",
-  inset: 0,
-  zIndex: "var(--z-drawer)",
-  overflowY: "auto",
-  background: "var(--bg)",
-};
-
-const contenidoStyle = {
-  maxWidth: 720,
-  margin: "0 auto",
-  padding: "var(--space-6)",
-  fontFamily: "var(--font-ui)",
-  color: "var(--ink)",
-};
 
 function Bloque({ titulo, children }) {
   return (
@@ -164,6 +143,9 @@ function ToastsSection() {
           </Button>
         ))}
       </Fila>
+      <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
+        Los del tono danger se anuncian en la región aria-live="assertive".
+      </p>
     </Bloque>
   );
 }
@@ -181,6 +163,9 @@ function EstadosSection() {
         <StatusBadge estado="SIN ESTADO" />
         <StatusBadge estado="Custom" tone="warning" glyph="triangle" />
       </Fila>
+      <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
+        Presets provisionales: se alinean con los estados reales al migrar cada pantalla.
+      </p>
     </Bloque>
   );
 }
@@ -533,71 +518,35 @@ function DataTableSection() {
   );
 }
 
-function UiSmoke() {
-  useEffect(() => {
-    logU("montado — revisa la capa a pantalla completa");
-  }, []);
-
+export default function UiGuide() {
   return (
-    <div style={capaStyle}>
-      <div style={contenidoStyle}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBlock: "var(--space-4)" }}>
-          <strong style={{ fontSize: "var(--fs-13)" }}>
-            Arnés de UI (CP3+CP4) — temporal, eliminar en CP6
-          </strong>
-          <Button variant="quiet" onClick={() => window.__uiSmokeUnmount?.()}>
-            Quitar arnés
-          </Button>
+    <ConfirmProvider>
+      <ToastProvider>
+        <div style={{ display: "grid", gap: "var(--space-5)", paddingBlock: "var(--space-4)" }}>
+          <PageHeader
+            title="Guía de UI del sistema"
+            meta="Ruta solo DEV (#/ui) · CP3 + CP4 · solo tokens"
+          />
+          <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
+            Referencia viva de los componentes base. En producción esta página no existe
+            (import dinámico bajo import.meta.env.DEV: no entra al bundle).
+          </p>
+          <BotonesSection />
+          <AlertsSection />
+          <ToastsSection />
+          <EstadosSection />
+          <CamposSection />
+          <BusquedaSection />
+          <EstadosVaciosSection />
+          <CabezaSection />
+          <SectionFichaSection />
+          <TimelineSection />
+          <ModalSection />
+          <ConfirmSection />
+          <DataTableSection />
+          <ConfirmDialog />
         </div>
-        <PageHeader title="Componentes del sistema" meta="CP3 + CP4 · solo tokens" />
-        <BotonesSection />
-        <AlertsSection />
-        <ToastsSection />
-        <EstadosSection />
-        <CamposSection />
-        <BusquedaSection />
-        <EstadosVaciosSection />
-        <CabezaSection />
-        <SectionFichaSection />
-        <TimelineSection />
-        <ModalSection />
-        <ConfirmSection />
-        <DataTableSection />
-        <ConfirmDialog />
-      </div>
-    </div>
+      </ToastProvider>
+    </ConfirmProvider>
   );
-}
-
-let uiRoot = null;
-
-export function mountUiSmoke() {
-  if (uiRoot) {
-    logU("ya está montado");
-    return;
-  }
-  const host = document.createElement("div");
-  host.id = "ui-smoke";
-  document.body.appendChild(host);
-  uiRoot = ReactDOM.createRoot(host);
-  uiRoot.render(
-    <React.StrictMode>
-      <ConfirmProvider>
-        <ToastProvider>
-          <UiSmoke />
-        </ToastProvider>
-      </ConfirmProvider>
-    </React.StrictMode>
-  );
-  window.__uiSmokeUnmount = unmountUiSmoke;
-  logU("montado — desmóntalo con __uiSmokeUnmount()");
-}
-
-export function unmountUiSmoke() {
-  if (!uiRoot) return;
-  uiRoot.unmount();
-  uiRoot = null;
-  document.getElementById("ui-smoke")?.remove();
-  delete window.__uiSmokeUnmount;
-  logU("desmontado");
 }
