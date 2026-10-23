@@ -16,8 +16,13 @@ export default function InterventionMaterials({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [showForm, setShowForm] = useState(false);
 
   const endpoint = `${routes.maintenance}/intervenciones/${intervention.id_intervencion}/insumos`;
+
+  function formatQuantity(value) {
+    return new Intl.NumberFormat("es-PY", { maximumFractionDigits: 3, useGrouping: false }).format(Number(value));
+  }
 
   async function loadConsumptions() {
     setLoading(true);
@@ -55,6 +60,7 @@ export default function InterventionMaterials({
       setIdItem("");
       setQuantity("");
       setReason("");
+      setShowForm(false);
       setNotice("Consumo registrado y stock actualizado.");
       await loadConsumptions();
       await onStockChanged();
@@ -76,21 +82,25 @@ export default function InterventionMaterials({
         <ul>
           {consumptions.map((row) => (
             <li key={row.id_intervencion_insumos}>
-              {row.insumo}: {row.cantidad_utilizada} {row.unidad_medida}
+              {row.insumo}: {formatQuantity(row.cantidad_utilizada)} {row.unidad_medida}
             </li>
           ))}
         </ul>
       )}
 
       {canConsume && (
-        <form onSubmit={registerConsumption}>
+        <>
+          <button className="mg-secondary" type="button" onClick={() => setShowForm((visible) => !visible)}>
+            {showForm ? "Cancelar consumo" : "Registrar insumo"}
+          </button>
+          {showForm && <form onSubmit={registerConsumption}>
           <fieldset disabled={busy || items.length === 0}>
             <label>Insumo
               <select required value={idItem} onChange={(event) => setIdItem(event.target.value)}>
                 <option value="">Seleccionar...</option>
                 {items.map((item) => (
                   <option key={item.id_insumo} value={item.id_insumo}>
-                    {item.nombre} · Stock {item.stock} {item.unidad_medida}
+                    {item.nombre} · Stock {formatQuantity(item.stock)} {item.unidad_medida}
                   </option>
                 ))}
               </select>
@@ -106,7 +116,8 @@ export default function InterventionMaterials({
             </button>
             {items.length === 0 && <p>No hay insumos activos disponibles.</p>}
           </fieldset>
-        </form>
+          </form>}
+        </>
       )}
     </section>
   );
