@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, downloadAttachment } from "../../services/api";
+import { api } from "../../services/api";
+import { downloadAttachment } from "../../utils/downloadAttachment";
 import { routes } from "../../services/routes";
 import Icon from "../../components/ui/Icon";
 import Modal from "../../components/ui/Modal";

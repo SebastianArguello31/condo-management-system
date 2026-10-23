@@ -20,6 +20,11 @@ const paths = {
   logout: "M9 3H3v18h6m5-14 5 5-5 5m-7-5h14",
   menu: "M3 6h18M3 12h18M3 18h18", check: "m5 12 4 4L19 6",
   arrow: "m9 5 7 7-7 7", refresh: "M20 7V2m0 5h-5M4 17v5m0-5h5M4 8a8 8 0 0 1 14-3l2 2M4 17l2 2a8 8 0 0 0 14-3",
+  reservations: "M5 6h14v14H5V6Zm0 4h14M9 2v6m6-6v6",
+  reservationsGestion: "M5 6h14v14H5V6Zm0 4h14M9 2v6m6-6v6M8.5 14l2 2 4-4",
+  espacios: "M4 4h16v16H4V4Zm0 8h16M12 4v16",
+  residentHome: "M4 21V9l8-6 8 6v12H4ZM13.9 12a1.9 1.9 0 1 1-3.8 0ZM8.5 21v-1a3.5 3.5 0 0 1 7 0v1",
+  dots: "M12 4h0m0 8h0m0 8h0",
   dashboard: "M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z",
   chart: "M3 3v18h18M7 16h2M11 11h2M15 7h2",
   calendar: "M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18",
@@ -30,9 +35,14 @@ const paths = {
   alertTriangle: "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4m0 4h.01",
 };
 
+/* strokeWidth por nombre: los "dots" son subpaths de longitud cero que, con
+ * strokeLinecap round, se pintan como puntos (trazo más grueso para que el
+ * disparador compacto del menú sea legible). */
+const WIDTHS = { dots: 4 };
+
 export default function Icon({ name, size = 20 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    stroke="currentColor" strokeWidth={WIDTHS[name] ?? 1.65} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d={paths[name] || paths.users} />
   </svg>;
 }

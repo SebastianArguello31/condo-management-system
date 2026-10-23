@@ -1,0 +1,1005 @@
+/* ==========================================================================
+   ui.css — estilos de los componentes básicos (CP3) y compuestos (CP4).
+   Solo consume tokens de styles/tokens.css; prohibido hex o px hardcodeados
+   (salvo las líneas de 1px/2px que el plan permite).
+   Transiciones solo de color/opacidad; respeta prefers-reduced-motion.
+   Breakpoints por convención (no tokens): 640 / 900 / 1150px.
+   ========================================================================== */
+
+/* -- Utilidades ---------------------------------------------------------- */
+.ui-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -- Botón --------------------------------------------------------------- */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-h);
+  padding-inline: var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    opacity var(--motion-fast) ease;
+}
+
+.ui-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ui-btn-primary {
+  background: var(--brand);
+  color: var(--on-brand);
+}
+
+.ui-btn-primary:hover:enabled {
+  background: var(--brand-hover);
+}
+
+.ui-btn-primary:active:enabled {
+  background: var(--brand-pressed);
+}
+
+.ui-btn-quiet {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line-control);
+}
+
+.ui-btn-quiet:hover:enabled {
+  background: var(--bg);
+}
+
+.ui-btn-danger {
+  background: var(--accent);
+  color: var(--on-brand);
+}
+
+.ui-btn-danger:hover:enabled {
+  background: var(--accent-hover);
+}
+
+.ui-btn-danger:active:enabled {
+  background: var(--accent-pressed);
+}
+
+.ui-btn-block {
+  display: flex;
+  width: 100%;
+}
+
+.ui-btn:focus-visible,
+.ui-control:focus-visible,
+.ui-checkbox input:focus-visible,
+.ui-search-clear:focus-visible,
+.ui-toast-close:focus-visible,
+.ui-alert-close:focus-visible,
+.ui-page-actions :focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* -- Spinner (también inline dentro del botón con busy) ------------------- */
+.ui-spinner {
+  display: inline-block;
+  width: var(--fs-16);
+  height: var(--fs-16);
+  border: 2px solid var(--line-control);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  vertical-align: middle;
+  animation: ui-spin 1.2s linear infinite;
+}
+
+.ui-spinner-inline {
+  width: var(--fs-13);
+  height: var(--fs-13);
+  border-top-color: currentColor;
+}
+
+@keyframes ui-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* -- Esqueleto (estático, sin animación de entrada) ----------------------- */
+.ui-skeleton {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ui-skeleton-line {
+  display: block;
+  width: 100%;
+  height: var(--lh-16);
+  background: var(--line);
+  border-radius: var(--radius-sm);
+}
+
+/* -- Avisos persistentes (Alert) ------------------------------------------ */
+.ui-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+}
+
+.ui-alert-content {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.ui-alert-body {
+  margin: 0;
+  flex: 1;
+}
+
+.ui-alert-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.ui-alert-info { background: var(--status-info-bg); color: var(--status-info-fg); }
+.ui-alert-success { background: var(--status-success-bg); color: var(--status-success-fg); }
+.ui-alert-warning { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+.ui-alert-danger { background: var(--status-danger-bg); color: var(--status-danger-fg); }
+.ui-alert-muted { background: var(--status-muted-bg); color: var(--status-muted-fg); }
+
+.ui-alert-close,
+.ui-toast-close {
+  flex: none;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: var(--fs-16);
+  line-height: 1;
+  padding: var(--space-1);
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity var(--motion-fast) ease;
+}
+
+.ui-alert-close:hover,
+.ui-toast-close:hover {
+  opacity: 1;
+}
+
+/* -- Avisos efímeros (Toast) ---------------------------------------------- */
+.ui-toasts {
+  position: fixed;
+  inset-inline: 0;
+  bottom: var(--space-4);
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  z-index: var(--z-modal);
+  pointer-events: none;
+  padding-inline: var(--space-4);
+}
+
+.ui-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: min(calc(var(--space-12) * 9), 100%);
+  max-width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  background: var(--surface);
+  color: var(--ink);
+  pointer-events: auto;
+}
+
+.ui-toast > span {
+  flex: 1;
+}
+
+.ui-toasts-group {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: center;
+}
+
+.ui-toast-danger { border-color: var(--status-danger-fg); }
+.ui-toast-success { border-color: var(--status-success-fg); }
+.ui-toast-warning { border-color: var(--status-warning-fg); }
+.ui-toast-info { border-color: var(--status-info-fg); }
+
+/* -- Insignia de estado (glifo + texto, nunca solo color) ------------------ */
+.ui-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  font-weight: 500;
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+}
+
+.ui-status-info { background: var(--status-info-bg); color: var(--status-info-fg); }
+.ui-status-success { background: var(--status-success-bg); color: var(--status-success-fg); }
+.ui-status-warning { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+.ui-status-danger { background: var(--status-danger-bg); color: var(--status-danger-fg); }
+.ui-status-muted { background: var(--status-muted-bg); color: var(--status-muted-fg); }
+
+.ui-status-glyph {
+  display: inline-block;
+  flex: none;
+  /* K3: glifo reducido a ~8px (var(--space-2)) para que no compita con el
+   * texto del estado. */
+  width: var(--space-2);
+  height: var(--space-2);
+  background: currentColor;
+}
+
+.ui-status-dot {
+  border-radius: 50%;
+}
+
+.ui-status-ring {
+  border-radius: 50%;
+  background: none;
+  border: 2px solid currentColor;
+}
+
+.ui-status-square {
+  border-radius: 1px;
+}
+
+.ui-status-diamond {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.ui-status-triangle {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+/* -- Campos de formulario -------------------------------------------------- */
+.ui-field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.ui-field-label {
+  /* K1: display block (anula el `label { display: flex; column }` legacy de
+   * index.css) para que el texto y el asterisco queden EN LÍNEA dentro de la
+   * etiqueta; el texto accesible "obligatorio" va oculto (ui-visually-hidden
+   * en Field.jsx). */
+  display: block;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.ui-field-required {
+  color: var(--accent);
+}
+
+.ui-field-help {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--ink-3);
+}
+
+.ui-field-error {
+  margin: 0;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--status-danger-fg);
+}
+
+.ui-control {
+  width: 100%;
+  min-width: 0;
+  height: var(--control-h);
+  /* K2/K4: padding en los DOS ejes de forma explícita (anula el
+   * `input, select { padding: 10px }` legacy de index.css) y fuente completa
+   * de la escala del kit (Input y Select comparten .ui-control → mismo
+   * tamaño y altura). */
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  transition:
+    border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease;
+}
+
+/* K4: Select igualado a Input — font explícito (evita el `font: inherit` de
+ * `select` heredado del body legacy, Arial): mismos family/size/line-height y
+ * la misma altura de control que ya comparte .ui-control. */
+select.ui-control {
+  font: var(--fs-14)/var(--lh-14) var(--font-ui);
+  height: var(--control-h);
+}
+
+.ui-control:hover {
+  border-color: var(--ink-2);
+}
+
+.ui-control-invalid {
+  border-color: var(--accent);
+}
+
+.ui-control:disabled {
+  background: var(--bg);
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+textarea.ui-control {
+  height: auto;
+  min-height: calc(var(--lh-14) * var(--fs-14) * 3);
+  padding-block: var(--space-2);
+  resize: vertical;
+}
+
+/* -- Checkbox (etiqueta a la derecha del control) --------------------------- */
+.ui-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.ui-checkbox input {
+  width: var(--space-4);
+  height: var(--space-4);
+  flex: none;
+  accent-color: var(--brand);
+  margin: 0;
+}
+
+.ui-checkbox:has(input:disabled) {
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+/* -- Buscador ---------------------------------------------------------------- */
+.ui-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-search input {
+  flex: 1;
+}
+
+.ui-search-clear {
+  border: 0;
+  background: none;
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color var(--motion-fast) ease;
+}
+
+.ui-search-clear:hover {
+  color: var(--ink);
+}
+
+/* -- Estados vacío y de error ------------------------------------------------ */
+.ui-empty {
+  text-align: center;
+  padding-block: var(--space-8);
+  color: var(--ink-3);
+}
+
+.ui-empty-title {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.ui-empty-description {
+  margin: var(--space-2) auto 0;
+  max-width: calc(var(--space-12) * 10);
+  font-size: var(--fs-13);
+}
+
+.ui-empty > :last-child {
+  margin-top: var(--space-4);
+}
+
+.ui-error {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+}
+
+.ui-error-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.ui-error-description {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-13);
+}
+
+.ui-error > :last-child {
+  margin-top: var(--space-3);
+}
+
+/* -- Cabecera de página -------------------------------------------------------- */
+.ui-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.ui-page-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-28);
+  line-height: var(--lh-28);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ui-page-meta {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+}
+
+.ui-page-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .ui-page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* =====================================================================
+   Compuestos (CP4). Breakpoints convención: 640 / 900 / 1150 px.
+   ===================================================================== */
+
+/* -- Sección tipo "ficha" (título izquierda, contenido derecha) ------------ */
+.ui-section {
+  display: grid;
+  grid-template-columns: minmax(auto, calc(var(--space-12) * 5)) 1fr;
+  gap: var(--space-4) var(--space-8);
+  padding-block: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--line);
+}
+
+.ui-section-title {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ui-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.ui-section-body {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (max-width: 640px) {
+  .ui-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ui-section > :last-child {
+  margin-bottom: 0;
+}
+
+.ui-section-body > :first-child {
+  margin-top: 0;
+}
+
+/* -- Lista de definiciones -------------------------------------------------- */
+.ui-dl {
+  margin: 0;
+  display: grid;
+}
+
+.ui-dl-2 {
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--space-6);
+}
+
+.ui-dl-row {
+  display: grid;
+  grid-template-columns: minmax(auto, calc(var(--space-12) * 4)) 1fr;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.ui-dl-2 .ui-dl-row:last-child {
+  border-bottom: 0;
+}
+
+.ui-dl dt {
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+  padding-top: 0;
+}
+
+.ui-dl dd {
+  margin: 0;
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .ui-dl-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .ui-dl-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+}
+
+/* -- Timeline "bitácora" ------------------------------------------------------ */
+.ui-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-timeline-entry {
+  position: relative;
+  padding-left: var(--space-5);
+  padding-block: var(--space-3);
+}
+
+.ui-timeline-entry::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--space-2) / 2 - 0.5px);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+
+.ui-timeline-entry:first-child::before {
+  top: var(--space-3);
+}
+
+.ui-timeline-entry:last-child::before {
+  bottom: calc(100% - var(--space-4));
+}
+
+.ui-timeline-dot {
+  position: absolute;
+  left: 0;
+  top: var(--space-3);
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 50%;
+  background: var(--line-control);
+}
+
+.ui-timeline-dot-info { background: var(--status-info-fg); }
+.ui-timeline-dot-success { background: var(--status-success-fg); }
+.ui-timeline-dot-warning { background: var(--status-warning-fg); }
+.ui-timeline-dot-danger { background: var(--status-danger-fg); }
+.ui-timeline-dot-brand { background: var(--brand); }
+
+.ui-timeline-time {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-timeline-title {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.ui-timeline-meta {
+  margin: 0;
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+}
+
+.ui-timeline-detail {
+  margin-top: var(--space-2);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink-2);
+}
+
+/* -- K2: aislamiento del CSS legado ---------------------------------------------
+ * index.css tiene selectores "desnudos" (button, input, select, th, td, label)
+ * que se filtran en los componentes del kit. Reparado: th/td de .ui-table
+ * (fondo, padding y alineación explícitos), .ui-control (padding y fuente
+ * explícitos) y los botones de cierre/clear, que no definían border-radius.
+ * Auditado sin cambios: .ui-btn (define todo), .ui-alert y sus tonos
+ * (bg+color explícitos), .ui-modal (bg/color/borde explícitos).
+ * -------------------------------------------------------------------------- */
+.ui-alert-close,
+.ui-toast-close,
+.ui-search-clear {
+  border-radius: var(--radius-sm);
+}
+
+/* -- Menú de acciones de fila (K6: disparador compacto de tres puntos) ------- */
+.ui-row-actions {
+  position: relative;
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.ui-row-actions-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+
+.ui-row-actions-trigger:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.ui-menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: var(--z-modal);
+  min-width: calc(var(--space-12) * 4);
+  padding: var(--space-1);
+  display: grid;
+  background: var(--surface);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-md);
+}
+
+.ui-menuitem {
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+
+.ui-menuitem:hover:not([aria-disabled="true"]) {
+  background: var(--bg);
+}
+
+.ui-menuitem-danger {
+  color: var(--status-danger-fg);
+}
+
+.ui-menuitem[aria-disabled="true"] {
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+/* -- Modal ampliado (sobre <dialog> nativo; clases ui-* aplican solo cuando
+      ui.css está cargado — las pantallas legacy solo usan mg-modal) --------- */
+.ui-modal {
+  padding: 0;
+  width: min(calc(var(--space-11) * 15), calc(100vw - var(--space-8)));
+  max-height: calc(100dvh - var(--space-10));
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+.ui-modal::backdrop {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.ui-modal[data-backdrop="true"]::backdrop {
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+.ui-modal .ui-modal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.ui-modal .ui-modal-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-20);
+  line-height: var(--lh-20);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ui-modal .ui-modal-desc {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+.ui-modal .ui-modal-close {
+  border: 0;
+  background: none;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease;
+}
+
+.ui-modal .ui-modal-close:hover {
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.ui-modal-body {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+}
+
+.ui-modal .ui-btn {
+  font-family: var(--font-ui);
+  font-weight: 500;
+}
+
+.mg-modal.ui-modal :focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ui-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: 0;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--line);
+}
+
+.ui-confirm-message {
+  margin: 0;
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--ink-2);
+}
+
+/* -- Tabla de datos ----------------------------------------------------------- */
+.ui-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink);
+}
+
+/* K2: cabecera con fondo y color EXPLÍCITOS con tokens (anula el
+ * `th { background: #f7f9fc }` de index.css) y alineación declarada en las
+ * celdas para que el base.css legado no filtre dentro del componente. */
+.ui-table th {
+  text-align: left;
+  background: var(--bg);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--line-control);
+}
+
+.ui-table td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  height: var(--row-h);
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.ui-table tbody tr {
+  transition: background-color var(--motion-fast) ease;
+}
+
+.ui-table tbody tr:hover {
+  background: var(--bg);
+}
+
+.ui-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* K5: columna alineada a la derecha (números/códigos): th y td comparten la
+ * clase `.ui-num` (la aplica DataTable cuando la columna trae
+ * `align: "right"`); tabular-nums para que las cifras no "bailen". En <640px
+ * la pila mantiene el valor a la derecha vía `td > :only-child`. */
+.ui-table .ui-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .ui-table thead {
+    display: none;
+  }
+
+  .ui-table,
+  .ui-table tbody,
+  .ui-table tr,
+  .ui-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .ui-table tbody tr {
+    border: 1px solid var(--line-control);
+    border-radius: var(--radius-md);
+    margin-block: var(--space-2);
+    padding-block: var(--space-2);
+    background: var(--surface);
+  }
+
+  .ui-table td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    height: auto;
+    min-height: 0;
+    border-bottom: 1px solid var(--line);
+    padding-inline: var(--space-3);
+  }
+
+  .ui-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .ui-table td::before {
+    content: attr(data-label);
+    flex: none;
+    font-size: var(--fs-12);
+    line-height: var(--lh-12);
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  .ui-table td > :only-child {
+    text-align: right;
+  }
+}
+
+/* -- Barra de filtros (K7) ------------------------------------------------------
+ * Las celdas se alinean por la BASE del control (flex-end): la etiqueta va
+ * arriba (altura uniforme de fila: fs-12 + gap = var(--space-5)) y los
+ * controles/clic comparten la línea inferior, sin espacio reservado para
+ * mensajes; si un Field muestra error el Field crece hacia abajo. ------- */
+.ui-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-3);
+  padding-block: var(--space-3) 0;
+}
+
+/* -- Movimiento reducido --------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .ui-btn,
+  .ui-control,
+  .ui-search-clear,
+  .ui-alert-close,
+  .ui-toast-close,
+  .ui-row-actions-trigger,
+  .ui-menuitem,
+  .ui-table tbody tr,
+  .ui-modal .ui-modal-close {
+    transition: none;
+  }
+
+  .ui-spinner {
+    animation: none;
+  }
+}
