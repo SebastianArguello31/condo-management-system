@@ -294,9 +294,14 @@ final, según alcance).
       Volver funciona (modo legado).
 - **F2-2** `refactor:` Edificios y Unidades; "Tipo de unidad" como **select**
   del catálogo `unitTypes`. Cierra **B10**.
-- **F2-3** `refactor:` Mis reservas (residente).
+- **F2-3** `refactor:` Mis reservas (residente). — **HECHA (pendiente de
+  verificar):** migrada al kit (PageHeader con conteos, useQuery sin
+  parpadeo, DataTable con StatusBadge/RowActionsMenu y sin columna "#ID",
+  cancelación useConfirm danger + useMutation + Toast, detalle con
+  DefinitionList). Sin cambios en CreateReservation ni en contratos de API.
 - **F2-4** `refactor:` Perfil (residente y técnico) + historiales en pantallas
-  propias ("Mis incidencias" / "Mis reservas"). Cierra **B7 perfil**.
+  propias ("Mis incidencias" / "Mis reservas"). Cierra **B7 perfil**. *(Su
+  análisis se hará en otra sesión.)*
 - **F2-5** `refactor:` IncidentsPage en subcomponentes (tabla, form de
   creación con FormModal, modal de detalle, timeline). Cierra **B7 detalle,
   B8**. — Ver "Programación de F2-5" abajo.
@@ -350,6 +355,15 @@ terminado un paso mientras sus bugs sigan abiertos.
 | B10 | Unidades (admin) | "Tipo de unidad" solo acepta números | Verificada: `UnitsPage.jsx:11` declara `type: "number"` → input numérico en `CrudPage.jsx:299`; el backend SÍ expone el catálogo `GET /unit-types` (`backend/app/modules/units/routes.py:16-20`). Debería ser select con lookup (como Edificios, `BuildingsPage.jsx:12-19`). **NO lo causó CP6b:** `git diff HEAD~1 HEAD` prueba que la versión anterior ya usaba `type: "number"`; el cambio solo borró la rama `buildings`/detalle/timeout | F2-2 (select del catálogo unitTypes) |
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
+
+> **ORDEN RESTANTE (2026-10-23, decide el dueño tras la revisión de F2-3):**
+> 1. **F2-4** — Perfil + historiales separados (análisis en otra sesión).
+> 2. **docs/convenciones-frontend.md** (guía del kit para los demás, parte de F2-11).
+> 3. **F2-1b** (CrudPage `variant="ui"` + Especialidades) y **F2-2**
+>    (Edificios/Unidades, select de unitTypes → cierra B10).
+> 4. **F2-5** — IncidentsPage (fechas/horas locales + CONSERVAR
+>    `InterventionMaterials` de Dev 2).
+> 5. Resto de §7 en su orden (F2-6…F2-11).
 
 > **ACTUALIZACIÓN de integración (2026-10-23):** el `merge --no-commit
 > origin/develop` en `feature/refactor-frontend-base` fue resuelto:

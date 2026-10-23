@@ -34,7 +34,7 @@ const TECNICO = "TECNICO";
 const ITEMS = {
   dashboard: {
     path: "/dashboard",
-    label: "Dashboard e Indicadores",
+    label: "Indicadores",
     icon: "dashboard",
     component: DashboardPage,
     roles: [ADMIN, TECNICO],
