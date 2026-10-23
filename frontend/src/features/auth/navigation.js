@@ -1,4 +1,5 @@
 export const navigation = [
+  { key: "dashboard", label: "Dashboard e Indicadores", roles: ["ADMIN", "TECNICO"] },
   { key: "incidents", label: "Incidencias", roles: ["ADMIN", "RESIDENTE", "TECNICO"] },
   { key: "maintenance", label: "Insumos", roles: ["ADMIN", "TECNICO"] },
   { key: "residentHome", label: "Mi perfil y unidad", roles: ["RESIDENTE"] },

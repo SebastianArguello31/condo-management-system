@@ -15,11 +15,13 @@ import EspaciosPage from "./features/espacios-comunes/EspaciosPage";
 import MisReservasPage from "./features/reservas/MisReservasPage";
 import GestionReservasPage from "./features/reservas/GestionReservasPage";
 import MaintenancePage from "./features/maintenance/MaintenancePage";
+import DashboardPage from "./features/dashboard/DashboardPage";
 import { setAccessToken } from "./services/api";
 import AppShell from "./components/AppShell";
 import "./styles/users-ui.css";
 
 const pageComponents = {
+  dashboard: DashboardPage,
   users: UsersPage, employees: EmployeesPage, admins: AdminsPage,
   specialties: SpecialtiesPage, buildings: BuildingsPage, units: UnitsPage,
   incidents: IncidentsPage, profile: EmployeeProfile,
@@ -43,7 +45,7 @@ export default function App() {
   function login(result) {
     setAccessToken(result.access_token);
     setUser(result.user);
-    setPage(result.user.rol === "ADMIN" ? "users" : pagesForRole(result.user.rol)[0]?.key ?? null);
+    setPage(result.user.rol === "ADMIN" || result.user.rol === "TECNICO" ? "dashboard" : pagesForRole(result.user.rol)[0]?.key ?? null);
   }
 
   function updateProfile(profile) {
@@ -59,6 +61,6 @@ export default function App() {
   const Page = selected ? pageComponents[selected.key] : null;
 
   return <AppShell user={user} pages={allowedPages} selected={selected} onNavigate={setPage} onLogout={logout}>
-    {Page ? <Page key={selected.key} user={user} onProfileUpdated={updateProfile} /> : <p>Tu cuenta no tiene pantallas habilitadas.</p>}
+    {Page ? <Page key={selected.key} user={user} onProfileUpdated={updateProfile} onNavigate={setPage} /> : <p>Tu cuenta no tiene pantallas habilitadas.</p>}
   </AppShell>;
 }
