@@ -1,13 +1,17 @@
-/* Menú por fila: botón "Más acciones" (enlace de texto) que abre el menú
- * con ítems navegables por teclado. Flechas mueven, Home/End extremos,
- * Esc cierra y devuelve el foco al botón, Tab cierra (sin interrumpir el
- * recorrido), clic fuera cierra.
+/* Menú de acciones de fila (K6): disparador COMPACTO con icono de tres puntos
+ * (aria-label "Más acciones"), alineado a la derecha (justify-content y menú
+ * con right: 0). Patrón recomendado en listados y fichas: UNA acción
+ * principal como enlace/botón de texto junto al menú, y el resto de las
+ * acciones secundarias (ver, asignar, eliminar…) dentro del menú. Ítems
+ * navegables por teclado: flechas mueven, Home/End extremos, Esc cierra y
+ * devuelve el foco al botón, Tab cierra, clic fuera cierra.
  * actions: [{ label, onSelect, disabled?, danger? }]
  */
 import { useEffect, useRef, useState } from "react";
+import Icon from "./Icon";
 import "./ui.css";
 
-export default function RowActionsMenu({ actions = [], label = "Más acciones", className = "" }) {
+export default function RowActionsMenu({ actions = [], className = "" }) {
   const [open, setOpen] = useState(false);
   const root = useRef(null);
   const trigger = useRef(null);
@@ -72,6 +76,7 @@ export default function RowActionsMenu({ actions = [], label = "Más acciones", 
         className="ui-row-actions-trigger"
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label="Más acciones"
         onClick={() => setOpen((v) => !v)}
         onKeyDown={(event) => {
           if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -80,7 +85,7 @@ export default function RowActionsMenu({ actions = [], label = "Más acciones", 
           }
         }}
       >
-        {label}
+        <Icon name="dots" size={16} />
       </button>
       {open && (
         <div role="menu" ref={menu} className="ui-menu" onKeyDown={(event) => focusItems(event)}>

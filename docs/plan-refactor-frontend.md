@@ -69,6 +69,15 @@ Entregables: frontend refactorizado con base compartida, navegación clara,
     (solo DEV, solo ADMIN; fuera del bundle de producción) en CP6b.
 17. Dead code JS aprobado y eliminado en CP6b (ver §5). El CSS legado NO se
     borra todavía: solo se lista lo sin referencias (ver §8).
+18. **Errores y éxito en modales (convención):** el error de una acción
+    realizada dentro de un modal se muestra DENTRO del modal (nunca solo a
+    nivel página, causa de B8); el éxito se informa con **Toast**.
+19. **Autocomplete de formularios:** al crear la cuenta de OTRA persona →
+    `autoComplete="off"`; en el PERFIL PROPIO → `given-name`, `family-name`,
+    `email`, `tel` — y siempre con attribute `name` (causa de B2).
+20. El kit expone **FormModal** (se crea en F2-1): modal con el patrón
+    error-dentro/Toast-de la §2.18 ya integrado; CrudPage deja de usarse
+    ahí mismo.
 
 ## 3. Dirección visual y convenciones fijas ("Bitácora técnica")
 
@@ -135,7 +144,8 @@ del plan). Restricciones y convenciones YA FIJADAS:
 | CP4 | UI compuestos: Section, DefinitionList, Timeline, RowActionsMenu, Modal (footer + backdrop opt-in + foco), ConfirmDialog, DataTable, FilterBar | **Hecho** (commit del dueño). Paginación fuera del alcance (decisión §2.13). |
 | CP5 | Router por hash + config declarativa + AppShell nuevo | **Hecho** (verificado por rol, commit del dueño). Aterrizaje §2.5. Icono Perfil/Reservas separado; clases ui-* sobre mg-modal; drawer móvil con `inert`. |
 | CP6a | `api.js` aditivo (signal/status/errors) + `validations/` + `utils/downloadAttachment` | **Hecho** (verificado a mano por el dueño: login, listado, guardado, error de servidor, descarga, sesión expirada; commit). |
-| CP6b | Página `#/ui` solo DEV (guía viva) + eliminación de arneses + dead code JS | **Implementado.** Pendiente: verificación del dueño + commit (ver STATUS.md). |
+| CP6b | Página `#/ui` solo DEV (guía viva) + eliminación de arneses + dead code JS | **Hecho, verificado y commiteado** (`21d79f0`). |
+| CP6c | Ajustes al kit (K1–K6): Field asterisco en línea; aislamiento del CSS legado (DataTable/Modal/Input/Select/Button/Alert); StatusBadge con estados reales + glifo 8px + normalización; Select igualado a Input; DataTable `align: "right"` con tabular-nums; RowActionsMenu compacto con patrón documentado | **Implementado.** Pendiente: verificación del dueño (checklist visual a 375/768/1280) + commit. |
 
 ## 6. Mapa de carpetas del frontend (Fase 1)
 
@@ -162,7 +172,8 @@ frontend/src/
 │   │   │   Textarea + Checkbox / SearchInput / EmptyState / ErrorState /
 │   │   │   Loading (Spinner/Skeleton) / PageHeader
 │   │   ├── Section / DefinitionList / Timeline / RowActionsMenu /
-│   │   │   Modal / ConfirmDialog / DataTable / FilterBar
+│   │   │   Modal / FormModal (se crea en F2-1, §2.20) / ConfirmDialog /
+│   │   │   DataTable / FilterBar
 │   │   ├── ui.css             tokens-only; es la única fuente de estilos ui.
 │   │   └── Icon.jsx           íconos (paths SVG); Perfil≠Reservas.
 │   └── (Icon.jsx vive en components/ui).
@@ -196,42 +207,89 @@ rama `buildings` + `setTimeout` sin cleanup de `UnitsPage.jsx`,
 `dev/ui-smoke.jsx` y `dev/validations-smoke.jsx` (la guía `#/ui` absorbe al
  último).
 
-## 7. Plan restante (Fase 2) — orden vigente
+## 7. Plan restante (Fase 2) — orden vigente (fijado por el dueño)
 
-1. `refactor:` SpecialtiesPage, BuildingsPage, UnitsPage → CrudPage + ui
-   (CRUD puro, riesgo bajo; conecta validations/especialidadCrear).
-2. `refactor:` ManagementPage + ResidentsPage + CreateAccount
-   (+ `validations/` cuenta/perfiles; relación residentes-unidades).
-3. `refactor:` EspaciosPage / SpacePolicies (subvistas y relaciones).
-4. `refactor:` IncidentsPage → subcomponentes (tabla, form de creación,
-   modal de detalle, timeline) — **antes que reservas**, habilita a Dev 2
-   (insumos en intervenciones).
-5. `refactor:` MisReservas / GestionReservas / CreateReservation —
-   **coordinar con Dev 4 antes** (riesgo alto; aquí se decide UI de
-   paginación si Dev 3/4 la necesitan).
-6. `refactor:` Profiles: split historiales — ResidentHome → Perfil
-   (solo datos+unidades) y pantallas propias "Mis incidencias"/"Mis
-   reservas"; EmployeeProfile → datos + especialidades.
-7. `feat:` navegación final + AppShell consolidado (ya existe; consolidar
-   breakpoints y drawer a convención 640px).
-8. `style:` pasada responsive + a11y (contraste final, aria-invalid,
-   dialog/inert revisados).
-9. `feat:` Rediseño del Login (login.css nuevo sobre tokens; mantener
-  `onLogin(result)` intacto).
-10. `chore:` borrar dead code restante + CSS legado sin referencias
-   (lista en §8) + `docs/convenciones-frontend.md` + limpieza final de
-   STATUS.md y frontend/AGENTS.md.
+**Regla de cierre:** cada paso debe cerrar sus bugs de §7-bis; no se da por
+terminado un paso mientras sus bugs sigan abiertos.
+
+- **CP6c** `fix/kit:` ajustes al kit UI (K1–K6, detalle en STATUS.md:
+  Field asterisco en línea; DataTable aislado del CSS legado y fondo/color de
+  cabecera con tokens; StatusBadge con presets de estados reales y glifo 8px;
+  Select `font: inherit` igualado a Input; DataTable con `align: "right"` +
+  tabular-nums; RowActionsMenu con disparador compacto y patrón documentado).
+  — **IMPLEMENTADO** (pendiente verificación + commit; ver STATUS.md).
+- **F2-1** `refactor:` CrudPage → nuevo **FormModal** del kit + Especialidades
+  (migra a DataTable/FilterBar/EmptyState/ErrorState; conecta
+  validations/especialidadCrear). Cierra **B9**. **Revisión visual con
+  capturas obligatoria antes de seguir.**
+- **F2-2** `refactor:` Edificios y Unidades; "Tipo de unidad" como **select**
+  del catálogo `unitTypes`. Cierra **B10**.
+- **F2-3** `refactor:` Mis reservas (residente).
+- **F2-4** `refactor:` Perfil (residente y técnico) + historiales en pantallas
+  propias ("Mis incidencias" / "Mis reservas"). Cierra **B7 perfil**.
+- **F2-5** `refactor:` IncidentsPage en subcomponentes (tabla, form de
+  creación con FormModal, modal de detalle, timeline). Cierra **B7 detalle,
+  B8**. — Ver "Programación de F2-5" abajo.
+- **F2-6** `refactor:` ManagementPage + Residentes + CreateAccount
+  (+ `validations/` cuenta/perfiles; relación residentes-unidades).
+  Cierra **B1–B5**.
+- **F2-7** `refactor:` Espacios + Políticas. Cierra **B6**.
+- **F2-8** `refactor:` Gestión de reservas + CreateReservation.
+- **F2-9** `feat:` Rediseño del Login (login.css nuevo sobre tokens;
+  mantener `onLogin(result)` intacto).
+- **F2-10** `refactor:` Pantallas nuevas de Dev 2 (inventario) y Dev 3
+  (dashboard) cuando lleguen: el dueño las migra. El dashboard se diseña con
+  el kit: cifras en serif, tokens `--chart-*`, enlaces a listados filtrados
+  por hash con query params. Ambas se registran en `config/routing.js`.
+- **F2-11** `style/chore:` pasada responsive + a11y, limpieza de CSS legado
+  (lista en §8) y `docs/convenciones-frontend.md`.
+
+### Contexto de integración (equipo)
+
+- **División de trabajo:** el dueño migra TODAS las pantallas; los otros
+  devs hacen backend y dejan el frontend de sus pantallas nuevas en estilo
+  legado (NO refactorizan frontend).
+- **Calendario:** todos hacen push mañana; el dueño resuelve los conflictos
+  ese mismo día. Después de eso, los demás devs dejan de modificar el repo,
+  así que para la entrega del domingo no habrá más conflictos.
+- **Riesgo de merge conocido:** `features/auth/navigation.js` (eliminado) y
+  el cableado de `App.jsx` y `AppShell.jsx` fueron reemplazados por
+  `config/routing.js`. Las pantallas nuevas de otros devs se registran en
+  `config/routing.js` al integrarlas.
+- **Programación de F2-5 (IncidentsPage):** NO se programa por calendario.
+  Se decide después de comprobar si Dev 2 modificó esa pantalla; si la tocó,
+  se integra su cambio antes de refactorizarla.
+
+## 7-bis. Bugs conocidos (UI)
+
+Estado al 2026-10-22, verificados con solo lectura (evidencia de archivo/línea).
+**Regla:** cada paso de migración de §7 debe cerrar sus bugs; no se da por
+terminado un paso mientras sus bugs sigan abiertos.
+
+| ID | Pantalla / rol | Síntoma | Causa | Paso que lo resuelve (§7) |
+|----|----------------|---------|-------|---------------------------|
+| B1 | Usuarios y accesos (admin) | Detalle en Usuarios y accesos | Por verificar | F2-6 |
+| B2 | Nuevo empleado (modal, admin) | Popup de correo del navegador al escribir el nombre | Verificada: `CreateAccount.jsx:50` — inputs sin `name` ni `autoComplete` (solo password tiene) y `CrudPage.jsx:310-312`; el navegador adivina el campo y ofrece correo guardado | F2-6 (CreateAccount) |
+| B3 | Nuevo empleado | Mensaje suelto bajo el botón al cerrar el modal | Verificada: `CreateAccount.jsx:44` renderiza el error como `<p>` sin estilos (`mg-alert`) fuera del modal al cerrarlo | F2-6 (CreateAccount) |
+| B4 | Empleados (admin) | Detalle en Empleados | Por verificar | F2-6 |
+| B5 | Residentes (admin) | Ver unidades en Residentes | Por verificar | F2-6 (relación residentes-unidades) |
+| B6 | Espacios (admin) | Transición rota Espacios → Políticas de reserva | Por verificar | F2-7 |
+| B7 | Incidencias (técnico) / Mi perfil | Detalle en el modal de incidencias y en Mi perfil | Por verificar | F2-5 (detalle) / F2-4 (perfil) |
+| B8 | Nueva incidencia (modal, residente) | Error de backend se renderiza al fondo de la página con el modal abierto | Verificada: el `error` es estado único de página — `IncidentsPage.jsx:55` lo setea al crear y se renderiza solo a nivel página (`IncidentsPage.jsx:103`); el modal de creación (línea 105) no lo muestra adentro (el de detalle sí, línea 106) | F2-5 |
+| B9 | Edificios, Unidades, Especialidades (admin) | Botón azul "Reintentar carga" parpadeante: aparece y desaparece al abrir la pantalla | Verificada: condición `!ready` en `CrudPage.jsx:239-240`; `ready` inicia `false` (línea 43) y pasa a `true` al resolver la carga (línea 78) — botón visible en cada montaje hasta que llega la lista | F2-1 (CrudPage deprecado; se migra Especialidades) |
+| B10 | Unidades (admin) | "Tipo de unidad" solo acepta números | Verificada: `UnitsPage.jsx:11` declara `type: "number"` → input numérico en `CrudPage.jsx:299`; el backend SÍ expone el catálogo `GET /unit-types` (`backend/app/modules/units/routes.py:16-20`). Debería ser select con lookup (como Edificios, `BuildingsPage.jsx:12-19`). **NO lo causó CP6b:** `git diff HEAD~1 HEAD` prueba que la versión anterior ya usaba `type: "number"`; el cambio solo borró la rama `buildings`/detalle/timeout | F2-2 (select del catálogo unitTypes) |
 
 ## 8. Pendientes y hallazgos abiertos
 
 **Producto de Dev 1:**
-- [ ] Verificación final de CP6b: guía `#/ui` (STATUS.md tiene las casillas).
+- [x] Verificación final de CP6b: guía `#/ui` — completada por el dueño y
+      commiteada (`21d79f0`).
 - [ ] **Adjuntos grandes:** el backend responde 413 al superar el límite
       (16 MB) y la UI actual solo muestra un error genérico. Al migrar
       IncidentsPage: validación de tamaño/tipo en cliente + mensaje claro
       (413) y/o Alert explicativo.
-- [ ] **`StatusBadge` con presets provisionales:** alinearlos con los estados
-      reales al migrar cada pantalla.
+- [x] **`StatusBadge` presets:** alineados a los estados reales del backend
+      en CP6c (K3); revisar tonos/glyphs por pantalla al migrar cada una.
 - [ ] **Fuente de datos del historial** de incidencias residente/técnico: el
       front usa GET `/incidents` (backend filtra por usuario); suposición sin
       verificar — confirmar con backend al migrar.

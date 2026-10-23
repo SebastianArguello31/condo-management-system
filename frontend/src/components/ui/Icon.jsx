@@ -22,12 +22,18 @@ const paths = {
   reservations: "M5 6h14v14H5V6Zm0 4h14M9 2v6m6-6v6",
   reservationsGestion: "M5 6h14v14H5V6Zm0 4h14M9 2v6m6-6v6M8.5 14l2 2 4-4",
   espacios: "M4 4h16v16H4V4Zm0 8h16M12 4v16",
-  residentHome: "M4 21V9l8-6 8 6v12H4ZM13.9 12a1.9 1.9 0 1 1-3.8 0 1.9 1.9 0 0 1 3.8 0ZM8.5 21v-1a3.5 3.5 0 0 1 7 0v1",
+  residentHome: "M4 21V9l8-6 8 6v12H4ZM13.9 12a1.9 1.9 0 1 1-3.8 0ZM8.5 21v-1a3.5 3.5 0 0 1 7 0v1",
+  dots: "M12 4h0m0 8h0m0 8h0",
 };
+
+/* strokeWidth por nombre: los "dots" son subpaths de longitud cero que, con
+ * strokeLinecap round, se pintan como puntos (trazo más grueso para que el
+ * disparador compacto del menú sea legible). */
+const WIDTHS = { dots: 4 };
 
 export default function Icon({ name, size = 20 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    stroke="currentColor" strokeWidth={WIDTHS[name] ?? 1.65} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d={paths[name] || paths.users} />
   </svg>;
 }

@@ -1,8 +1,11 @@
 /* Tabla de datos con estados integrados: loading → Skeleton, error →
  * ErrorState (con Reintentar), sin filas → EmptyState. caption oculta de
  * salida; th con scope; en <640px cada fila se apila en tarjeta con el
- * nombre de la columna (data-label). Columnas: { key, header,
- * headerClassName?, cellClassName?, render?(fila) }.
+ * nombre de la columna (data-label).
+ * K5: columnas aceptan `align: "right"` → th y td con .ui-num (alineación a
+ * la derecha + tabular-nums) para montos, códigos y fechas numéricas.
+ * Columnas: { key, header, align?: "right" | "left", headerClassName?,
+ * cellClassName?, render?(fila) }.
  */
 import "./ui.css";
 import EmptyState from "./EmptyState";
@@ -49,13 +52,19 @@ export default function DataTable({
     );
   }
 
+  const alignClass = (column) => (column.align === "right" ? "ui-num" : "");
+
   return (
     <table className={["ui-table", className].filter(Boolean).join(" ")}>
       <caption className="ui-visually-hidden">{caption}</caption>
       <thead>
         <tr>
           {columns.map((column) => (
-            <th key={column.key} scope="col" className={column.headerClassName}>
+            <th
+              key={column.key}
+              scope="col"
+              className={[alignClass(column), column.headerClassName].filter(Boolean).join(" ") || undefined}
+            >
               {column.header}
             </th>
           ))}
@@ -65,7 +74,11 @@ export default function DataTable({
         {rows.map((row) => (
           <tr key={rowKey ? rowKey(row) : row.id ?? row}>
             {columns.map((column) => (
-              <td key={column.key} data-label={column.header} className={column.cellClassName}>
+              <td
+                key={column.key}
+                data-label={column.header}
+                className={[alignClass(column), column.cellClassName].filter(Boolean).join(" ") || undefined}
+              >
                 {column.render ? column.render(row) : row[column.key]}
               </td>
             ))}

@@ -152,19 +152,30 @@ function ToastsSection() {
 
 function EstadosSection() {
   return (
-    <Bloque titulo="StatusBadge (glifo + texto)">
+    <Bloque titulo="StatusBadge (glifo + texto con estados reales del backend)">
       <Fila>
         <StatusBadge estado="RECIBIDA" />
-        <StatusBadge estado="EN PROCESO" />
+        <StatusBadge estado="EN_REVISION" />
+        <StatusBadge estado="ASIGNADA" />
+        <StatusBadge estado="EN_PROCESO" />
+        <StatusBadge estado="EN_ESPERA" />
+        <StatusBadge estado="PENDIENTE" />
+      </Fila>
+      <Fila>
+        <StatusBadge estado="CONFIRMADA" />
         <StatusBadge estado="RESUELTA" />
-        <StatusBadge estado="APROBADA" />
         <StatusBadge estado="RECHAZADA" />
         <StatusBadge estado="CANCELADA" />
+        <StatusBadge estado="CERRADA" />
         <StatusBadge estado="SIN ESTADO" />
+      </Fila>
+      <Fila>
         <StatusBadge estado="Custom" tone="warning" glyph="triangle" />
       </Fila>
       <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
-        Presets provisionales: se alinean con los estados reales al migrar cada pantalla.
+        Presets alineados a los estados reales del backend (incidencia y reservas).
+        Nota: "EN_PROCESO" se presenta "EN PROCESO" (guiones bajos → espacios);
+        "SIN ESTADO" usa el fallback neutral y "Custom" acepta tone/glyph override.
       </p>
     </Bloque>
   );
@@ -452,10 +463,16 @@ function DataTableSection() {
     },
     { key: "estado", header: "Estado", render: (fila) => <StatusBadge estado={fila.estado} /> },
     { key: "residente", header: "Residente" },
-    { key: "saldo", header: "Saldo", render: (fila) => <span className="ui-mono">{fila.saldo}</span> },
+    {
+      key: "saldo",
+      header: "Saldo",
+      align: "right", // K5: números a la derecha con tabular-nums
+      render: (fila) => <span className="ui-mono">{fila.saldo}</span>,
+    },
     {
       key: "acciones",
       header: "Acciones",
+      align: "right", // K6: el disparador y su cabecera comparten el borde derecho
       render: (fila) => (
         <RowActionsMenu
           actions={[

@@ -258,8 +258,10 @@
 .ui-status-glyph {
   display: inline-block;
   flex: none;
-  width: var(--fs-12);
-  height: var(--fs-12);
+  /* K3: glifo reducido a ~8px (var(--space-2)) para que no compita con el
+   * texto del estado. */
+  width: var(--space-2);
+  height: var(--space-2);
   background: currentColor;
 }
 
@@ -292,6 +294,11 @@
 }
 
 .ui-field-label {
+  /* K1: display block (anula el `label { display: flex; column }` legacy de
+   * index.css) para que el texto y el asterisco queden EN LÍNEA dentro de la
+   * etiqueta; el texto accesible "obligatorio" va oculto (ui-visually-hidden
+   * en Field.jsx). */
+  display: block;
   font-size: var(--fs-12);
   font-weight: 500;
   color: var(--ink-2);
@@ -318,7 +325,11 @@
   width: 100%;
   min-width: 0;
   height: var(--control-h);
-  padding-inline: var(--space-3);
+  /* K2/K4: padding en los DOS ejes de forma explícita (anula el
+   * `input, select { padding: 10px }` legacy de index.css) y fuente completa
+   * de la escala del kit (Input y Select comparten .ui-control → mismo
+   * tamaño y altura). */
+  padding: var(--space-2) var(--space-3);
   background: var(--surface);
   color: var(--ink);
   border: 1px solid var(--line-control);
@@ -330,6 +341,14 @@
     border-color var(--motion-fast) ease,
     background-color var(--motion-fast) ease,
     color var(--motion-fast) ease;
+}
+
+/* K4: Select igualado a Input — font explícito (evita el `font: inherit` de
+ * `select` heredado del body legacy, Arial): mismos family/size/line-height y
+ * la misma altura de control que ya comparte .ui-control. */
+select.ui-control {
+  font: var(--fs-14)/var(--lh-14) var(--font-ui);
+  height: var(--control-h);
 }
 
 .ui-control:hover {
@@ -667,24 +686,37 @@ textarea.ui-control {
   color: var(--ink-2);
 }
 
-/* -- Menú de acciones de fila ------------------------------------------------- */
+/* -- K2: aislamiento del CSS legado ---------------------------------------------
+ * index.css tiene selectores "desnudos" (button, input, select, th, td, label)
+ * que se filtran en los componentes del kit. Reparado: th/td de .ui-table
+ * (fondo, padding y alineación explícitos), .ui-control (padding y fuente
+ * explícitos) y los botones de cierre/clear, que no definían border-radius.
+ * Auditado sin cambios: .ui-btn (define todo), .ui-alert y sus tonos
+ * (bg+color explícitos), .ui-modal (bg/color/borde explícitos).
+ * -------------------------------------------------------------------------- */
+.ui-alert-close,
+.ui-toast-close,
+.ui-search-clear {
+  border-radius: var(--radius-sm);
+}
+
+/* -- Menú de acciones de fila (K6: disparador compacto de tres puntos) ------- */
 .ui-row-actions {
   position: relative;
   display: inline-flex;
+  justify-content: flex-end;
 }
 
 .ui-row-actions-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   background: none;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2);
   border-radius: var(--radius-sm);
-  font-family: var(--font-ui);
-  font-size: var(--fs-12);
-  font-weight: 500;
-  color: var(--brand);
+  color: var(--ink-2);
   cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: transparent;
   transition:
     color var(--motion-fast) ease,
     background-color var(--motion-fast) ease;
@@ -692,7 +724,7 @@ textarea.ui-control {
 
 .ui-row-actions-trigger:hover {
   background: var(--bg);
-  text-decoration-color: currentColor;
+  color: var(--ink);
 }
 
 .ui-menu {
@@ -844,8 +876,12 @@ textarea.ui-control {
   color: var(--ink);
 }
 
+/* K2: cabecera con fondo y color EXPLÍCITOS con tokens (anula el
+ * `th { background: #f7f9fc }` de index.css) y alineación declarada en las
+ * celdas para que el base.css legado no filtre dentro del componente. */
 .ui-table th {
   text-align: left;
+  background: var(--bg);
   padding: var(--space-2) var(--space-3);
   font-size: var(--fs-12);
   line-height: var(--lh-12);
@@ -857,6 +893,7 @@ textarea.ui-control {
 }
 
 .ui-table td {
+  text-align: left;
   padding: var(--space-2) var(--space-3);
   height: var(--row-h);
   border-bottom: 1px solid var(--line);
@@ -873,6 +910,15 @@ textarea.ui-control {
 
 .ui-mono {
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* K5: columna alineada a la derecha (números/códigos): th y td comparten la
+ * clase `.ui-num` (la aplica DataTable cuando la columna trae
+ * `align: "right"`); tabular-nums para que las cifras no "bailen". En <640px
+ * la pila mantiene el valor a la derecha vía `td > :only-child`. */
+.ui-table .ui-num {
+  text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
