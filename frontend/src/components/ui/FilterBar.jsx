@@ -1,6 +1,7 @@
-/* Barra de filtros: fila flexible para SearchInput/Select/Checkbox y una
- * acción opcional "Limpiar filtros". Envolver los controles en Field para
- * etiquetas.
+/* Barra de filtros (K7): fila flexible con etiquetas visibles en TODAS las
+ * celdas (envolver controles en Field; SearchInput ya trae la suya) y
+ * alineación por la BASE del control; los botones quedan en esa misma línea
+ * base. Acción opcional "Limpiar filtros".
  */
 import "./ui.css";
 import Button from "./Button";

@@ -972,11 +972,15 @@ textarea.ui-control {
   }
 }
 
-/* -- Barra de filtros --------------------------------------------------------- */
+/* -- Barra de filtros (K7) ------------------------------------------------------
+ * Las celdas se alinean por la BASE del control (flex-end): la etiqueta va
+ * arriba (altura uniforme de fila: fs-12 + gap = var(--space-5)) y los
+ * controles/clic comparten la línea inferior, sin espacio reservado para
+ * mensajes; si un Field muestra error el Field crece hacia abajo. ------- */
 .ui-filterbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   gap: var(--space-2) var(--space-3);
   padding-block: var(--space-3) 0;
 }

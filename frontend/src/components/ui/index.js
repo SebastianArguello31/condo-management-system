@@ -18,6 +18,7 @@ export { default as DefinitionList } from "./DefinitionList";
 export { default as Timeline } from "./Timeline";
 export { default as RowActionsMenu } from "./RowActionsMenu";
 export { default as Modal } from "./Modal";
+export { default as FormModal, useFormFieldError } from "./FormModal";
 export { default as ConfirmDialog } from "./ConfirmDialog";
 export { default as DataTable } from "./DataTable";
 export { default as FilterBar } from "./FilterBar";

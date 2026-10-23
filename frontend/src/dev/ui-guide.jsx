@@ -12,13 +12,13 @@ import {
   Alert,
   Button,
   Checkbox,
-  ConfirmDialog,
   DataTable,
   DefinitionList,
   EmptyState,
   ErrorState,
   Field,
   FilterBar,
+  FormModal,
   Input,
   Modal,
   PageHeader,
@@ -31,10 +31,10 @@ import {
   StatusBadge,
   Textarea,
   Timeline,
-  ToastProvider,
+  useFormFieldError,
   useToast,
 } from "../components/ui";
-import { ConfirmProvider, useConfirm } from "../hooks/useConfirm";
+import { useConfirm } from "../hooks/useConfirm";
 
 function logU(message) {
   console.log(`[ui-guide] ${message}`);
@@ -302,7 +302,7 @@ function SectionFichaSection() {
             { term: "Código", detail: <span className="ui-mono">B1-101</span> },
             { term: "Torre", detail: "Aurora" },
             { term: "Metros cuadrados", detail: <span className="ui-mono">78</span> },
-            { term: "Estado", detail: <StatusBadge estado="OCUPADA" /> },
+            { term: "Estado", detail: <StatusBadge estado="CONFIRMADA" /> },
           ]}
         />
       </Section>
@@ -351,6 +351,93 @@ function TimelineSection() {
           },
         ]}
       />
+    </Bloque>
+  );
+}
+
+/* Campo de demo: consume los errores por campo del FormModal vía
+ * useFormFieldError (patrón previsto para las migraciones de Fase 2). */
+function CampoDemo({ name, label, ...rest }) {
+  const error = useFormFieldError(name);
+  return (
+    <Field label={label} error={error}>
+      <Input name={name} autoComplete="off" {...rest} />
+    </Field>
+  );
+}
+
+/* Estados demo: "normal", "busy", "error" (general) y "campos" (por campo).
+ * El submit simula 1,2 s de red; en los modos de error reproduce el fallo y
+ * el Alert queda enfocado; en éxito informa con Toast (convención §2.18). */
+function FormModalSection() {
+  const show = useToast();
+  const [modo, setModo] = useState(null); // null | "normal" | "busy" | "error" | "campos"
+  const [busy, setBusy] = useState(false);
+
+  const abrir = (nuevo) => {
+    if (nuevo === "busy") {
+      setBusy(true);
+      window.setTimeout(() => setBusy(false), 1500);
+    }
+    setModo(nuevo);
+    logU(`formmodal: abierto en modo ${nuevo}`);
+  };
+
+  const cerrar = () => {
+    setModo(null);
+    setBusy(false);
+    logU("formmodal: cerrado");
+  };
+
+  const error =
+    modo === "error"
+      ? "El servidor rechazó la operación (demo). Ajusta los datos y vuelve a intentar."
+      : undefined;
+  const fieldErrors =
+    modo === "campos"
+      ? { nombre: "El nombre es obligatorio (demo).", email: "El formato del email no es válido (demo)." }
+      : null;
+
+  return (
+    <Bloque titulo="FormModal (Modal + form: error dentro, éxito con Toast, cierre bloqueado en busy)">
+      <Fila>
+        <Button onClick={() => abrir("normal")}>Abrir normal</Button>
+        <Button variant="quiet" onClick={() => abrir("busy")}>
+          Abrir busy (1,5 s)
+        </Button>
+        <Button variant="quiet" onClick={() => abrir("error")}>
+          Abrir con error general
+        </Button>
+        <Button variant="quiet" onClick={() => abrir("campos")}>
+          Abrir con error por campo
+        </Button>
+      </Fila>
+      <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
+        En los modos de error el Alert (role="alert") se enfoca al aparecer; con
+        busy la ×, Esc y Cancelar están bloqueadas y el Guardar muestra spinner.
+      </p>
+      <FormModal
+        title="Nueva reserva (demo)"
+        description="El foco queda atrapado; al cerrar vuelve al botón que lo abrió."
+        open={modo !== null}
+        busy={busy}
+        error={error}
+        fieldErrors={fieldErrors}
+        onClose={cerrar}
+        onSubmit={() => {
+          setBusy(true);
+          window.setTimeout(() => {
+            setBusy(false);
+            cerrar();
+            show("Reserva creada (demo).", { tone: "success" });
+            logU("formmodal: submit ok");
+          }, 1200);
+        }}
+      >
+        <CampoDemo name="nombre" label="Nombre del espacio" required />
+        <CampoDemo name="email" label="Email de contacto" type="email" />
+        <CampoDemo name="observaciones" label="Observaciones (opcional)" />
+      </FormModal>
     </Bloque>
   );
 }
@@ -415,7 +502,7 @@ function ConfirmSection() {
   const confirm = useConfirm();
   const [resultado, setResultado] = useState("(aún sin responder)");
   return (
-    <Bloque titulo="ConfirmDialog (enchufado a useConfirm)">
+    <Bloque titulo="ConfirmDialog (provider global de App.jsx, useConfirm a la vista)">
       <Fila>
         <Button
           onClick={async () => {
@@ -448,9 +535,10 @@ function ConfirmSection() {
 }
 
 const FILAS_DEMO = [
-  { id: "u1", codigo: "B1-101", estado: "OCUPADA", residente: "M. López", saldo: "G. 0" },
-  { id: "u2", codigo: "B1-102", estado: "RESERVADA", residente: "—", saldo: "G. 60.000" },
-  { id: "u3", codigo: "B2-201", estado: "LIBRE", residente: "—", saldo: "G. 350.000" },
+  { id: "r1", codigo: "R-0001", estado: "PENDIENTE", residente: "M. López", saldo: "G. 0" },
+  { id: "r2", codigo: "R-0002", estado: "CONFIRMADA", residente: "M. López", saldo: "G. 60.000" },
+  { id: "r3", codigo: "R-0003", estado: "RECHAZADA", residente: "C. Delgado", saldo: "G. 35.000" },
+  { id: "r4", codigo: "R-0004", estado: "CANCELADA", residente: "—", saldo: "G. 120.000" },
 ];
 
 function DataTableSection() {
@@ -477,8 +565,8 @@ function DataTableSection() {
         <RowActionsMenu
           actions={[
             { label: "Ver ficha", onSelect: () => logU(`fila ${fila.codigo}: ficha`) },
-            { label: "Asignar residente", disabled: fila.estado === "OCUPADA", onSelect: () => logU(`fila ${fila.codigo}: asignar`) },
-            { label: "Eliminar unidad", danger: true, onSelect: () => logU(`fila ${fila.codigo}: eliminar`) },
+            { label: "Cancelar reserva", disabled: fila.estado !== "PENDIENTE", onSelect: () => logU(`fila ${fila.codigo}: cancelar`) },
+            { label: "Eliminar reserva", danger: true, onSelect: () => logU(`fila ${fila.codigo}: eliminar`) },
           ]}
         />
       ),
@@ -496,7 +584,7 @@ function DataTableSection() {
       </Fila>
       <FilterBar onReset={() => logU("filterbar: reset")}>
         <SearchInput
-          label="Buscar unidad"
+          label="Buscar"
           value=""
           onChange={() => {}}
           onClear={() => {}}
@@ -513,14 +601,14 @@ function DataTableSection() {
         columns={columnas}
         rows={modo === "data" ? FILAS_DEMO : []}
         rowKey={(fila) => fila.id}
-        caption="Listado de unidades del condominio"
+        caption="Listado de reservas del condominio"
         loading={modo === "loading"}
-        error={modo === "error" ? { message: "Falló el servicio de unidades (demo)." } : null}
-        emptyTitle="Sin unidades"
-        emptyDescription="Ajusta los filtros o registra la primera unidad."
+        error={modo === "error" ? { message: "Falló el servicio de reservas (demo)." } : null}
+        emptyTitle="Sin reservas"
+        emptyDescription="Ajusta los filtros o crea la primera reserva."
         emptyAction={
           <Button variant="quiet" onClick={() => logU("tabla vacía: acción")}>
-            Registrar unidad
+            Crear reserva
           </Button>
         }
         onRetry={() => {
@@ -537,33 +625,31 @@ function DataTableSection() {
 
 export default function UiGuide() {
   return (
-    <ConfirmProvider>
-      <ToastProvider>
-        <div style={{ display: "grid", gap: "var(--space-5)", paddingBlock: "var(--space-4)" }}>
-          <PageHeader
-            title="Guía de UI del sistema"
-            meta="Ruta solo DEV (#/ui) · CP3 + CP4 · solo tokens"
-          />
-          <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
-            Referencia viva de los componentes base. En producción esta página no existe
-            (import dinámico bajo import.meta.env.DEV: no entra al bundle).
-          </p>
-          <BotonesSection />
-          <AlertsSection />
-          <ToastsSection />
-          <EstadosSection />
-          <CamposSection />
-          <BusquedaSection />
-          <EstadosVaciosSection />
-          <CabezaSection />
-          <SectionFichaSection />
-          <TimelineSection />
-          <ModalSection />
-          <ConfirmSection />
-          <DataTableSection />
-          <ConfirmDialog />
-        </div>
-      </ToastProvider>
-    </ConfirmProvider>
+    <div style={{ display: "grid", gap: "var(--space-5)", paddingBlock: "var(--space-4)" }}>
+      <PageHeader
+        title="Guía de UI del sistema"
+        meta="Ruta solo DEV (#/ui) · CP3 + CP4 · solo tokens"
+      />
+      <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
+        Referencia viva de los componentes base. En producción esta página no existe
+        (import dinámico bajo import.meta.env.DEV: no entra al bundle).
+      </p>
+      <BotonesSection />
+      <AlertsSection />
+      <ToastsSection />
+      <EstadosSection />
+      <CamposSection />
+      <BusquedaSection />
+      <EstadosVaciosSection />
+      <CabezaSection />
+      <SectionFichaSection />
+      <TimelineSection />
+      <ModalSection />
+      <FormModalSection />
+      <ConfirmSection />
+      <DataTableSection />
+    </div>
   );
 }
+/* Nota: ConfirmDialog y los providers (Toast/Confirm) se montan UNA vez en
+ * App.jsx; ConfirmSection arriba usa useConfirm de ese provider global. */

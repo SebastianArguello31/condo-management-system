@@ -145,7 +145,8 @@ del plan). Restricciones y convenciones YA FIJADAS:
 | CP5 | Router por hash + config declarativa + AppShell nuevo | **Hecho** (verificado por rol, commit del dueño). Aterrizaje §2.5. Icono Perfil/Reservas separado; clases ui-* sobre mg-modal; drawer móvil con `inert`. |
 | CP6a | `api.js` aditivo (signal/status/errors) + `validations/` + `utils/downloadAttachment` | **Hecho** (verificado a mano por el dueño: login, listado, guardado, error de servidor, descarga, sesión expirada; commit). |
 | CP6b | Página `#/ui` solo DEV (guía viva) + eliminación de arneses + dead code JS | **Hecho, verificado y commiteado** (`21d79f0`). |
-| CP6c | Ajustes al kit (K1–K6): Field asterisco en línea; aislamiento del CSS legado (DataTable/Modal/Input/Select/Button/Alert); StatusBadge con estados reales + glifo 8px + normalización; Select igualado a Input; DataTable `align: "right"` con tabular-nums; RowActionsMenu compacto con patrón documentado | **Implementado.** Pendiente: verificación del dueño (checklist visual a 375/768/1280) + commit. |
+| CP6c | Ajustes al kit (K1–K6): Field asterisco en línea; aislamiento del CSS legado (DataTable/Modal/Input/Select/Button/Alert); StatusBadge con estados reales + glifo 8px + normalización; Select igualado a Input; DataTable `align: "right"` con tabular-nums; RowActionsMenu compacto con patrón documentado | **Hecho, verificado y commiteado por el dueño.** |
+| F2-1a | K7 FilterBar (alineación por base del control, etiquetas visibles); FormModal (Modal+form, §2.18: error dentro con foco/scroll, Toast de éxito fuera, errores por campo vía useFormFieldError, cierre bloqueado en busy); estados reales en la tabla demo; providers Toast/Confirm + ConfirmDialog montados una vez en App.jsx | **Implementado.** Pendiente: verificación del dueño (guía a 375/768/1280) + commit. |
 
 ## 6. Mapa de carpetas del frontend (Fase 1)
 
@@ -217,11 +218,14 @@ terminado un paso mientras sus bugs sigan abiertos.
   cabecera con tokens; StatusBadge con presets de estados reales y glifo 8px;
   Select `font: inherit` igualado a Input; DataTable con `align: "right"` +
   tabular-nums; RowActionsMenu con disparador compacto y patrón documentado).
-  — **IMPLEMENTADO** (pendiente verificación + commit; ver STATUS.md).
-- **F2-1** `refactor:` CrudPage → nuevo **FormModal** del kit + Especialidades
+  — **HECHO y commiteado por el dueño.**
+- **F2-1a** `feat/kit:` (ver fila F2-1a de la tabla de §5) —
+  **IMPLEMENTADO**, pendiente verificación + commit.
+- **F2-1b** `refactor:` CrudPage → nuevo **FormModal** del kit + Especialidades
   (migra a DataTable/FilterBar/EmptyState/ErrorState; conecta
-  validations/especialidadCrear). Cierra **B9**. **Revisión visual con
-  capturas obligatoria antes de seguir.**
+  validations/especialidadCrear; useQuery/useConfirm; errores por campo desde
+  `err.errors`). Cierra **B9**. **Revisión visual con capturas obligatoria
+  antes de seguir.** — SOLO tras el "ok F2-1b" del dueño.
 - **F2-2** `refactor:` Edificios y Unidades; "Tipo de unidad" como **select**
   del catálogo `unitTypes`. Cierra **B10**.
 - **F2-3** `refactor:` Mis reservas (residente).
@@ -276,7 +280,7 @@ terminado un paso mientras sus bugs sigan abiertos.
 | B6 | Espacios (admin) | Transición rota Espacios → Políticas de reserva | Por verificar | F2-7 |
 | B7 | Incidencias (técnico) / Mi perfil | Detalle en el modal de incidencias y en Mi perfil | Por verificar | F2-5 (detalle) / F2-4 (perfil) |
 | B8 | Nueva incidencia (modal, residente) | Error de backend se renderiza al fondo de la página con el modal abierto | Verificada: el `error` es estado único de página — `IncidentsPage.jsx:55` lo setea al crear y se renderiza solo a nivel página (`IncidentsPage.jsx:103`); el modal de creación (línea 105) no lo muestra adentro (el de detalle sí, línea 106) | F2-5 |
-| B9 | Edificios, Unidades, Especialidades (admin) | Botón azul "Reintentar carga" parpadeante: aparece y desaparece al abrir la pantalla | Verificada: condición `!ready` en `CrudPage.jsx:239-240`; `ready` inicia `false` (línea 43) y pasa a `true` al resolver la carga (línea 78) — botón visible en cada montaje hasta que llega la lista | F2-1 (CrudPage deprecado; se migra Especialidades) |
+| B9 | Edificios, Unidades, Especialidades (admin) | Botón azul "Reintentar carga" parpadeante: aparece y desaparece al abrir la pantalla | Verificada: condición `!ready` en `CrudPage.jsx:239-240`; `ready` inicia `false` (línea 43) y pasa a `true` al resolver la carga (línea 78) — botón visible en cada montaje hasta que llega la lista | F2-1b (CrudPage sobre useQuery; se migra Especialidades) |
 | B10 | Unidades (admin) | "Tipo de unidad" solo acepta números | Verificada: `UnitsPage.jsx:11` declara `type: "number"` → input numérico en `CrudPage.jsx:299`; el backend SÍ expone el catálogo `GET /unit-types` (`backend/app/modules/units/routes.py:16-20`). Debería ser select con lookup (como Edificios, `BuildingsPage.jsx:12-19`). **NO lo causó CP6b:** `git diff HEAD~1 HEAD` prueba que la versión anterior ya usaba `type: "number"`; el cambio solo borró la rama `buildings`/detalle/timeout | F2-2 (select del catálogo unitTypes) |
 
 ## 8. Pendientes y hallazgos abiertos

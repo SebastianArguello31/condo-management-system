@@ -13,6 +13,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Login from "./features/auth/Login";
 import { useHashRoute } from "./hooks/useHashRoute";
+import { ConfirmProvider } from "./hooks/useConfirm";
 import {
   defaultRouteFor,
   navigationForRole,
@@ -21,9 +22,26 @@ import {
 } from "./config/routing";
 import { setAccessToken } from "./services/api";
 import AppShell from "./components/AppShell";
+import { ConfirmDialog, ToastProvider } from "./components/ui";
 import "./styles/users-ui.css";
 
+/* F2-1a: ToastProvider + ConfirmProvider montados UNA vez en App, arriba de
+ * todo (incluye Login): cualquier pantalla puede usar useToast/useConfirm, y
+ * ConfirmDialog queda conectado a la promesa compartida. Los modales y
+ * confirmaciones legados (window.confirm, {error, notice} a nivel página)
+ * no cambian. */
 export default function App() {
+  return (
+    <ToastProvider>
+      <ConfirmProvider>
+        <ConfirmDialog />
+        <AppRoutes />
+      </ConfirmProvider>
+    </ToastProvider>
+  );
+}
+
+function AppRoutes() {
   const [user, setUser] = useState(null);
   const { path, navigate } = useHashRoute();
 
