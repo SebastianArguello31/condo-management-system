@@ -146,7 +146,7 @@ del plan). Restricciones y convenciones YA FIJADAS:
 | CP6a | `api.js` aditivo (signal/status/errors) + `validations/` + `utils/downloadAttachment` | **Hecho** (verificado a mano por el dueño: login, listado, guardado, error de servidor, descarga, sesión expirada; commit). |
 | CP6b | Página `#/ui` solo DEV (guía viva) + eliminación de arneses + dead code JS | **Hecho, verificado y commiteado** (`21d79f0`). |
 | CP6c | Ajustes al kit (K1–K6): Field asterisco en línea; aislamiento del CSS legado (DataTable/Modal/Input/Select/Button/Alert); StatusBadge con estados reales + glifo 8px + normalización; Select igualado a Input; DataTable `align: "right"` con tabular-nums; RowActionsMenu compacto con patrón documentado | **Hecho, verificado y commiteado por el dueño.** |
-| F2-1a | K7 FilterBar (alineación por base del control, etiquetas visibles); FormModal (Modal+form, §2.18: error dentro con foco/scroll, Toast de éxito fuera, errores por campo vía useFormFieldError, cierre bloqueado en busy); estados reales en la tabla demo; providers Toast/Confirm + ConfirmDialog montados una vez en App.jsx | **Implementado.** Pendiente: verificación del dueño (guía a 375/768/1280) + commit. |
+| F2-1a | K7 FilterBar (alineación por base del control, etiquetas visibles); FormModal (Modal+form, §2.18: error dentro con foco/scroll, Toast de éxito fuera, errores por campo vía useFormFieldError, cierre bloqueado en busy); estados reales en la tabla demo; providers Toast/Confirm + ConfirmDialog montados una vez en App.jsx | **Hecho, verificado y commiteado por el dueño** (`111c173`). |
 
 ## 6. Mapa de carpetas del frontend (Fase 1)
 
@@ -220,12 +220,76 @@ terminado un paso mientras sus bugs sigan abiertos.
   tabular-nums; RowActionsMenu con disparador compacto y patrón documentado).
   — **HECHO y commiteado por el dueño.**
 - **F2-1a** `feat/kit:` (ver fila F2-1a de la tabla de §5) —
-  **IMPLEMENTADO**, pendiente verificación + commit.
-- **F2-1b** `refactor:` CrudPage → nuevo **FormModal** del kit + Especialidades
-  (migra a DataTable/FilterBar/EmptyState/ErrorState; conecta
-  validations/especialidadCrear; useQuery/useConfirm; errores por campo desde
-  `err.errors`). Cierra **B9**. **Revisión visual con capturas obligatoria
-  antes de seguir.** — SOLO tras el "ok F2-1b" del dueño.
+  **HECHO y commiteado por el dueño** (`111c173`).
+- **F2-1b** `refactor:` CrudPage (modo nuevo con `variant="ui"`) +
+  Especialidades. Cierra **B9**. **Revisión visual con capturas obligatoria
+  antes de seguir.** — **SIGUIENTE**, especificación completa abajo.
+
+### Especificación F2-1b (autónoma, no depende de una conversación)
+
+**1) Antes de codificar — inventario de consumidores** (grep hecho el
+2026-10-22; reverificar con grep el día de la migración por si cambió en el
+merge):
+
+| Consumidor | Props que usa | Notas |
+|---|---|---|
+| Especialidades (`features/users/SpecialtiesPage.jsx`) | `title`, `description`, `endpoint`, `idField`, `fields`, `columns` | La única que migra a modo nuevo |
+| Edificios (`features/units/BuildingsPage.jsx`) | `title`, `description`, `endpoint`, `idField`, `fields`, `columns`, `lookups` | Modo legado hasta F2-2 |
+| Unidades (`features/units/UnitsPage.jsx`) | `title`, `endpoint`, `idField`, `fields`, `columns` | Modo legado hasta F2-2 (F2-2 añade el select de unitTypes) |
+| Espacios comunes (`features/espacios-comunes/EspaciosPage.jsx`) | `title`, `endpoint`, `idField`, `fields`, `columns`, `lookups`, `canDelete={false}`, `isFieldDisabled(field,row)`, `renderExtraActions(row,busy)` | Subvistas: "Ver detalle" (Modal propio) y "Políticas" → SpacePolicies. Modo legado |
+| Políticas (`features/espacios-comunes/SpacePolicies.jsx`) | `title`, `endpoint` (anidado `/policies`), `updateMethod="PUT"`, `idField`, `fields`, `columns`, `lookups` | Subvista de Espacios. Modo legado |
+
+CRUD defaults que los consumidores omiten (deben seguir vigentes):
+`updateMethod="PATCH"`, `canCreate/canEdit/canDelete = true`,
+`canEditRow → siempre true`, `isFieldDisabled → nunca`, `getRecordLabel`,
+`lookups = []`. Ningún otro archivo usa CrudPage (verificado con grep).
+
+**2) Regla estricta de API:** la API pública de CrudPage NO pierde ni cambia
+el significado de ninguna prop existente; solo se permiten props NUEVAS
+opcionales (otros devs pueden estar usándolo). Firma actual conservada:
+`title, description, endpoint, updateMethod, idField, fields, columns,
+lookups, renderExtraActions, canCreate, canEdit, canDelete, canEditRow,
+isFieldDisabled, getRecordLabel`.
+
+**3) Coexistencia de modos:** modo LEGADO por defecto (todo el código actual
+intacto). Modo NUEVO activado solo con la prop opcional `variant="ui"`.
+Solamente **Especialidades** usa el modo nuevo (se edita su invocación para
+añadir `variant="ui"`); Edificios/Unidades/Espacios/Políticas siguen en
+legado hasta F2-2. NO eliminar el código del modo legado hasta que
+Especialidades esté verificado por el dueño (lo hace F2-2 o la limpieza
+final, según alcance).
+
+**4) Requisitos del modo nuevo (`variant="ui"`):**
+- Carga con `useQuery`: estado inicial `loading` (sin parpadeo de
+  "Reintentar" — cierra B9); error de carga → `ErrorState` con Reintentar;
+  vacío → `EmptyState` con acción de crear.
+- Tabla con `DataTable`; acción principal como enlace de texto +
+  `RowActionsMenu` para secundarias (patrón K6); búsqueda con `SearchInput`
+  donde hoy existe (toolbar `mg-search`).
+- Crear/editar con `FormModal`: Alert `role="alert"` DENTRO del modal con
+  foco/scroll; **errores por campo** desde `err.errors` (más validación en
+  cliente con `validations/` — `especialidadCrear` para Especialidades);
+  `name` y `autoComplete="off"` en todos los campos (§2.19); cierre
+  bloqueado en busy.
+- Eliminar/desactivar con `useConfirm` (adiós `window.confirm`); éxito con
+  **Toast**; éxito/notice de página reproducido por Toast (convención §2.18);
+  error de la acción dentro del modal (si viene de un modal).
+- Conservar TODAS las funcionalidades actuales de las 5 pantallas.
+
+**5) Checklist de verificación (las 5 pantallas, 375/768/1280, teclado):**
+- [ ] Especialidades: crear/editar/eliminar; validación en cliente
+      (especialidadCrear); error de backend por campo en FormModal; sin
+      parpadeo de Reintentar al abrir (B9 cerrado); Toast de éxito;
+      confirm de eliminación es ConfirmDialog. *(única en modo ui)*
+- [ ] Edificios: idéntico CRUD + lookup de tipo de edificio intacto (modo
+      legado, sin cambios visuales).
+- [ ] Unidades: CRUD intacto (modo legado); "Tipo de unidad" sigue
+      numérico HASTA F2-2 (B10 no se toca aquí).
+- [ ] Espacios comunes: CRUD sin eliminar con confirm; campo "activo"
+      deshabilitado en creación; "Ver detalle" abre el Modal propio;
+      "Políticas" navega a la subvista (modo legado).
+- [ ] Políticas: CRUD con updateMethod PUT + lookup de espacios; botón
+      Volver funciona (modo legado).
 - **F2-2** `refactor:` Edificios y Unidades; "Tipo de unidad" como **select**
   del catálogo `unitTypes`. Cierra **B10**.
 - **F2-3** `refactor:` Mis reservas (residente).
@@ -282,6 +346,31 @@ terminado un paso mientras sus bugs sigan abiertos.
 | B8 | Nueva incidencia (modal, residente) | Error de backend se renderiza al fondo de la página con el modal abierto | Verificada: el `error` es estado único de página — `IncidentsPage.jsx:55` lo setea al crear y se renderiza solo a nivel página (`IncidentsPage.jsx:103`); el modal de creación (línea 105) no lo muestra adentro (el de detalle sí, línea 106) | F2-5 |
 | B9 | Edificios, Unidades, Especialidades (admin) | Botón azul "Reintentar carga" parpadeante: aparece y desaparece al abrir la pantalla | Verificada: condición `!ready` en `CrudPage.jsx:239-240`; `ready` inicia `false` (línea 43) y pasa a `true` al resolver la carga (línea 78) — botón visible en cada montaje hasta que llega la lista | F2-1b (CrudPage sobre useQuery; se migra Especialidades) |
 | B10 | Unidades (admin) | "Tipo de unidad" solo acepta números | Verificada: `UnitsPage.jsx:11` declara `type: "number"` → input numérico en `CrudPage.jsx:299`; el backend SÍ expone el catálogo `GET /unit-types` (`backend/app/modules/units/routes.py:16-20`). Debería ser select con lookup (como Edificios, `BuildingsPage.jsx:12-19`). **NO lo causó CP6b:** `git diff HEAD~1 HEAD` prueba que la versión anterior ya usaba `type: "number"`; el cambio solo borró la rama `buildings`/detalle/timeout | F2-2 (select del catálogo unitTypes) |
+
+## Agenda de integración (luego de F2-1b — y quizá F2-2)
+
+Orden fijado por el dueño: PRIMERO F2-1b (y opcionalmente F2-2 si queda
+tiempo y el dueño lo autoriza); la integración con el equipo va DESPUÉS.
+Todo lo demás de la agenda queda igual (los conflictos probables y el
+registro en `config/routing.js` se re-evalúan al momento de integrar, por
+si F2-1b/F2-2 agregan más cambios propios).
+
+(a) **Día de integración (todos hacen push; el dueño resuelve los
+conflictos el mismo día):**
+1. `git fetch` + `git merge origin/develop` en la rama de Dev 1.
+2. Conflictos probables según lo reemplazado: `features/auth/navigation.js`
+   (eliminado del lado Dev 1), `App.jsx` y `AppShell.jsx` (cableado por hash
+   + `config/routing.js`), y `package-lock.json` (resolver con una sola
+   regeneración coherente; sin `npm audit fix` sin análisis).
+3. Pantallas nuevas de otros devs (inventario de Dev 2, dashboard de Dev 3):
+   quedan en estilo legado; se registran en `config/routing.js` al
+   integrarlas (el dueño las migra después, F2-10).
+4. Prueba de integración con los 3 roles (ADMIN / RESIDENTE / TECNICO):
+   login, aterrizaje por rol (§2.5), navegación completa, pantallas de
+   otros devs, y pantallas legacy de Dev 1 sin cambios.
+5. `git push` a la rama y PR para que el dueño lo cierre.
+6. Después del merge, los demás devs dejan de modificar el repo: para la
+   entrega del domingo no habrá más conflictos.
 
 ## 8. Pendientes y hallazgos abiertos
 
