@@ -14,6 +14,7 @@ import ResidentHome from "./features/users/ResidentHome";
 import EspaciosPage from "./features/espacios-comunes/EspaciosPage";
 import MisReservasPage from "./features/reservas/MisReservasPage";
 import GestionReservasPage from "./features/reservas/GestionReservasPage";
+import MaintenancePage from "./features/maintenance/MaintenancePage";
 import { setAccessToken } from "./services/api";
 import AppShell from "./components/AppShell";
 import "./styles/users-ui.css";
@@ -25,6 +26,7 @@ const pageComponents = {
   residents: ResidentsPage, residentHome: ResidentHome,
   espacios: EspaciosPage, misReservas: MisReservasPage,
   gestionReservas: GestionReservasPage,
+  maintenance: MaintenancePage,
 };
 
 export default function App() {

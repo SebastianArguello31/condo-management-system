@@ -11,6 +11,7 @@ const paths = {
   buildings: "M4 21V3h12v18M16 9h4v12M8 7h4M8 11h4M8 15h4M2 21h20",
   units: "m3 10 9-7 9 7v11H3V10Zm6 11v-8h6v8",
   incidents: "M5 3h14v18H5V3Zm4 5h6m-6 4h6m-6 4h4",
+  maintenance: "M4 7l8-4 8 4-8 4-8-4Zm0 0v10l8 4m8-14v10l-8 4m0-10v10",
   profile: "M20 21v-2a7 7 0 0 0-14 0v2M17 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z",
   search: "m21 21-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z",
   plus: "M12 5v14M5 12h14", close: "m6 6 12 12M6 18 18 6",
