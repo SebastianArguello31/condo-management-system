@@ -12,13 +12,11 @@ const EMPTY_ITEM = {
   costo_unitario: "0",
 };
 
-const EMPTY_MOVEMENT = { cantidad: "", motivo: "", direccion: "ENTRADA" };
+const EMPTY_MOVEMENT = { cantidad: "", motivo: "" };
 
 const MOVEMENT_PATHS = {
-  INICIAL: "existencias-iniciales",
   ENTRADA: "entradas",
   SALIDA: "salidas",
-  AJUSTE: "ajustes",
 };
 
 const MOVEMENT_LABELS = {
@@ -36,6 +34,10 @@ function errorMessage(error) {
 
 function formatDate(value) {
   return value ? new Date(value).toLocaleString() : "—";
+}
+
+function formatQuantity(value) {
+  return new Intl.NumberFormat("es-PY", { maximumFractionDigits: 3, useGrouping: false }).format(Number(value));
 }
 
 export default function MaintenancePage({ user }) {
@@ -169,7 +171,6 @@ export default function MaintenancePage({ user }) {
     const body = {
       cantidad: movementForm.cantidad,
       motivo: movementForm.motivo.trim(),
-      ...(movementType === "AJUSTE" ? { direccion: movementForm.direccion } : {}),
     };
 
     try {
@@ -300,8 +301,8 @@ export default function MaintenancePage({ user }) {
                     {item.descripcion && <span className="mg-description">{item.descripcion}</span>}
                   </td>
                   <td>{item.categoria}</td>
-                  <td>{item.stock} {item.unidad_medida}</td>
-                  <td>{item.stock_minimo} {item.unidad_medida}</td>
+                  <td>{formatQuantity(item.stock)} {item.unidad_medida}</td>
+                  <td>{formatQuantity(item.stock_minimo)} {item.unidad_medida}</td>
                   <td>
                     <span className={`mg-status ${item.bajo_stock ? "is-inactive" : "is-active"}`}>
                       <i />{item.bajo_stock ? "Stock bajo" : "Disponible"}
@@ -316,8 +317,6 @@ export default function MaintenancePage({ user }) {
                         <button className="mg-secondary" type="button" onClick={() => openEdit(item)}>Editar</button>
                         <button className="mg-secondary" type="button" onClick={() => openMovement(item, "ENTRADA")}>Entrada</button>
                         <button className="mg-secondary" type="button" onClick={() => openMovement(item, "SALIDA")}>Salida</button>
-                        <button className="mg-secondary" type="button" onClick={() => openMovement(item, "AJUSTE")}>Ajuste</button>
-                        <button className="mg-secondary" type="button" onClick={() => openMovement(item, "INICIAL")}>Inicial</button>
                       </>}
                     </div>
                   </td>
@@ -360,18 +359,10 @@ export default function MaintenancePage({ user }) {
               <div className="mg-form-grid">
                 <label className="mg-full-field">Tipo de movimiento
                   <select value={movementType} onChange={(event) => setMovementType(event.target.value)}>
-                    <option value="INICIAL">Existencias iniciales</option>
                     <option value="ENTRADA">Entrada</option>
                     <option value="SALIDA">Salida</option>
-                    <option value="AJUSTE">Ajuste</option>
                   </select>
                 </label>
-                {movementType === "AJUSTE" && <label>Dirección
-                  <select value={movementForm.direccion} onChange={(event) => setMovementForm({ ...movementForm, direccion: event.target.value })}>
-                    <option value="ENTRADA">Aumentar stock</option>
-                    <option value="SALIDA">Disminuir stock</option>
-                  </select>
-                </label>}
                 <label>Cantidad *<input required type="number" min="0.001" step="0.001" value={movementForm.cantidad} onChange={(event) => setMovementForm({ ...movementForm, cantidad: event.target.value })} /></label>
                 <label className="mg-full-field">Motivo *<textarea required minLength="3" maxLength="500" rows="3" value={movementForm.motivo} onChange={(event) => setMovementForm({ ...movementForm, motivo: event.target.value })} /></label>
               </div>
@@ -403,7 +394,7 @@ export default function MaintenancePage({ user }) {
             <ul>
               {history.map((movement) => (
                 <li key={movement.id_movimiento}>
-                  {formatDate(movement.fecha)} · {MOVEMENT_LABELS[movement.tipo] || movement.tipo} · {movement.cantidad} · Stock: {movement.stock_resultante} · {movement.motivo} · {movement.responsable_nombre} {movement.responsable_apellido}
+                  {formatDate(movement.fecha)} · {MOVEMENT_LABELS[movement.tipo] || movement.tipo} · {formatQuantity(movement.cantidad)} · Stock: {formatQuantity(movement.stock_resultante)} · {movement.motivo} · {movement.responsable_nombre} {movement.responsable_apellido}
                   {movement.id_intervencion ? ` · Intervención #${movement.id_intervencion}` : ""}
                 </li>
               ))}
