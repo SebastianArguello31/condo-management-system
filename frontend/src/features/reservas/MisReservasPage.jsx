@@ -4,13 +4,13 @@ import { routes } from "../../services/routes";
 import { useQuery } from "../../hooks/useQuery";
 import { useMutation } from "../../hooks/useMutation";
 import { useConfirm } from "../../hooks/useConfirm";
+import { formatDate } from "../../utils/format";
 import {
   Button,
   DataTable,
   DefinitionList,
   Modal,
   PageHeader,
-  RowActionsMenu,
   StatusBadge,
   useToast,
 } from "../../components/ui";
@@ -20,7 +20,10 @@ import CreateReservation from "./CreateReservation";
  * Mismas consultas, orden y reglas que antes: lista GET /reservations con
  * espacios y tipos de evento para el form; detalle GET /reservations/:id;
  * cancelación PATCH /reservations/:id/status solo con estado PENDIENTE o
- * CONFIRMADA (confirmación por ConfirmDialog, no window.confirm). */
+ * CONFIRMADA (confirmación por ConfirmDialog, no window.confirm).
+ * Ajuste final: acciones visibles con botones (Detalle con borde y
+ * Cancelar ghost rojo, con aria-label que identifica la reserva) en lugar
+ * del menú de fila; Fecha en DD/MM/AAAA (utils/format). */
 
 function puedeCancelar(estado) {
   return ["PENDIENTE", "CONFIRMADA"].includes(estado);
@@ -80,24 +83,44 @@ export default function MisReservasPage() {
     : undefined;
 
   const columns = [
-    { key: "fecha", header: "Fecha", cellClassName: "ui-mono" },
+    { key: "fecha", header: "Fecha", cellClassName: "ui-mono", render: (row) => formatDate(row.fecha) },
     { key: "espacio", header: "Espacio" },
     { key: "tipo_evento", header: "Evento" },
     { key: "estado", header: "Estado", render: (row) => <StatusBadge estado={row.estado} /> },
     {
       key: "acciones",
       header: "Acciones",
-      align: "right",
+      /* Columna de ancho FIJO con tokens (colgroup del DataTable) y
+       * contenido alineado a la IZQUIERDA: th y td comparten relleno
+       * (--space-3) y la fila ui-actions-inline compensa el relleno del
+       * botón compacto para que el texto de "Detalle" arranque en la misma
+       * x que "ACCIONES".
+       * Ajuste final: botones visibles en fila (sin menú): "Detalle" con
+       * borde y "Cancelar" ghost rojo, SOLO si el estado permite
+       * cancelar; el flujo no cambia (useConfirm danger + useMutation +
+       * Toast). aria-label descriptivo con fecha (ISO) y espacio. */
+      width: "calc(var(--space-12) * 4)",
       render: (row) => (
-        <div className="ui-row-actions">
-          <Button variant="quiet" onClick={() => openDetail(row)}>Detalle</Button>
-          {puedeCancelar(row.estado) && <RowActionsMenu
-            actions={[{
-              label: "Cancelar reserva",
-              disabled: cancelar.busy,
-              onSelect: () => pedirCancelacion(row),
-            }]}
-          />}
+        <div className="ui-actions-inline">
+          <Button
+            variant="quiet"
+            size="sm"
+            aria-label={`Ver detalle de la reserva del ${row.fecha}, ${row.espacio}`}
+            onClick={() => openDetail(row)}
+          >
+            Detalle
+          </Button>
+          {puedeCancelar(row.estado) && (
+            <Button
+              variant="danger-ghost"
+              size="sm"
+              disabled={cancelar.busy}
+              aria-label={`Cancelar reserva del ${row.fecha}, ${row.espacio}`}
+              onClick={() => pedirCancelacion(row)}
+            >
+              Cancelar
+            </Button>
+          )}
         </div>
       ),
     },

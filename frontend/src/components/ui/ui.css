@@ -287,6 +287,25 @@
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
 
+/* Glifo aditivo (F2-3): check ✓ para FINALIZADA. El tick se dibuja con el
+ * border-trick (esquina de bordes right+bottom girada 45°): sin hex y sin
+ * px sueltos — el trazo usa las líneas de 2px que el plan permite y el
+ * tamaño sale de tokens (--space-*). El ::after vive dentro del glifo de
+ * --space-2 y no desborda (bounding ≈ 6px < 8px). */
+.ui-status-check {
+  background: none;
+  position: relative;
+}
+
+.ui-status-check::after {
+  content: "";
+  position: absolute;
+  inset: 30% 25% 12% 25%;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
 /* -- Campos de formulario -------------------------------------------------- */
 .ui-field {
   display: grid;
@@ -705,6 +724,7 @@ textarea.ui-control {
   position: relative;
   display: inline-flex;
   justify-content: flex-end;
+  gap: var(--space-1);
 }
 
 .ui-row-actions-trigger {
@@ -768,6 +788,23 @@ textarea.ui-control {
 .ui-menuitem[aria-disabled="true"] {
   color: var(--ink-3);
   cursor: not-allowed;
+}
+
+/* Fila de acciones con BOTONES visibles (ajuste F2-3, columna Acciones):
+ * sustituye al disparador compacto de tres puntos (a diferencia de
+ * .ui-row-actions que solo usa RowActionsMenu). Alineada a la IZQUIERDA con
+ * la cabecera: th y td comparten el mismo relleno (--space-3, .ui-table);
+ * el primer control cede SU relleno propio (el del tamaño compacto "sm")
+ * con un margen negativo de token para que su texto arranque en la misma
+ * x que el texto de la cabecera (misma alineación y relleno izquierdos). */
+.ui-actions-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-actions-inline > :first-child {
+  margin-inline-start: calc(var(--space-3) * -1);
 }
 
 /* -- Modal ampliado (sobre <dialog> nativo; clases ui-* aplican solo cuando
@@ -867,6 +904,46 @@ textarea.ui-control {
 }
 
 /* -- Tabla de datos ----------------------------------------------------------- */
+/* Marco cerrado (aditivo, F2-3): la tabla queda dentro de un panel con borde
+ * de 1px (token de línea) y radio de panel; overflow hidden para que la
+ * cabecera tintada y las filas se recorten dentro del marco. Sin sombras.
+ * La última fila pierde su borde inferior para no doblar la línea con el
+ * borde del marco. */
+.ui-table-shell {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.ui-table-shell .ui-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* La celda de cabecera SIN borde superior propio: el borde superior del
+ * thead lo dibuja solo el marco (.ui-table-shell); con border-collapse:
+ * collapse cualquier línea de la celda se apila junto a él y queda doble.
+ * La delimitación del encabezado sigue siendo su border-bottom. */
+.ui-table-shell .ui-table th {
+  border-top: 0;
+}
+
+/* Ajuste F2-3 (línea doble sobre el thead): origen verificado en el CSS real —
+ * ninguna regla legada (index.css th/td solo border-bottom; users-ui.css .mg-table
+ * th, scoped) ni ninguna regla del kit da borde superior al th. La doble real es
+ * la ADYACENCIA: en las pantallas del kit la cabecera de página subrayada
+ * (.ui-page-header, border-bottom con --line, arriba en este archivo) va
+ * seguida DIRECTAMENTE del marco (.ui-table-shell, border --line), con 0px
+ * entre ambas: dos líneas de 1px del mismo color se leen como una línea doble
+ * encima del thead. Separación aditiva SOLO en esa adyacencia (la guía #/ui,
+ * que no apila la tabla junto al PageHeader, no cambia). Resultado: una
+ * sola línea exterior del panel (el marco) y la delimitación inferior del
+ * encabezado (th border-bottom). */
+.ui-page-header + .ui-table-shell {
+  margin-top: var(--space-4);
+}
+
 .ui-table {
   width: 100%;
   border-collapse: collapse;
@@ -876,19 +953,25 @@ textarea.ui-control {
   color: var(--ink);
 }
 
-/* K2: cabecera con fondo y color EXPLÍCITOS con tokens (anula el
- * `th { background: #f7f9fc }` de index.css) y alineación declarada en las
- * celdas para que el base.css legado no filtre dentro del componente. */
+/* K2, actualizado por el ajuste F2-3 (5a): cabecera de tabla con MÁS PESO —
+ * 13px (--fs-13/--lh-13), 600, --ink (antes --ink-2) y tracking normal
+ * (antes 0.02em) sobre un tinte más marcado ya existente
+ * (--status-neutral-bg, antes --bg); mayúsculas y border-bottom
+ * (delimitador de la cabecera) intactos. Contraste --ink sobre
+ * --status-neutral-bg ≈ 13.5:1 (AA holgado). Cambio de KIT: afecta a todas
+ * las tablas (usos verificados: Mis reservas y la guía #/ui). En la pila
+ * móvil (<640px) thead está display:none y las etiquetas de las tarjetas
+ * apiladas (td::before) mantienen sus propios pesos/colores: sin riesgo. */
 .ui-table th {
   text-align: left;
-  background: var(--bg);
+  background: var(--status-neutral-bg);
   padding: var(--space-2) var(--space-3);
-  font-size: var(--fs-12);
-  line-height: var(--lh-12);
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  font-weight: 600;
+  letter-spacing: normal;
   text-transform: uppercase;
-  color: var(--ink-2);
+  color: var(--ink);
   border-bottom: 1px solid var(--line-control);
 }
 
@@ -925,6 +1008,18 @@ textarea.ui-control {
 @media (max-width: 640px) {
   .ui-table thead {
     display: none;
+  }
+
+  /* En la pila móvil el marco cerrado se retira: las filas ya son tarjetas
+   * propias (borde + radio) y el shell no debe doblar bordes ni encerrarlas. */
+  .ui-table-shell {
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .ui-table-shell .ui-table tbody tr:last-child td {
+    border-bottom: 1px solid var(--line);
   }
 
   .ui-table,
@@ -1002,4 +1097,64 @@ textarea.ui-control {
   .ui-spinner {
     animation: none;
   }
+}
+
+/* -- Variantes aditivas de Button (ajuste visual F2-3) ----------------------
+ * .ui-btn-link: acción tipo ENLACE de texto (sin fondo/borde, sin negrita,
+ * alto de la fila de tabla). Aditivo: no toca las variantes previas.
+ * Solo tokens del kit. ----------------------------------------------------- */
+.ui-btn-link {
+  height: var(--row-h);
+  padding-inline: var(--space-2);
+  border-color: transparent;
+  background: none;
+  color: var(--brand);
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
+}
+
+.ui-btn-link:hover:enabled {
+  background: none;
+  color: var(--brand-hover);
+}
+
+.ui-btn-link:active:enabled {
+  background: none;
+  color: var(--brand-pressed);
+}
+
+/* Tamaño compacto de fila: combinable con cualquier variante (p. ej. link). */
+.ui-btn-sm {
+  height: var(--row-h);
+  padding-inline: var(--space-3);
+}
+
+/* Variante aditiva (ajuste F2-3): acción destructiva secundaria GHOST —
+ * texto rojo con --accent, sin borde ni fondo; hover/active con el tinte
+ * danger existente y el tono oscurecido del propio acento. Contraste
+ * verificado: --accent ≥ 5.8:1 sobre surface y ≥ 4.7:1 sobre
+ * --status-danger-bg (AA con texto normal). Combinable con size="sm". */
+.ui-btn-danger-ghost {
+  border-color: transparent;
+  background: none;
+  color: var(--accent);
+}
+
+.ui-btn-danger-ghost:hover:enabled {
+  background: var(--status-danger-bg);
+  color: var(--accent-hover);
+}
+
+.ui-btn-danger-ghost:active:enabled {
+  background: var(--status-danger-bg);
+  color: var(--accent-pressed);
+}
+
+/* Hueco reservado del menú de fila (K6): mantiene "Detalle" en la misma
+ * posición horizontal en todas las filas (con o sin menú). Ancho igual al
+ * disparador compacto: 2 × padding (--space-2) + icono de 16px. */
+.ui-row-actions-slot {
+  display: inline-block;
+  width: var(--space-8);
 }

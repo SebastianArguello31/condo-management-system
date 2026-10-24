@@ -85,6 +85,17 @@ function BotonesSection() {
           Block (ancho completo)
         </Button>
       </Fila>
+      <Fila>
+        {/* Aditivas F2-3: danger-ghost destructiva secundaria (texto rojo,
+          * sin borde/fondo) y compacto "sm" combinado con variantes. */}
+        <Button variant="danger-ghost">Danger ghost</Button>
+        <Button variant="quiet" size="sm">
+          Quiet compacto (sm)
+        </Button>
+        <Button variant="danger-ghost" size="sm">
+          Danger ghost compacto (sm)
+        </Button>
+      </Fila>
       <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
         Recorre con Tab: el foco visible es el anillo de 2px (var(--focus-ring)).
       </p>
@@ -165,9 +176,13 @@ function EstadosSection() {
         <StatusBadge estado="CONFIRMADA" />
         <StatusBadge estado="RESUELTA" />
         <StatusBadge estado="RECHAZADA" />
-        <StatusBadge estado="CANCELADA" />
         <StatusBadge estado="CERRADA" />
         <StatusBadge estado="SIN ESTADO" />
+      </Fila>
+      {/* Cierres de reservas lado a lado: glifos y tonos distintos. */}
+      <Fila>
+        <StatusBadge estado="FINALIZADA" />
+        <StatusBadge estado="CANCELADA" />
       </Fila>
       <Fila>
         <StatusBadge estado="Custom" tone="warning" glyph="triangle" />
@@ -176,6 +191,8 @@ function EstadosSection() {
         Presets alineados a los estados reales del backend (incidencia y reservas).
         Nota: "EN_PROCESO" se presenta "EN PROCESO" (guiones bajos → espacios);
         "SIN ESTADO" usa el fallback neutral y "Custom" acepta tone/glyph override.
+        En reservas, FINALIZADA (check, info) y CANCELADA (punto, muted) comparten
+        contraste AA.
       </p>
     </Bloque>
   );
@@ -618,6 +635,10 @@ function DataTableSection() {
       />
       <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
         Bajo 640px las filas se apilan en tarjetas con el nombre de la columna.
+        Cabecera con más peso (ajuste F2-3, cambio de kit): 13px (--fs-13),
+        600, --ink y tracking normal sobre --status-neutral-bg; conserva
+        mayúsculas y su línea inferior; en móvil las etiquetas de
+        las tarjetas (td::before) no cambian de peso.
       </p>
     </Bloque>
   );

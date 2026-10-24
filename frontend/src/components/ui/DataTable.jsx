@@ -4,7 +4,11 @@
  * nombre de la columna (data-label).
  * K5: columnas aceptan `align: "right"` → th y td con .ui-num (alineación a
  * la derecha + tabular-nums) para montos, códigos y fechas numéricas.
- * Columnas: { key, header, align?: "right" | "left", headerClassName?,
+ * La tabla va DENTRO de un marco cerrado (.ui-table-shell): 1px de línea +
+ * radio de panel + overflow hidden (sin sombras; en móvil el marco se
+ * retira para no doblar los bordes de las tarjetas apiladas).
+ * Columnas: { key, header, align?: "right" | "left", width?: string (token,
+ * colgroup: ancho fijo de columna, p. ej. la de acciones), headerClassName?,
  * cellClassName?, render?(fila) }.
  */
 import "./ui.css";
@@ -54,37 +58,52 @@ export default function DataTable({
 
   const alignClass = (column) => (column.align === "right" ? "ui-num" : "");
 
+  /* Opción aditiva de columna (ancho fijo con tokens): si alguna columna
+   * define `width`, se emite un colgroup (evita que la celda de acciones y
+   * su cabecera cambien de posición entre filas/estados). La pila móvil
+   * (<640px) ignora el colgroup. */
+  const conAncho = columns.some((column) => column.width);
+
   return (
-    <table className={["ui-table", className].filter(Boolean).join(" ")}>
-      <caption className="ui-visually-hidden">{caption}</caption>
-      <thead>
-        <tr>
-          {columns.map((column) => (
-            <th
-              key={column.key}
-              scope="col"
-              className={[alignClass(column), column.headerClassName].filter(Boolean).join(" ") || undefined}
-            >
-              {column.header}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={rowKey ? rowKey(row) : row.id ?? row}>
+    <div className="ui-table-shell">
+      <table className={["ui-table", className].filter(Boolean).join(" ")}>
+        <caption className="ui-visually-hidden">{caption}</caption>
+        {conAncho && (
+          <colgroup>
             {columns.map((column) => (
-              <td
+              <col key={column.key} style={{ width: column.width ?? "auto" }} />
+            ))}
+          </colgroup>
+        )}
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th
                 key={column.key}
-                data-label={column.header}
-                className={[alignClass(column), column.cellClassName].filter(Boolean).join(" ") || undefined}
+                scope="col"
+                className={[alignClass(column), column.headerClassName].filter(Boolean).join(" ") || undefined}
               >
-                {column.render ? column.render(row) : row[column.key]}
-              </td>
+                {column.header}
+              </th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={rowKey ? rowKey(row) : row.id ?? row}>
+              {columns.map((column) => (
+                <td
+                  key={column.key}
+                  data-label={column.header}
+                  className={[alignClass(column), column.cellClassName].filter(Boolean).join(" ") || undefined}
+                >
+                  {column.render ? column.render(row) : row[column.key]}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

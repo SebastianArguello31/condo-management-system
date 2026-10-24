@@ -184,6 +184,9 @@ frontend/src/
 ├── services/                  api.js + routes.js.
 ├── utils/
 │   └── downloadAttachment.js  Descarga de adjuntos.
+│   └── format.js              (NUEVO, sesión preparatoria 2026-10-24)
+│                              formatDate/formatTime/formatDateTime en
+│                              hora local; para F2-3..F2-5 (aún sin usar).
 ├── styles/
 │   ├── tokens.css             Única fuente de valores visuales.
 │   ├── base.css               Reset/base/utilidades (carga al final).
@@ -356,14 +359,24 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
 
-> **ORDEN RESTANTE (2026-10-23, decide el dueño tras la revisión de F2-3):**
-> 1. **F2-4** — Perfil + historiales separados (análisis en otra sesión).
-> 2. **docs/convenciones-frontend.md** (guía del kit para los demás, parte de F2-11).
+> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-3, 2026-10-23; F2-3 ya está
+> hecha: ver "Sesión F2-3: Mis reservas" más abajo):**
+> 1. **F2-4** — Perfil + historiales separados (cierra B7); **empezar por el
+>    análisis en solo lectura**, sin editar antes del "ok" del dueño.
+> 2. **docs/convenciones-frontend.md** (guía del kit para los demás, parte de
+>    F2-11).
 > 3. **F2-1b** (CrudPage `variant="ui"` + Especialidades) y **F2-2**
 >    (Edificios/Unidades, select de unitTypes → cierra B10).
-> 4. **F2-5** — IncidentsPage (fechas/horas locales + CONSERVAR
->    `InterventionMaterials` de Dev 2).
-> 5. Resto de §7 en su orden (F2-6…F2-11).
+> 4. **F2-5** — IncidentsPage (fechas en DD/MM/AAAA con hora local +
+>    CONSERVAR `InterventionMaterials` de Dev 2).
+> 5. **F2-6 → F2-9** — resto de pantallas (pantallas de gestión, espacios +
+>    políticas, gestión de reservas + CreateReservation, Login rediseño);
+>    F2-10 ya no requiere paso aparte (las pantallas de Dev 2/3 ya llegaron
+>    con develop y quedaron registradas en routing.js).
+> 6. **F2-11** — limpieza de CSS, responsive y a11y (unifica el marco legado
+>    del shell y el ErrorBoundary global).
+>
+> Lo explícito del sprint tiene prioridad al elegir dentro de este orden.
 
 > **ACTUALIZACIÓN de integración (2026-10-23):** el `merge --no-commit
 > origin/develop` en `feature/refactor-frontend-base` fue resuelto:
@@ -418,6 +431,130 @@ conflictos el mismo día):**
 6. Después del merge, los demás devs dejan de modificar el repo: para la
    entrega del domingo no habrá más conflictos.
 
+## Sesión F2-3: Mis reservas (rama feature/refactor-mis-reservas)
+
+Rama nacida de `feature/refactor-frontend-base` después de que esa base
+integrara develop en el merge de la sesión anterior. **PR aún sin abrir:
+abrirlo cuando se mergee el PR de `feature/refactor-frontend-base`.**
+
+**Lo hecho:**
+
+- **MisReservasPage migrada al kit** (commit del dueño `2b5eb3e`):
+  `useQuery` con una sola consulta (reservas + espacios + tipos de evento,
+  mismos endpoints que antes) con loading → Skeleton, error → ErrorState con
+  Reintentar y vacío → EmptyState con el disparador REAL de "Nueva reserva"
+  (única instancia, sin duplicar el trigger); `reload()` conserva datos
+  previos (la lista no titila). PageHeader con título + metadatos de conteo
+  ("N reservas · M pendientes"). DataTable con los estados reales
+  (PENDIENTE/CONFIRMADA/RECHAZADA/CANCELADA/FINALIZADA vía StatusBadge) y sin
+  columna "#ID" (id solo como rowKey); acción principal "Detalle" como enlace
+  compacto; "Cancelar reserva" SOLO con estado PENDIENTE/CONFIRMADA (reglas
+  de reservas/rules.py) dentro de RowActionsMenu, con useConfirm (danger) +
+  useMutation + Toast de éxito y Toast danger para el error — cero
+  window.confirm. Detalle: Modal + DefinitionList (mismos datos que antes).
+  CreateReservation, api.js, routes.js, backend y CSS legado SIN tocar.
+- **Cambios al kit (retrocompatibles; DataTable/StatusBadge solo los usan la
+  guía #/ui y Mis reservas, verificado con grep):**
+  - `Button`: variante **"link"** (enlace de texto, sin borde ni negrita,
+    alto de fila) y **size="sm"** (compacto), aditivas; usos previos intactos.
+  - `DataTable`: **marco cerrado** (`.ui-table-shell`: borde 1px `--line`,
+    radio `--radius-md`, overflow hidden, sin sombras; línea superior del
+    thead dibujada SOLO por el marco — sin doble línea; en `<640px` el marco
+    se retira para no doblar los bordes de las tarjetas apiladas) y opción
+    de columna **`width`** (colgroup con tokens) para reservar el ancho de la
+    columna de Acciones, **alineada a la izquierda**: "Acciones" arranca en la
+    misma x que "Detalle", con hueco SIEMPRE reservado del menú
+    (`.ui-row-actions-slot`, ancho `--space-8`) en filas con o sin menú.
+    *(Sesión de pulido 2026-10-24: la columna pasó a botones visibles con
+    `.ui-actions-inline`; ver "Ajuste final" más abajo — el slot queda solo
+    como kit retro.)*
+  - `StatusBadge`: preset **FINALIZADA** (estado real del catálogo
+    `estado_reservas`, database/seed.sql:528-556) con tono **info** y glifo
+    **check** (border-trick de 2px, distinto del punto de CANCELADA, que
+    quedó en tono **muted**); guía #/ui los muestra lado a lado.
+- **Menú:** etiqueta del ítem del dashboard cambiada a **"Indicadores"**
+  (antes "Dashboard e Indicadores") en `config/routing.js`.
+- **Bug F2-3(β1) — pantalla en blanco:** al abrir `#/mis-reservas` TODO en
+  blanco (shell incluido). Causa verificada con lectura: `data` de useQuery
+  es `undefined` en el primer render y `const [rows, spaces, events] = data || []`
+  sin defaults por posición dejaba `rows === undefined`; el conteo del
+  encabezado (`rows.filter`) se evaluaba antes de cualquier guard → TypeError
+  sin ErrorBoundary. Corregido con la mínima edición (defaults `= []` en la
+  desestructuración, solo en MisReservasPage). **ErrorBoundary creado:**
+  `components/ui/ErrorBoundary.jsx` (clase; console.error del error) usado en
+  App.jsx alrededor de la pantalla activa con `key`/`resetKey` = ruta (se
+  reinicia al navegar) y ErrorState con "Volver al inicio" → ruta por defecto
+  del rol; el shell y el menú siguen vivos si una pantalla falla.
+- **Ajuste final de Mis reservas (2026-10-24, tras revisar el marco cerrado):**
+  - **Línea doble sobre el thead — causa real verificada (no era el th):**
+    ni `index.css` (`table`/`th, td` solo border-bottom; `th` solo background)
+    ni `users-ui.css` (`.mg-table th` con border-top, scoped a `.mg-table`)
+    ni regla del kit pintan una línea sobre el thead; el `border-top: 0` del
+    th ya lo neutralizaba. La doble real era la ADYACENCIA: la cabecera de
+    página subrayada (`.ui-page-header`, border-bottom `--line` en
+    ui.css:499) queda pegada a 0px del borde superior del marco
+    (`.ui-table-shell` border `--line`, ui.css:897) porque PageHeader y
+    DataTable son hermanos directos en la pantalla → dos líneas de 1px del
+    mismo tokens se leen como una doble. Corregido en ui.css con regla
+    aditiva acotada: `.ui-page-header + .ui-table-shell { margin-top:
+    var(--space-4) }` (solo cuando el marco va justo tras la cabecera; la
+    guía #/ui no cambia). Queda UNA línea exterior (el marco) + la
+    delimitación inferior de la cabecera (th border-bottom).
+  - **Columna Acciones alineada de verdad:** el desfaso era el relleno
+    PROPIO del botón compacto (`.ui-btn-sm` padding-inline `--space-3`), no
+    de th/td (que ya compartían `--space-3`): th y td siguen con ese relleno
+    y la nueva fila `.ui-actions-inline` (ui.css) cede el relleno del primer
+    control con `margin-inline-start: calc(var(--space-3) * -1)` para que el
+    texto de "Detalle" arranque en la misma x que "ACCIONES". Ancho fijo de
+    la columna: `calc(var(--space-12) * 4)` (192px: caben los dos botones).
+  - **Acciones visibles sin menú:** la pantalla deja de usar
+    `RowActionsMenu` (el componente sigue en el kit, lo usa la guía): celda
+    con `.ui-actions-inline` y, en señor orden, "Detalle" (`Button
+    variant="quiet" size="sm"`, con borde) y "Cancelar" (`Button
+    variant="danger-ghost" size="sm"`, texto rojo sin borde) visible solo
+    con PENDIENTE/CONFIRMADA; mismo flujo (useConfirm danger + useMutation +
+    Toast). Ambos con texto visible y aria-label descriptivo con fecha (ISO)
+    y espacio ("Cancelar reserva del 2026-10-07, Parrillera"). `.ui-row-actions-slot`
+    queda sin consumir aquí (kit, retrocompatible). Button: variante
+    aditiva **"danger-ghost"** (`--accent`, hover/active con
+    `--status-danger-bg`; ≥5.8:1 sobre surface, ≥4.7:1 sobre el tinte,
+    AA), documentada en su cabecera y mostrada en la guía #/ui.
+  - **fecha en DD/MM/AAAA:** columna Fecha con `formatDate` de
+    `utils/format.js` (ya existía; hora local, sin desplazar día).
+  - **Cabecera de tabla más pesada (cambio de KIT, afecta a todas las
+    tablas — usos verificados: Mis reservas y la guía):** `.ui-table th` con
+    `--fs-13`/`--lh-13` (antes 12), weight 600 (antes 500), `--ink` (antes
+    `--ink-2`), tracking normal (antes 0.02em) y fondo más marcado
+    `--status-neutral-bg` (antes `--bg`), manteniendo mayúsculas y su
+    border-bottom (`--line-control`). Contraste del par ≈13.5:1 (AA
+    holgado); en `<640px` thead está display:none y las etiquetas de las
+    tarjetas (td::before) nunca tocaron esos estilos: sin peso extra. Todo
+    con tokens (cero hex, cero px sueltos); sin cambios de funcionalidad.
+
+**Pendientes abiertos (sección propia de esta sesión):**
+- [ ] **"Nueva reserva" (CreateReservation)** sigue en estilo legado — se
+  toma en F2-8 (Gestión de reservas + CreateReservation).
+- [ ] **Fechas en ISO** (listado y detalle): pasar a **DD/MM/AAAA en hora
+  local** con una utilidad común (usarla también en F2-4 y F2-5).
+  *(Utilidad creada el 2026-10-24: `utils/format.js` — formatDate/
+  formatTime/formatDateTime, hora local; conectar al migrar.)*
+- [ ] **Marco legado alrededor del shell** (header superior blanco, panel con
+  radios grandes, pill de rol) → se unifica en **F2-11**.
+- [ ] **ErrorBoundary global:** hoy vive en App.jsx por pantalla activa; al
+  consolidar el shell final (F2-11) revisar límites y mensaje.
+- [ ] **Menú con 12 ítems para ADMIN**: al completar pantallas, el panel deja
+  de ser cómodo — decidir scroll interno (F2-11).
+- [ ] **npm audit: 2 vulnerabilidades (high) sin revisar** (aporta el merge
+  de develop; solo lectura, NO `npm audit fix` sin análisis).
+- [ ] **Bugs B1-B10**: siguen abiertos salvo los que cierre la migración de
+  cada pantalla (este paso no cerró ninguno de §7-bis: B7/B8 son de
+  Incidencias/Perfil).
+
+**Estado de commits y PR:** `2b5eb3e` (F2-3 núcleo) ya commiteado y
+verificado por el dueño. Los **ajustes visuales de cierre del kit** están SIN
+commit (ver "commit sugerido" en STATUS.md). PR de esta rama: **sin abrir**
+hasta que se mergee el PR de `feature/refactor-frontend-base`.
+
 ## 8. Pendientes y hallazgos abiertos
 
 **Producto de Dev 1:**
@@ -453,8 +590,9 @@ real a medida que se migren pantallas):
   2px en módulos legacy), prefers-reduced-motion.
 
 **Ambiente/deuda técnica:**
-- [ ] `npm audit`: 1 vulnerabilidad high sin revisar (solo lectura; NO
-      ejecutar `npm audit fix` sin análisis del dueño).
+- [ ] `npm audit`: **2 vulnerabilidades (high)** sin revisar (aporta el merge
+      de develop; solo lectura; NO ejecutar `npm audit fix` sin análisis del
+      dueño).
 - [ ] CSS legado SIN referencias en JSX (inventario del barrido CP6b; borrar
       en la limpieza final): de `index.css`: `.topbar`, `.container`,
       `.table-container`, `.detail-grid`, `.detail-section`, `.filter-bar`,
@@ -472,8 +610,101 @@ real a medida que se migren pantallas):
       `font-variant-numeric: tabular-nums` sí se usa en ui.css: decidir en la
       limpieza.)
 
+## 8-bis. Pulido pendiente
+
+Lista VACÍA. Formato de cada entrada: `- [Pantalla] — idea — alcance:
+kit | pantalla`. Se llena a medida que se migran pantallas con mejoras que
+NO son esenciales para cerrar el paso (las esenciales van al checklist del
+paso o a §7-bis); el "pulido" se decide y ejecuta después, entrando a la
+agenda cuando el dueño lo ordene.
+
+(nada registrado todavía)
+
+## 8-ter. Plantilla de migración de pantalla
+
+Checklist canónico para migrar UNA pantalla al kit (se copia al abrir un
+paso F2-x; referencia técnica: `docs/kit-ui-referencia.md`, reglas:
+`docs/convenciones-frontend.md`):
+
+1. **Antes de codificar (solo lectura):** git status/diff/log; grep de
+   consumidores related (CrudPage props, Icon usados, CSS de la pantalla);
+   revisar bugs §7-bis que cierra este paso. Pedir "ok" al dueño antes de
+   editar.
+2. **Datos:** `useQuery` con `signal` (loading → Skeleton sin parpadeo de
+   Reintentar; error → ErrorState+Reintentar; vacío → EmptyState con el
+   trigger REAL de creación, única instancia); `useMutation` para guardar/
+   eliminar y `reload()` (sin titilar a vacío).
+3. **Listado:** `PageHeader` (título + meta de conteo, un único `h1`) +
+   `DataTable` (columns/rowKey/caption, `align: "right"` para montos y
+   fechas/códigos, columna de acciones con `width` reservado + enlace
+   principal `Button variant="link" size="sm"` + `RowActionsMenu`,
+   destructivas `danger: true`); búsqueda con `SearchInput`, filtros con
+   `FilterBar` (etiquetas visibles; si el dashboard lo necesita, filtros
+   por query params del hash).
+4. **Formularios:** `FormModal` (error de la acción DENTRO, éxito por
+   Toast del padre); validación en cliente con `validations/` (schema que
+   espeje el backend) + mapeo `err.errors (arrays) → fieldErrors (string)`
+   + `useFormFieldError`; cierre bloqueado en `busy`.
+5. **Confirmaciones:** `useConfirm` (danger para destructivas); cero
+   `window.confirm`.
+6. **Detalles:** fechas/horas con `utils/format.js` (nunca ISO crudo);
+   estados con `StatusBadge` (presets reales; override si el estado no
+   tiene preset); `name` + `autoComplete` correcto en todos los inputs;
+   adjuntos con `utils/downloadAttachment.js`.
+7. **Verificación (dueño):** las 3 anchuras 375/768/1280, teclado, los
+   flujos CRUD completos, errores de servidor simulados;
+   checklist-documentado en STATUS.md ("Pruebas pendientes" SOLO con lo NO
+   ejecutado) + commit sugerido; actualizar `docs/convenciones-frontend.md`
+   §9 con una línea y registrar en §8-bis lo aplazado a "Pulido".
+
+## Sesión de preparación para migrar pantallas (2026-10-24)
+
+Solo lectura + archivos NUEVOS (sin tocar pantallas): base para migrar
+cualquier pantalla.
+
+- **`docs/kit-ui-referencia.md` (nuevo):** referencia técnica del kit
+  generada DEL CÓDIGO REAL (`components/ui/*.jsx`, hooks, validations,
+  utils, services, config/routing.js): props por componente (tipo/
+  obligatoria/defecto), ejemplo mínimo y notas de a11y; catálogo de hooks;
+  api()/routes; validations (ojo: `validate` devuelve UN mensaje por campo,
+  `err.errors` trae ARRAYS — normalizar); tokens por categoría (nombres);
+  pasos para registrar una pantalla en routing.js. Ampliarla al cambiar el kit.
+- **`components/ui/ErrorBoundary.jsx`:** YA existía (F2-3); verificado que
+  está envuelto en `App.jsx:132` alrededor de la pantalla activa con
+  `key`/`resetKey` = `shown.path` (elemento 2 del pedido: nada que hacer).
+- **`utils/format.js` (nuevo):** `formatDate` (DD/MM/AAAA), `formatTime` y
+  `formatDateTime` en hora local del navegador; string solo de fecha
+  (`AAAA-MM-DD`) se construye en hora local para no desplazar el día; todo
+  devuelve `""` sin dato válido. Sin consumidores todavía (F2-3 lo adopta).
+- **`docs/convenciones-frontend.md` (nuevo, borrador):** estructura de
+  carpetas, uso del kit, estados, errores en modales, validaciones,
+  a11y, prohibiciones. Se amplía con UNA LÍNEA por pantalla migrada (§9).
+- **Nuevas secciones del plan:** §8-bis "Pulido pendiente" (lista vacía,
+  formato pantalla — idea — alcance kit/pantalla) y §8-ter "Plantilla de
+  migración de pantalla" (checklist canónico por paso F2-x).
+
 ## 9. Prompt de arranque
 
-"Lee docs/plan-refactor-frontend.md y STATUS.md. Resume en 5 líneas dónde
-estamos, qué falta verificar y cuál es el siguiente paso. No cambies nada
-hasta que yo confirme."
+"Lee docs/plan-refactor-frontend.md (y STATUS.md) y frontend/AGENTS.md.
+Resume en 5 líneas dónde estamos (último checkpoint hecho y verificado,
+trabajo sin commit, PRs pendientes), qué pruebas faltan y cuál es el
+siguiente paso según el bloque ORDEN RESTANTE VIGENTE. No cambies nada
+hasta que yo confirme. Reglas fijas: sin npm/node ni git de escritura
+(git solo lectura); español, formal, con tuteo; solo se usan tokens de
+styles/tokens.css (sin hex ni px sueltos); cambios en components/ui siempre
+retrocompatibles; al cerrar la sesión, persiste todo el avance en este
+plan y en STATUS.md."
+
+## 10. Checklist de cierre de sesión
+
+Al terminar cada sesión (sin memoria la siguiente), ANTES de que el dueño
+haga commit/push, marcar todo aquí:
+
+- [ ] Nueva sección de sesión en este plan con lo hecho (o sección del
+      checkpoint correspondiente del §7).
+- [ ] Pendientes abiertos actualizados (bugs §7-bis, ambiente, lo propio).
+- [ ] Bloque ORDEN RESTANTE VIGENTE vigente y con el próximo paso primero.
+- [ ] STATUS.md: "Estado" con último checkpoint hecho/verificado/commiteado
+      (o los ajustes sin commit + commit sugerido), "Pruebas pendientes"
+      SOLO con lo no ejecutado y "Regla permanente" vigente.
+- [ ] "Prompt de arranque" (§9) sigue al final y actualizado.
