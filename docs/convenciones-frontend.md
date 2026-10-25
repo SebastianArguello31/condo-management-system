@@ -178,3 +178,9 @@ solo si su clave no coincide con el id.
   prioridad con override de módulo, "Reportada" con formatDate, filters
   con semilla `?estado=` del hash) — los MODALES siguen legacy (F2-5b los
   extrae; B8 abierta); InterventionMaterials (Dev 2) intacto.
+- **Incidencias (`IncidentsPage`)** — F2-5b: creación en
+  `IncidentsCreateModal` (FormModal con validación en cliente
+  `incidenciaCrear` + límites REALES de adjuntos del backend, error de
+  la acción DENTRO — **cierra B8** —, éxito por Toast y reload sin
+  titilar); modal de detalle e InterventionMaterials intactos; el badge
+  "SIN ESTADO" es dato/backend, no pantalla (reportado).

@@ -314,8 +314,10 @@ final, según alcance).
 - **F2-5** `refactor:` IncidentsPage en subcomponentes (tabla, form de
   creación con FormModal, modal de detalle, timeline). Cierra **B7 detalle,
   B8**. — **F2-5a HECHA (pendiente de verificar):** shell + listado +
-  filtros al kit en `feature/refactor-incidencias` (modales aún legacy;
-  detalle en "F2-5: análisis y plan" más abajo). F2-5b/F2-5c pendientes.
+  filtros al kit en `feature/refactor-incidencias` (detalle en "F2-5:
+  análisis y plan" más abajo). **F2-5b HECHA (pendiente de verificar):**
+  creación en `IncidentsCreateModal` (FormModal; cierra B8; detalle en
+  "Sesión F2-5b"). F2-5c pendiente.
 - **F2-6** `refactor:` ManagementPage + Residentes + CreateAccount
   (+ `validations/` cuenta/perfiles; relación residentes-unidades).
   Cierra **B1–B5**.
@@ -367,15 +369,15 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
 
-> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-5a, 2026-10-25; F2-4,
-> F2-1b, F2-2 y F2-5a hechas — F2-5b/5c son el próximo paso antes de
+> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-5b, 2026-10-25; F2-4,
+> F2-1b, F2-2, F2-5a y F2-5b hechas — verificación y F2-5c antes de
 > F2-6):**
-> 1. **Verificación por el dueño** de F2-1b, F2-2 (incluida ronda 1) y
->    F2-5a (checklists en STATUS.md) → abrir PRs de las ramas hechas.
-> 2. **F2-5b** (modales al kit: creación en FormModal con
->    `incidenciaCrear` y límites de adjunto; detalle con ficha/timeline;
->    cierra B8 y el defecto de B7 que la captura confirme) y **F2-5c**
->    (pulido de la pantalla).
+> 1. **Verificación por el dueño** de F2-1b, F2-2 (incluida ronda 1),
+>    F2-5a y F2-5b (checklists en STATUS.md) → abrir PRs de las ramas
+>    hechas.
+> 2. **F2-5b**: HECHA (creación al kit, cierra B8); queda el **detalle**
+>    (ficha/timeline con los defectos de B7 que la captura confirme) y
+>    **F2-5c** (pulido de la pantalla).
 > 3. **docs/convenciones-frontend.md** (guía del kit para los demás,
 >    parte de F2-11; ya va llevada por sesión con una línea por pantalla
 >    en §9).
@@ -1016,15 +1018,56 @@ rol se mantienen. (7) Límites de adjuntos en cliente en 5b. (8) Definir
 "abiertas" como estados no de cierre (REPÓRTALO: RESUELTA, CERRADA,
 RECHAZADA, CANCELADA).
 
+## Sesión F2-5b: creación de incidencias al kit (2026-10-25)
+
+Alcance: `IncidentsCreateModal.jsx` (NUEVO) + `IncidentsPage.jsx` (solo
+para montar el modal nuevo y quitar el creador legado). El modal de
+DETALLE, sus formularios, intervenciones e `InterventionMaterials`
+quedan INTACTOS (verificado con git diff: la línea del detalle no
+cambia). Sin npm/node; sin tocar api.js, routes.js, backend, CSS legado
+ni otras pantallas; CERO cambios al kit.
+
+- **PASO 0 (diagnóstico "SIN ESTADO", solo lectura):** NO es la
+  pantalla; el texto lo emite el backend:
+  `backend/app/modules/incidents/repositories/incidents.py:51` usa
+  `COALESCE(estado.nombre, 'SIN ESTADO') AS estado` cuando no hay
+  historial. Causa de los datos: en `database/seed_demo.sql` las
+  incidencias se insertaron con títulos LARGOS (líneas 301-305, p. ej.
+  "Fuga en cañería principal del edificio Torre Norte - Urgente: ...")
+  pero el INSERT de `historial_incidencia` (líneas 533-551) casó por
+  `JOIN incidentes i ON i.titulo = h.titulo` EXACTO contra los títulos
+  CORTOS (línea 588) → esas filas quedaron SIN historial → estado NULL
+  → "SIN ESTADO". El frontend está correcto (`IncidentsPage` pinta
+  `row.estado` tal cual con StatusBadge neutral/dot). NO se toca
+  (dato/backend).
+- **Paridad del modal de creación:** mismos campos y textos (Título,
+  Descripción, Unidad "Edificio · código", Tipo, nota de prioridad
+  Normal, Evidencias con el MISMO accept), misma FormData ("titulo",
+  "descripcion", "id_unidad", "id_tipo_incidencia" y cada archivo bajo
+  "archivos"), mismo endpoint POST `/incidents`, mismo éxito con Toast +
+  reload (texto nuevo "Incidencia registrada." por la convención §2.18)
+  y error DENTRO del modal (B8); ahora además errores por campo
+  (`validate()` + `err.errors` normalizado) que el legado no mostraba.
+- **Límites de adjuntos usados = REALES del backend** (attachments.py:
+  8-15): ≤3 archivos, ≤5 MB cada uno, .jpg/.jpeg/.png/.pdf; mensajes por
+  archivo ("<nombre> supera 5 MB", "<nombre> no es JPG, PNG ni PDF").
+  La firma mágica y el nombre ≤200 quedan en el backend.
+- Reglas §8-ter aplicadas sin desviarse (FormModal error DENTRO con foco
+  y scroll, 413 con mensaje específico, 400 con err.errors por campo,
+  éxito por Toast, cierre bloqueado en busy, Field con name/autoComplete,
+  showRequiredNote, useMutation con dedupe, cero window.confirm).
+- Verificación pendiente del dueño: checklist F2-5b en STATUS.md.
+
 ## 8. Pendientes y hallazgos abiertos
 
 **Producto de Dev 1:**
 - [x] Verificación final de CP6b: guía `#/ui` — completada por el dueño y
       commiteada (`21d79f0`).
-- [ ] **Adjuntos grandes:** el backend responde 413 al superar el límite
-      (16 MB) y la UI actual solo muestra un error genérico. Al migrar
-      IncidentsPage: validación de tamaño/tipo en cliente + mensaje claro
-      (413) y/o Alert explicativo.
+- [x] **Adjuntos grandes:** el backend responde 413 al superar el límite
+      (16 MB) y la UI actual solo muestra un error genérico. RESUELTO en
+      F2-5b: validación de tamaño/cantidad/extensión en el cliente dentro
+      de `IncidentsCreateModal` + mensaje específico de 413 en el Alert
+      DENTRO del modal (quedó la firma mágica al backend).
 - [x] **`StatusBadge` presets:** alineados a los estados reales del backend
       en CP6c (K3); revisar tonos/glyphs por pantalla al migrar cada una.
 - [x] **Fuente de datos del historial** de incidencias residente/técnico:
@@ -1087,6 +1130,10 @@ NO son esenciales para cerrar el paso (las esenciales van al checklist del
 paso o a §7-bis); el "pulido" se decide y ejecuta después, entrando a la
 agenda cuando el dueño lo ordene.
 
+- [IncidentsPage] — badge de estado "EN_REVISION" se parte en dos líneas
+  (el badge con nowrap o abreviatura si el dueño lo decide) — alcance: kit.
+- [IncidentsPage] — el placeholder de búsqueda de incidencias se corta
+  ("Buscar en mis incidencias" no cabe a 1280/375) — alcance: pantalla.
 - [IncidentsPage] — columna **Unidad** para el RESIDENTE (el perfil
   mostraba la unidad de cada incidencia; al sacar el historial del perfil
   se decidió PERDER esa info y añadirla acá si el dueño quiere) — alcance:

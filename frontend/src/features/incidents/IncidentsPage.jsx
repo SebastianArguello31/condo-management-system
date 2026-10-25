@@ -11,10 +11,12 @@
  * StatusBadge (presets reales), prioridad con override de MÓDULO (sin
  * presets nuevos en el kit), "Reportada" con formatDate y acciones
  * RowActions ("Detalle" quiet sm, aria-label con el título).
- * Los MODALES de creación y detalle (formularios, cambio de estado,
- * intervenciones e InterventionMaterials de Dev 2) se CONSERVAN con su
- * código y comportamiento ACTUALES (solo se saca el aviso de página: el
- * éxito pasa a Toast); B8 (5b) y el defecto de B7 (5c) siguen abiertos.
+ * La CREACIÓN usó el creador legado hasta F2-5a; en F2-5b va al kit con
+ * IncidentsCreateModal (FormModal: error de la acción DENTRO del modal,
+ * éxito por Toast, reload() sin titilar — cierra B8). El modal de DETALLE
+ * (formularios, cambio de estado, intervenciones e InterventionMaterials
+ * de Dev 2) se conserva con su código y comportamiento ACTUALES intactos
+ * (el defecto de B7 queda abierto para 5c).
  */
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
@@ -38,11 +40,10 @@ import {
 } from "../../components/ui";
 import Modal from "../../components/ui/Modal";
 import InterventionMaterials from "./InterventionMaterials";
-
-const EMPTY_FORM = { titulo: "", descripcion: "", id_unidad: "", id_tipo_incidencia: "", archivos: [] };
+import IncidentsCreateModal from "./IncidentsCreateModal";
 
 /* Fallback del metadata QUE SOLO PIDE el residente (técnico/ADMIN no lo
- * consulta): el crear usa los modales y no existe en la pantalla. */
+ * consulta). */
 const EMPTY_METADATA = { tipos: [], unidades: [] };
 
 /* "Abiertas" = cualquier estado que NO marca cierre (criterio: RESUELTA,
@@ -92,7 +93,8 @@ export default function IncidentsPage({ user }) {
 
   /* Defaults POR POSICIÓN: data es undefined en el primer render (no
    * repetir el bug de pantalla en blanco de Mis reservas). metadata queda
-   * null para técnico/ADMIN; el modal de creación la usa con fallback. */
+   * null para técnico/ADMIN; el modal de creación recibe los catálogos
+   * vía props (solo el residente los consulta). */
   const [incidents = [], priorities = [], statuses = [], metadatos = null, technicians = [], inventoryItems = []] = data || [];
   const metadata = metadatos ?? EMPTY_METADATA;
 
@@ -102,7 +104,6 @@ export default function IncidentsPage({ user }) {
   const [history, setHistory] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [interventions, setInterventions] = useState([]);
-  const [form, setForm] = useState({ ...EMPTY_FORM });
   const [interventionResult, setInterventionResult] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -119,18 +120,6 @@ export default function IncidentsPage({ user }) {
   useEffect(() => {
     setEstadoFiltro(estadoDesdeUrl);
   }, [estadoDesdeUrl]);
-
-  const update = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
-
-  async function createIncident(event) {
-    event.preventDefault(); setBusy(true); setError("");
-    try {
-      const body = new FormData();
-      ["titulo", "descripcion", "id_unidad", "id_tipo_incidencia"].forEach((key) => body.append(key, form[key]));
-      form.archivos.forEach((file) => body.append("archivos", file));
-      await api(routes.incidents, { method: "POST", body }); setForm({ ...EMPTY_FORM }); setShowCreate(false); notify("Incidencia creada."); await reload();
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
-  }
 
   async function openDetail(row) {
     setNextStatus(""); setStatusComment("");
@@ -293,7 +282,15 @@ export default function IncidentsPage({ user }) {
         ? <Button variant="quiet" onClick={limpiarFiltros}>Limpiar filtros</Button>
         : (isResident ? triggerNuevo : undefined)}
     />
-    {showCreate && <Modal title="Nueva incidencia" busy={busy} onClose={() => setShowCreate(false)}><form onSubmit={createIncident}><fieldset disabled={busy} className="mg-form-body"><label>Título<input name="titulo" required minLength={5} value={form.titulo} onChange={update} /></label><label>Descripción<textarea name="descripcion" required minLength={10} value={form.descripcion} onChange={update} /></label><label>Unidad<select name="id_unidad" required value={form.id_unidad} onChange={update}><option value="">Seleccionar...</option>{metadata.unidades.map((u) => <option key={u.id_unidad} value={u.id_unidad}>{u.edificio} · {u.codigo}</option>)}</select></label><label>Tipo<select name="id_tipo_incidencia" required value={form.id_tipo_incidencia} onChange={update}><option value="">Seleccionar...</option>{metadata.tipos.map((t) => <option key={t.id_tipo_incidencia} value={t.id_tipo_incidencia}>{t.nombre}</option>)}</select></label><p>La incidencia se registra con prioridad Normal. Administración puede ajustarla.</p><label>Evidencias<input type="file" multiple accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setForm((c) => ({ ...c, archivos: [...e.target.files] }))} /></label></fieldset><button className="mg-primary">Crear</button></form></Modal>}
+    {showCreate && (
+      <IncidentsCreateModal
+        open
+        onClose={() => setShowCreate(false)}
+        onCreated={reload}
+        unidades={metadata.unidades}
+        tipos={metadata.tipos}
+      />
+    )}
     {detail && <Modal title={`Incidencia #${detail.id_incidencia}`} busy={busy} onClose={() => setDetail(null)}><div className="mg-form-body"><p><strong>{detail.titulo}</strong></p><p>{detail.descripcion}</p><p>Tipo: {detail.tipo_incidencia || "Sin tipo"}</p>{isAdmin && <label>Prioridad<select value={detail.id_prioridad} onChange={updatePriority}>{priorities.map((p) => <option key={p.id_prioridad} value={p.id_prioridad}>{p.nombre}</option>)}</select></label>}<p>Estado: {detail.estado}</p>{isTechnician && <form onSubmit={changeStatus}><fieldset disabled={busy}><label>Nuevo estado<select required value={nextStatus} onChange={(e) => setNextStatus(e.target.value)}><option value="">Seleccionar...</option>{statuses.filter((s) => detail.estados_permitidos?.includes(s.nombre)).map((s) => <option key={s.id_estado} value={s.nombre}>{s.nombre.replaceAll("_", " ")}</option>)}</select></label><label>Comentario (opcional)<textarea maxLength={500} value={statusComment} onChange={(e) => setStatusComment(e.target.value)} /></label><button className="mg-primary" disabled={!nextStatus}>Guardar estado</button>{!detail.estados_permitidos?.length && <p>No hay cambios de estado disponibles.</p>}</fieldset></form>}{error && <div role="alert" className="mg-alert mg-alert-error">{error}</div>}<h3>Historial</h3><ul>{history.map((h) => <li key={h.id_historial_incidencia}>{h.fecha} · {h.estado}{h.comentario && ` · ${h.comentario}`}</li>)}</ul><h3>Asignaciones</h3><ul>{assignments.map((a) => <li key={a.id_asignacion}>{a.tecnico_nombre} {a.tecnico_apellido}</li>)}</ul><h3>Intervenciones</h3>{interventions.map((intervention) => <article className="detail-section" key={intervention.id_intervencion}><p>{intervention.fecha_inicio} · {intervention.resultado}</p><InterventionMaterials intervention={intervention} items={inventoryItems} canConsume={Boolean(detail.puede_registrar_intervencion && (isAdmin || (isTechnician && intervention.id_personal === user.id_usuario)))} onStockChanged={reload} /></article>)}{isTechnician && <form onSubmit={addIntervention}><textarea required minLength={5} value={interventionResult} onChange={(e) => setInterventionResult(e.target.value)} placeholder="Detalle de lo realizado" /><button className="mg-primary">Registrar intervención</button></form>}{detail.adjuntos?.map((file) => <button key={file.id_adjuntos_incidencia} className="mg-secondary" onClick={() => downloadAttachment(file.id_adjuntos_incidencia, file.nombre_original)}>Descargar {file.nombre_original}</button>)}</div></Modal>}
   </section>;
 }
