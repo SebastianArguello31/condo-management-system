@@ -470,6 +470,7 @@ export default function CrudPageUi({
           busy={guardar.busy}
           error={accionError || undefined}
           fieldErrors={fieldErrors}
+          showRequiredNote={fields.some((field) => field.required)}
           onSubmit={save}
           onClose={cerrarModal}
         >

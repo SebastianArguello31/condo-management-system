@@ -1244,3 +1244,14 @@ textarea.ui-control {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* Nota de campos obligatorios del FormModal (F2-2, ronda 1; aditivo):
+ * una línea fs-13/ink-2 sobre los campos cuando el padre activa
+ * showRequiredNote (CrudPageUi la activa si algún field es required);
+ * el <form> la referencia vía aria-describedby. Solo tokens. */
+.ui-form-required {
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink-2);
+}

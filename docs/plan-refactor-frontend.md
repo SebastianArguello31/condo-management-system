@@ -299,7 +299,9 @@ final, según alcance).
 - [ ] Políticas: CRUD con updateMethod PUT + lookup de espacios; botón
       Volver funciona (modo legado).
 - **F2-2** `refactor:` Edificios y Unidades; "Tipo de unidad" como **select**
-  del catálogo `unitTypes`. Cierra **B10**.
+  del catálogo `unitTypes`. Cierra **B10**. — **HECHA (pendiente de
+  verificar)** en la rama `feature/refactor-edificios-unidades` (nacida de
+  `chore/kit-rowactions-convenciones`); detalle en "Sesión F2-2" más abajo.
 - **F2-3** `refactor:` Mis reservas (residente). — **HECHA (pendiente de
   verificar):** migrada al kit (PageHeader con conteos, useQuery sin
   parpadeo, DataTable con StatusBadge/RowActionsMenu y sin columna "#ID",
@@ -363,14 +365,15 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
 
-> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-1b, 2026-10-25; F2-4 y
-> F2-1b hechas — ver las secciones de sesión correspondientes al final
+> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-2, 2026-10-25; F2-4, F2-1b y
+> F2-2 hechas — ver las secciones de sesión correspondientes al final
 > de este documento):**
 > 1. **Verificación de F2-1b por el dueño** (checklist de la sesión: Especialidades
 >    en 1280/768/375 + teclado, y las 4 pantallas legadas sin cambios) → abrir PR
 >    de la rama (sin abrir: esperar el merge del PR de `feature/refactor-perfil`).
 > 2. **F2-2** (Edificios/Unidades, select de unitTypes → cierra B10) re-evaluando
->    la especificación contra el modo ui nuevo.
+>    la especificación contra el modo ui nuevo. — **HECHA (pendiente de
+>    verificar)**, ver "Sesión F2-2".
 > 3. **docs/convenciones-frontend.md** (guía del kit para los demás, parte de
 >    F2-11).
 > 4. **F2-5** — IncidentsPage (fechas en DD/MM/AAAA con hora local +
@@ -651,6 +654,95 @@ pantalla migra después; (c) el dispatcher añade el import de CrudPageUi
 para TODAS las pantallas legadas (bundle mínimo, sin efecto de
 comportamiento: el legado no se monta).
 
+## Sesión F2-2: Edificios y Unidades al kit (rama feature/refactor-edificios-unidades)
+
+Rama nacida de `chore/kit-rowactions-convenciones` (`dd872ed`, que ya incluye
+RowActions y createLabel/editLabel en CrudPageUi). Inventario de
+consumidores re-verificado con grep ANTES de editar: Espacios y Políticas
+siguen montando CrudPage LEGADO (sin `variant="ui"`, idénticas), el mismo
+cuadro de la especificación §7-F2-1b → se continuó.
+
+**Archivos tocados (solo 2):**
+- `frontend/src/features/units/BuildingsPage.jsx` — SOLO props nuevas en la
+  invocación: `variant="ui"`, `createLabel="Nuevo edificio"`,
+  `editLabel="Editar edificio"`, `getRecordLabel={row => \`edificio
+  ${row.nombre}\`}` y columna ID quitada del `columns` (id solo como
+  rowKey por idField). `fields`, `columns` restantes, `lookups` (constante
+  de módulo `types` → GET /building-types), endpoint, description y
+  payloads SIN CAMBIOS.
+- `frontend/src/features/units/UnitsPage.jsx` — `variant="ui"` + labels
+  `createLabel="Nueva unidad"` / `editLabel="Editar unidad"` +
+  `getRecordLabel={row => \`unidad ${row.codigo}\`}`, columna ID quitada y
+  **B10 cerrado**: `id_tipo_unidad` pasó de `type: "number"` a
+  `type: "select"` con `lookup: "unitTypes", optionId: "id_tipo_unidad"` —
+  mismo mecanismo de `lookups` que Edificios, con `LOOKUPS` constante de
+  módulo (no inline: el literal en cada render rompería el dedupe de
+  useQuery) alimentada por `routes.unitTypes` (GET /unit-types, ya
+  existente). `id_edificio` SIGUE `type: "number"` (hallazgo, fuera de
+  alcance; ver abajo). Payloads idénticos al legado: select → Number,
+  trim de strings, `codigo` requerido, sin schemas inventados (no existe
+  schema en validations/ para buildings/units; solo `required` de fields).
+
+**Cambios al kit: NINGUNO** — CrudPageUi ya cubría todo lo exigido por
+convenciones `§8-bis` (RowActions Editar quiet sm + Eliminar danger-ghost
+sm con aria-label vía getRecordLabel, columna Acciones width
+`calc(var(--space-12) * 4)`, createLabel/editLabel sin ícono, FormModal
+con name/autoComplete, error dentro + Toast). Ni un cambio en
+`components/ui` ni ui.css. `CrudPage.jsx` intacto (legado no cambiado).
+
+**Paridad (modo legado → ui):**
+- Listado: UseQuery con signal (endpoint + lookups en un Promise.all,
+  deps `[endpoint, lookups]`), loading → Skeleton SIN "Reintentar" al
+  abrir (B9 cerrado por código: `useQuery` arranca `loading: enabled`,
+  CrudPageUi:500 pasa a DataTable que renderiza Skeleton), error →
+  ErrorState con Reintentar (`reload`), vacío → EmptyState con el trigger
+  ("Nuevo edificio"/"Nueva unidad", única instancia). Edificios ya
+  mostraba nombre de tipo y Unidades ya muestra edificio y tipo UN NOMBRE
+  (`edificio`/`tipo_unidad` llegan del backend con JOIN; verificado en
+  `.repositories/units.py:3-18`), no el número.
+- Formularios: FormModal con título "Nuevo|Editar edificio/unidad" y
+  descripción "Registro: edificio/unidad <nombre|código>", cierre
+  bloqueado en busy, error de la acción DENTRO + fieldErrors de
+  `err.errors`, éxito Toast "Cambios guardados." + reload sin titilar.
+  Select de tipo de unidad: opciones del catálogo con "Seleccionar..."
+  y help de lookups vacíos igual que el legado; al editar el valor
+  inicial es el id numérico de la fila (llega en el listado).
+- Eliminación: useConfirm danger ("Se eliminará "unidad U-101". No hay
+  vuelta atrás.") + useMutation DELETE + Toast + reload. Cero
+  window.confirm. Resto de defaults (PATCH, canCreate/canEdit/canDelete,
+  canEditRow, isFieldDisabled) idénticos al legado.
+- **Sin StatusBadge:** ni `edificios` ni `unidades` tienen campo
+  `activo` en el esquema real (verificado en repositories) — no aplica
+  el override ACTIVA/INACTIVA (regla: solo si el registro tiene campo
+  activo). Fechas: ninguna columna muestra fechas (created_at no se
+  mostraba en el legado ni se muestra).
+- Separación --space-4 PageHeader/FilterBar/DataTable: ya resuelta por
+  las reglas de adyacencia de ui.css (sin CSS nuevo).
+
+**Pulido §8-bis evaluado ("mensaje duplicado Toast/tabla en reload
+fallido"):** NO implementado. Al guardar/eliminar con éxito el Toast
+informa la operación real OK y, si el reload posterior falla, la tabla
+muestra ErrorState con Reintentar (son dos mensajes de cosas distintas,
+sin acción duplicada y con datos previos conservados; patrón ya aceptado
+en F2-1b). Reproducir el aviso combinado del legado implicaría tocar el
+kit; queda anotado en §8-bis para el dueño.
+
+**Hallazgos (SIN implementar, fuera de alcance):**
+1. `Unidades` referencia al EDIFICIO con input `type: "number"`
+   (`id_edificio`): mismo tratamiento candidado al select/lookup de
+   Edificios (el catálogo GET /buildings existe). Se APLICÓ solo a
+   `id_tipo_unidad` (B10); convertir el edificio requiere decisión del
+   dueño.
+2. `UnitsPage` no pasaba `description` a CrudPage legado; en modo ui
+   toma el default "Administra los registros del condominio." en la meta
+   del PageHeader.
+
+**Verificación (checklist, pendiente del dueño, STATUS.md tiene la
+versión completa):** Edificios y Unidades en 1280/768/375 + teclado;
+crear/editar/eliminar con payload idéntico al legado (Network); B9 (sin
+parpadeo de Reintentar al abrir), B10 (select con nombres del catálogo);
+Espacios/Políticas SIN cambios (grep + captura).
+
 ## Sesión F2-4: Perfil + historiales fuera (rama feature/refactor-perfil)
 
 Rama nacida de `feature/refactor-mis-reservas`. Análisis en solo lectura
@@ -880,8 +972,10 @@ agenda cuando el dueño lo ordene.
   casos, tocar solo `emptyTitle` — alcance: pantalla (futuro).
 - [CrudPageUi] — los avisos combinados del legado ("se guardó, pero no se
   pudo actualizar la lista") no se reproducen: el error de reload queda
-  como ErrorState de la tabla; evaluar el mensaje duplicado del Toast vs
-  tabla cuando se migren más pantallas — alcance: kit/UI (evaluar en F2-2).
+  como ErrorState de la tabla. **EVALUADO en F2-2:** no duplicado real —
+  Toast opera la acción (OK verificable) y ErrorState informa el reload
+  fallido con Reintentar y datos previos conservados; reproducir el aviso
+  combinado tocaría el kit — alcance: kit/UI (decisión del dueño).
 - [PageHeader/kit] — la meta de CrudPageUi mezcla la descripción de la
   pantalla con el conteo ("desc · N registros") en la línea mono; si se
   quiere limpio, separar descripción del meta (componente/prop) — alcance:

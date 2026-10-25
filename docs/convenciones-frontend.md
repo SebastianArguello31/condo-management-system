@@ -164,3 +164,11 @@ solo si su clave no coincide con el id.
   FormModal con validación en cliente `especialidadCrear`, eliminación
   con useConfirm + Toast — **cierra B9**); el resto de consumidores de
   CrudPage sigue en modo legado (sin cambios hasta F2-2/F2-7).
+- **Edificios (`BuildingsPage`) y Unidades (`UnitsPage`)** — F2-2:
+  migradas con `variant="ui"` (RowActions Editar/Eliminar, labels
+  específicos "Nuevo/Editar edificio", "Nueva/Editar unidad", sin
+  columna ID, sin StatusBadge porque no tienen campo `activo`); B10
+  cerrado: tipo de unidad como select del catálogo `unit-types` (constante
+  de módulo en `lookups`, misma técnica que Edificios) — el
+  edificio de las unidades sigue un input numérico (pendiente de
+  decisión, ver plan).
