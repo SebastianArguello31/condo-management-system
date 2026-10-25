@@ -291,6 +291,42 @@ extremos, Esc cierra y devuelve foco, Tab cierra, clic fuera cierra.
 Patrón recomendado: UNA acción principal como enlace de texto (`Button
 variant="link" size="sm"`) junto al menú; el resto AL menú.
 
+### RowActions — `components/ui/RowActions.jsx` (patrón de Mis reservas)
+
+Acciones de fila como BOTONES VISIBLES dentro de `.ui-actions-inline`.
+`RowActionsMenu` y `RowActions` son alternativas: **RowActions para 1–3
+acciones por fila; el menú SOLO con más de 3**.
+
+| Prop | Tipo | Obligatoria | Defecto | Notas |
+|---|---|---|---|---|
+| `actions` | `[{ label, onSelect, ariaLabel?, danger?, disabled?, busy?, hidden? }]` | no | `[]` | los `hidden` se omiten; sin acciones ni `children` → `null` |
+| `children` | node | no | — | pinta DESPUÉS de los botones (p. ej. `renderExtraActions`) |
+| `className` | string | no | `""` | |
+
+```jsx
+<RowActions
+  actions={[
+    { label: "Detalle", ariaLabel: `Ver detalle de la reserva del ${r.fecha}, ${r.espacio}`,
+      onSelect: () => ver(r) },
+    { label: "Cancelar", danger: true, disabled: cancelar.busy,
+      ariaLabel: `Cancelar reserva del ${r.fecha}, ${r.espacio}`,
+      onSelect: () => cancelar(r) },
+  ]}
+/>
+<RowActions actions={canDelete ? [{ label: "Editar", ariaLabel: `Editar ${etiqueta}`, onSelect: () => editar(r) }] : []}>
+  {renderExtraActions?.(r, busy)}
+</RowActions>
+```
+
+Accesibilidad: cada botón es `Button size="sm"` del kit (`variant="quiet"`
+por defecto; `"danger-ghost"` si `danger`); `ariaLabel` → `aria-label`
+SIEMPRE con el nombre o la fecha del registro; `disabled`/`busy` pasan al
+Button (busy añade spinner); primer botón visible hereda el margen
+negativo de `.ui-actions-inline > :first-child` (texto alineado con la
+cabecera); fila en `inline-flex` con `gap: --space-2`. Sin estado interno
+ni CSS propio (usa la clase existente). Usos: Mis reservas, CrudPageUi
+(Especialidades).
+
 ### Modal — `components/ui/Modal.jsx`
 
 | Prop | Tipo | Obligatoria | Defecto | Notas |

@@ -17,6 +17,7 @@ export { default as Section } from "./Section";
 export { default as DefinitionList } from "./DefinitionList";
 export { default as Timeline } from "./Timeline";
 export { default as RowActionsMenu } from "./RowActionsMenu";
+export { default as RowActions } from "./RowActions";
 export { default as Modal } from "./Modal";
 export { default as FormModal, useFormFieldError } from "./FormModal";
 export { default as ConfirmDialog } from "./ConfirmDialog";

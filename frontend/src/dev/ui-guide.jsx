@@ -22,6 +22,7 @@ import {
   Input,
   Modal,
   PageHeader,
+  RowActions,
   RowActionsMenu,
   SearchInput,
   Section,
@@ -633,6 +634,39 @@ function DataTableSection() {
           logU("tabla: reintento");
         }}
       />
+      <Fila>
+        <RowActions
+          actions={[
+            {
+              label: "Detalle",
+              onSelect: () => logU("rowactions: detalle"),
+            },
+            {
+              label: "Cancelar",
+              danger: true,
+              onSelect: () => logU("rowactions: cancelar"),
+            },
+            {
+              label: "Oculta",
+              hidden: true,
+              onSelect: () => logU("rowactions: oculta (NO se muestra)"),
+            },
+          ]}
+        />
+        <RowActionsMenu
+          actions={[
+            { label: "Ver ficha", onSelect: () => logU("menú: ficha") },
+            { label: "Cancelar reserva", onSelect: () => logU("menú: cancelar") },
+            { label: "Eliminar reserva", danger: true, onSelect: () => logU("menú: eliminar") },
+          ]}
+        />
+      </Fila>
+      <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
+        RowActions: 1–3 acciones por fila como botones visibles (quiet sm;
+        destructiva danger-ghost sm; aria-label con el nombre/fecha del
+        registro — Mis reservas, Especialidades). RowActionsMenu: SOLO con
+        más de 3 acciones por fila.
+      </p>
       <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
         Bajo 640px las filas se apilan en tarjetas con el nombre de la columna.
         Cabecera con más peso (ajuste F2-3, cambio de kit): 13px (--fs-13),

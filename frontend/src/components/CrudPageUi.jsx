@@ -11,9 +11,9 @@
  * FormModal, éxito por Toast, eliminación con useConfirm (danger) y carga
  * con Skeleton sin parpadeo de "Reintentar" (cierra B9).
  * Aditivo de la ronda 1 (F2-1b): acciones de fila como botones visibles
- * (Editar quiet sm + Eliminar danger-ghost sm, patrón de Mis reservas, sin
- * RowActionsMenu) y labels opcionales createLabel/editLabel para el botón
- * de crear y los títulos de los modales. */
+ * vía RowActions (Editar quiet sm + Eliminar danger-ghost sm, patrón de
+ * Mis reservas, sin menú) y labels opcionales createLabel/editLabel para
+ * el botón de crear y los títulos de los modales. */
 import { useMemo, useState } from "react";
 import { api } from "../services/api";
 import { routes } from "../services/routes";
@@ -30,6 +30,7 @@ import {
   FormModal,
   Input,
   PageHeader,
+  RowActions,
   SearchInput,
   Select,
   Textarea,
@@ -389,30 +390,28 @@ export default function CrudPageUi({
             render: (row) => {
               const etiqueta = getRecordLabel?.(row) || `registro #${row[idField]}`;
               return (
-                <div className="ui-actions-inline">
-                  {canEdit && canEditRow(row) && (
-                    <Button
-                      variant="quiet"
-                      size="sm"
-                      aria-label={`Editar ${etiqueta}`}
-                      onClick={() => editar(row)}
-                    >
-                      Editar
-                    </Button>
-                  )}
-                  {canDelete && (
-                    <Button
-                      variant="danger-ghost"
-                      size="sm"
-                      disabled={eliminar.busy}
-                      aria-label={`Eliminar ${etiqueta}`}
-                      onClick={() => pedirEliminar(row)}
-                    >
-                      Eliminar
-                    </Button>
-                  )}
+                <RowActions
+                  actions={[
+                    ...(canEdit && canEditRow(row)
+                      ? [{
+                          label: "Editar",
+                          ariaLabel: `Editar ${etiqueta}`,
+                          onSelect: () => editar(row),
+                        }]
+                      : []),
+                    ...(canDelete
+                      ? [{
+                          label: "Eliminar",
+                          danger: true,
+                          disabled: eliminar.busy,
+                          ariaLabel: `Eliminar ${etiqueta}`,
+                          onSelect: () => pedirEliminar(row),
+                        }]
+                      : []),
+                  ]}
+                >
                   {renderExtraActions?.(row, busy)}
-                </div>
+                </RowActions>
               );
             },
           },

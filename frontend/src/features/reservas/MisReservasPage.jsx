@@ -6,11 +6,11 @@ import { useMutation } from "../../hooks/useMutation";
 import { useConfirm } from "../../hooks/useConfirm";
 import { formatDate } from "../../utils/format";
 import {
-  Button,
   DataTable,
   DefinitionList,
   Modal,
   PageHeader,
+  RowActions,
   StatusBadge,
   useToast,
 } from "../../components/ui";
@@ -91,37 +91,33 @@ export default function MisReservasPage() {
       key: "acciones",
       header: "Acciones",
       /* Columna de ancho FIJO con tokens (colgroup del DataTable) y
-       * contenido alineado a la IZQUIERDA: th y td comparten relleno
-       * (--space-3) y la fila ui-actions-inline compensa el relleno del
-       * botón compacto para que el texto de "Detalle" arranque en la misma
-       * x que "ACCIONES".
-       * Ajuste final: botones visibles en fila (sin menú): "Detalle" con
-       * borde y "Cancelar" ghost rojo, SOLO si el estado permite
-       * cancelar; el flujo no cambia (useConfirm danger + useMutation +
-       * Toast). aria-label descriptivo con fecha (ISO) y espacio. */
+       * contenido alineado a la IZQUIERDA: th y td comparten el mismo
+       * relleno (--space-3) y la fila de acciones (RowActions sobre
+       * .ui-actions-inline) lo compensa para que el texto arranque en la
+       * misma x que "ACCIONES". Botones visibles (Detalle con borde y
+       * Cancelar ghost rojo, SOLO si el estado permite cancelar); el
+       * flujo no cambia (useConfirm danger + useMutation + Toast).
+       * aria-label descriptivo con fecha (ISO) y espacio. */
       width: "calc(var(--space-12) * 4)",
       render: (row) => (
-        <div className="ui-actions-inline">
-          <Button
-            variant="quiet"
-            size="sm"
-            aria-label={`Ver detalle de la reserva del ${row.fecha}, ${row.espacio}`}
-            onClick={() => openDetail(row)}
-          >
-            Detalle
-          </Button>
-          {puedeCancelar(row.estado) && (
-            <Button
-              variant="danger-ghost"
-              size="sm"
-              disabled={cancelar.busy}
-              aria-label={`Cancelar reserva del ${row.fecha}, ${row.espacio}`}
-              onClick={() => pedirCancelacion(row)}
-            >
-              Cancelar
-            </Button>
-          )}
-        </div>
+        <RowActions
+          actions={[
+            {
+              label: "Detalle",
+              ariaLabel: `Ver detalle de la reserva del ${row.fecha}, ${row.espacio}`,
+              onSelect: () => openDetail(row),
+            },
+            ...(puedeCancelar(row.estado)
+              ? [{
+                  label: "Cancelar",
+                  danger: true,
+                  disabled: cancelar.busy,
+                  ariaLabel: `Cancelar reserva del ${row.fecha}, ${row.espacio}`,
+                  onSelect: () => pedirCancelacion(row),
+                }]
+              : []),
+          ]}
+        />
       ),
     },
   ];
