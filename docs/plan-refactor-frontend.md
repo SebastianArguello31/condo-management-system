@@ -228,7 +228,10 @@ terminado un paso mientras sus bugs sigan abiertos.
   **HECHO y commiteado por el dueño** (`111c173`).
 - **F2-1b** `refactor:` CrudPage (modo nuevo con `variant="ui"`) +
   Especialidades. Cierra **B9**. **Revisión visual con capturas obligatoria
-  antes de seguir.** — **SIGUIENTE**, especificación completa abajo.
+  antes de seguir.** — **HECHA (pendiente de verificar)** en la rama
+  `feature/refactor-crudpage-especialidades` (nacida de
+  `feature/refactor-perfil`): detalle completo en "Sesión F2-1b" más abajo.
+  Especificación original: apartado siguiente.
 
 ### Especificación F2-1b (autónoma, no depende de una conversación)
 
@@ -360,20 +363,20 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
 
-> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-4, 2026-10-24; F2-4 ya está
-> hecha — ver "Sesión F2-4: Perfil + historiales fuera" más abajo):**
-> 1. **Verificación de F2-4 por el dueño** (checklist de la sección de
->    sesión: paridad y visuals 1280/768/375 por rol) → abrir PR.
-> 2. **docs/convenciones-frontend.md** (guía del kit para los demás, parte de
+> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-1b, 2026-10-25; F2-4 y
+> F2-1b hechas — ver las secciones de sesión correspondientes al final
+> de este documento):**
+> 1. **Verificación de F2-1b por el dueño** (checklist de la sesión: Especialidades
+>    en 1280/768/375 + teclado, y las 4 pantallas legadas sin cambios) → abrir PR
+>    de la rama (sin abrir: esperar el merge del PR de `feature/refactor-perfil`).
+> 2. **F2-2** (Edificios/Unidades, select de unitTypes → cierra B10) re-evaluando
+>    la especificación contra el modo ui nuevo.
+> 3. **docs/convenciones-frontend.md** (guía del kit para los demás, parte de
 >    F2-11).
-> 3. **F2-1b** (CrudPage `variant="ui"` + Especialidades) y **F2-2**
->    (Edificios/Unidades, select de unitTypes → cierra B10).
 > 4. **F2-5** — IncidentsPage (fechas en DD/MM/AAAA con hora local +
 >    CONSERVAR `InterventionMaterials` de Dev 2).
 > 5. **F2-6 → F2-9** — resto de pantallas (pantallas de gestión, espacios +
->    políticas, gestión de reservas + CreateReservation, Login rediseño);
->    F2-10 ya no requiere paso aparte (las pantallas de Dev 2/3 ya llegaron
->    con develop y quedaron registradas en routing.js).
+>    políticas, gestión de reservas + CreateReservation, Login rediseño).
 > 6. **F2-11** — limpieza de CSS, responsive y a11y (unifica el marco legado
 >    del shell y el ErrorBoundary global).
 >
@@ -555,6 +558,98 @@ abrirlo cuando se mergee el PR de `feature/refactor-frontend-base`.**
 verificado por el dueño. Los **ajustes visuales de cierre del kit** están SIN
 commit (ver "commit sugerido" en STATUS.md). PR de esta rama: **sin abrir**
 hasta que se mergee el PR de `feature/refactor-frontend-base`.
+
+## Sesión F2-1b: CrudPage variant="ui" + Especialidades (rama feature/refactor-crudpage-especialidades)
+
+Rama nacida de `feature/refactor-perfil` (`faa0c95`). Inventario de
+consumidores re-verificado con grep ANTES de editar: idéntico al cuadro de
+la especificación §7-F2-1b (los 5 consumidores y sus props coinciden; el
+único que omite también `description` es Unidades) → se continuó.
+
+**Archivos tocados:**
+- `frontend/src/components/CrudPage.jsx` — SOLO: import de CrudPageUi,
+  renombrado interno `CrudPageLegacy` (cuerpo intacto, `git diff` lo
+  prueba: 2 líneas del body sin cambios) y `export default` nuevo: un
+  despachador `({ variant, ...props })` que renderiza `<CrudPageUi>` si
+  `variant === "ui"` y `<CrudPageLegacy {...props}>` en el resto. Sin
+  hooks condicionales; las 15 props conservan nombre y significado; la
+  única prop nueva es la opcional `variant`.
+- `frontend/src/components/CrudPageUi.jsx` — NUEVO. Modo "ui" con las
+  mismas props (implementa TODAS, aunque Especialidades use pocas).
+- `frontend/src/features/users/SpecialtiesPage.jsx` — SOLO
+  `variant="ui"` en la invocación (una línea).
+
+**Cambios al kit: NINGUNO** (`components/ui` y `ui.css` intactos; los
+usos del kit en el modo nuevo ya existían: PageHeader/FilterBar/
+SearchInput/DataTable/RowActionsMenu/FormModal/Field/Input/Select/
+Textarea/Checkbox/Button (link/sm/primary/quiet)/EmptyState/ErrorState/
+Skeleton/ErrorState de DataTable/Icon `plus`).
+
+**Decisiones de paridad (modo legado → modo ui):**
+- Carga: `useQuery` con signal (endpoint + lookups en un solo
+  Promise.all), deps `[endpoint, lookups]` (mirando estabilidad:
+  `EMPTY_LOOKUPS` constante de módulo como default, como el legado).
+  loading → Skeleton (estado inicial: loading sin "Reintentar" → **B9
+  cerrado, pendiente de verificar visualmente**), error → ErrorState con
+  Reintentar, `reload()` conserva datos (sin titilar).
+- Estados de página: PageHeader con `title`, meta una línea
+  `"<description> · N registros"` (description existe como meta; el
+  conteo de la toolbar legado se conserva ahí) y acción `canCreate`.
+  Búsqueda con SearchInput en FilterBar, etiqueta visible "Buscar en
+  <pantalla>", mismo criterio de filtrado (columns declaradas,
+  case-insensitive). Botón "Actualizar" (reload) conservado en la misma
+  fila (paridad del toolbar legado).
+- Tabla: DataTable con caption "Listado de <pantalla>", rowKey
+  `row[idField]`, columns del consumidor respetadas (sin render/format
+  nuevos); celdas igual que el legado: boolean → "Sí"/"No", null → "—".
+  Columna #ID solo porque el consumidor la declara. Sin StatusBadge: la
+  columna "Estado" es un boolean (activo) y ninguna columna declara
+  estado real — no se inventan presets.
+- Acciones de fila: "Editar" como `Button variant="link" size="sm"`
+  (canEdit + canEditRow); "Eliminar" en RowActionsMenu (`danger: true`,
+  canDelete); `renderExtraActions?.(row, busy)` se sigue llamando tal
+  cual (los otros 4 consumidores siguen en legado; en el modo ui su JSX
+  se muestra inline a la derecha del menú — provisional hasta F2-7,
+  anotado en §8-bis).
+- Crear/editar: FormModal (`title` = "Crear|Editar · <título>",
+  description "Registro: <getRecordLabel|##id>" al editar), cierre
+  bloqueado en busy, error de la acción DENTRO (Alert role="alert" con
+  foco/scroll), éxito con Toast "Cambios guardados." + reload().
+  Payload IDÉNTICO al legado (trim de strings no-password, password
+  omitida si vacía al editar, required → "Completa el campo <label>",
+  tope 72 bytes con TextEncoder + NUEVO chequeo mínimo 8 caracteres que
+  en el legado daba el navegador, nullable "" → null, multiselect →
+  map(Number), select/number → Number, checkbox → boolean; skip de
+  isFieldDisabled). Validación cliente con `validate(form,
+  especialidadCrear)` cuando `endpoint === routes.specialties`
+  (errores por campo) + `err.errors` (arrays) → `fieldErrors`
+  `campo → mensajes[0]` en cualquier fallo de backend; name y
+  autoComplete ("off"; "new-password" en password) en todos.
+  Confirmación "Seleccionar..." y mensajes de lookups vacíos igual que
+  el legado (help concatenado).
+- Eliminar: useConfirm danger "Se eliminará \"<getRecordLabel|##id>\".
+  No hay vuelta atrás." (label "Eliminar") + useMutation DELETE
+  `${endpoint}/${id}` + Toast "Registro eliminado." + reload(); error →
+  Toast danger. Cero window.confirm. Cierre del form si se elimina la
+  fila editada (igual que el legado).
+
+**Paridad NO alcanzada/desviación documentada (menor):** (1) el texto de
+estado vacío del legado era único ("No hay registros que coincidan.");
+el modo ui distingue "No hay registros" (+ descripción, con trigger de
+crear) de "No hay registros que coincidan." (búsqueda sin resultados, sin
+trigger aislado); (2) los avisos "Los cambios se guardaron, pero no se
+pudo actualizar la lista: …" del legado ya no se componen: reload()
+fallido muestra el ErrorState de la tabla con Reintentar (patrón de Mis
+reservas). Ambas listadas en §8-bis.
+
+**Riesgos:** (a) un consumidor futuro del modo ui que pase
+`lookups={[]}` inline (literal nuevo en cada render) rompería el
+deduplicado de useQuery — al migrarlo, mirar estabilidad (Especialidades
+y los otros 4 usan constantes de módulo, OK); (b) F2-2 añade el select
+de unitTypes a Unidades — el modo ui ya resuelve select/lookup, pero esa
+pantalla migra después; (c) el dispatcher añade el import de CrudPageUi
+para TODAS las pantallas legadas (bundle mínimo, sin efecto de
+comportamiento: el legado no se monta).
 
 ## Sesión F2-4: Perfil + historiales fuera (rama feature/refactor-perfil)
 
@@ -776,6 +871,27 @@ agenda cuando el dueño lo ordene.
   mostraba la unidad de cada incidencia; al sacar el historial del perfil
   se decidió PERDER esa info y añadirla acá si el dueño quiere) — alcance:
   pantalla (F2-5).
+- [CrudPageUi] — `renderExtraActions` se renderiza inline junto al menú de
+  fila (su JSX propio); formalizar como ítems del RowActionsMenu cuando
+  Espacios migre (F2-7) — alcance: kit/UI (futuro).
+- [CrudPageUi] — el modo ui distingue vacío real ("No hay registros") de
+  búsqueda sin resultados ("No hay registros que coincidan."); el legado
+  usaba una sola frase. Si el dueño prefiere la frase del legado en ambos
+  casos, tocar solo `emptyTitle` — alcance: pantalla (futuro).
+- [CrudPageUi] — los avisos combinados del legado ("se guardó, pero no se
+  pudo actualizar la lista") no se reproducen: el error de reload queda
+  como ErrorState de la tabla; evaluar el mensaje duplicado del Toast vs
+  tabla cuando se migren más pantallas — alcance: kit/UI (evaluar en F2-2).
+- [PageHeader/kit] — la meta de CrudPageUi mezcla la descripción de la
+  pantalla con el conteo ("desc · N registros") en la línea mono; si se
+  quiere limpio, separar descripción del meta (componente/prop) — alcance:
+  kit (futuro).
+- [Button/kit] — `size="sm"` mantiene 44px táctiles (alto de fila), que
+  agranda las filas de tabla en desktop; evaluar 32px en escritorio con
+  44px en móvil — alcance: kit.
+- [Especialidades] — placeholder de búsqueda genérico ("Buscar
+  registros..."); afinarlo al contenido de la pantalla si el dueño
+  quiere — alcance: pantalla.
 - [Mi perfil] — enlaces directos a los historiales (#/incidencias y
   #/mis-reservas; decidido NO implementarlos en F2-4) — alcance: pantalla
   (futuro).

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../services/api";
 import Modal from "./ui/Modal";
 import Icon from "./ui/Icon";
+import CrudPageUi from "./CrudPageUi";
 
 const EMPTY_LOOKUPS = [];
 const always = () => true;
@@ -16,7 +17,7 @@ function emptyForm(fields) {
   );
 }
 
-export default function CrudPage({
+function CrudPageLegacy({
   title,
   description = "Administra los registros del condominio.",
   endpoint,
@@ -400,4 +401,11 @@ export default function CrudPage({
       </div>
     </section>
   );
+}
+
+export default function CrudPage({ variant, ...props }) {
+  if (variant === "ui") {
+    return <CrudPageUi {...props} />;
+  }
+  return <CrudPageLegacy {...props} />;
 }

@@ -944,6 +944,15 @@ textarea.ui-control {
   margin-top: var(--space-4);
 }
 
+/* F2-1b ronda 1: el mismo caso de adyacencia con la barra de filtros
+   (.ui-filterbar) como hermana directa del marco de la tabla: sin regla
+   quedan a 0px y la barra se pega a la línea del thead. Aditivo y acotado
+   a esa adjacencia (usos verificados con grep: la guía #/ui y CrudPageUi
+   — en la guía la demo obtiene la misma separación, sin romperse). */
+.ui-filterbar + .ui-table-shell {
+  margin-top: var(--space-4);
+}
+
 .ui-table {
   width: 100%;
   border-collapse: collapse;

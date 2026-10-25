@@ -126,3 +126,9 @@ solo si su clave no coincide con el id.
   cuenta con StatusBadge override); historiales fuera del perfil (van a
   `#/incidencias` y `#/mis-reservas`, sin pantallas nuevas); sin CSS
   nuevo.
+- **Especialidades (`SpecialtiesPage`)** — F2-1b: primera pantalla en
+  modo nuevo de `CrudPage` con `variant="ui"` (`CrudPageUi`: useQuery con
+  signal sin parpadeo de Reintentar, PageHeader + FilterBar/DataTable,
+  FormModal con validación en cliente `especialidadCrear`, eliminación
+  con useConfirm + Toast — **cierra B9**); el resto de consumidores de
+  CrudPage sigue en modo legado (sin cambios hasta F2-2/F2-7).
