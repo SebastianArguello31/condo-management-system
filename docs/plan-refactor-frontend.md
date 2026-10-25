@@ -313,7 +313,9 @@ final, según alcance).
   `feature/refactor-perfil`; detalle en "Sesión F2-4" más abajo.
 - **F2-5** `refactor:` IncidentsPage en subcomponentes (tabla, form de
   creación con FormModal, modal de detalle, timeline). Cierra **B7 detalle,
-  B8**. — Ver "Programación de F2-5" abajo.
+  B8**. — **F2-5a HECHA (pendiente de verificar):** shell + listado +
+  filtros al kit en `feature/refactor-incidencias` (modales aún legacy;
+  detalle en "F2-5: análisis y plan" más abajo). F2-5b/F2-5c pendientes.
 - **F2-6** `refactor:` ManagementPage + Residentes + CreateAccount
   (+ `validations/` cuenta/perfiles; relación residentes-unidades).
   Cierra **B1–B5**.
@@ -365,21 +367,23 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
 
-> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-2, 2026-10-25; F2-4, F2-1b y
-> F2-2 hechas — ver las secciones de sesión correspondientes al final
-> de este documento):**
-> 1. **Verificación de F2-1b por el dueño** (checklist de la sesión: Especialidades
->    en 1280/768/375 + teclado, y las 4 pantallas legadas sin cambios) → abrir PR
->    de la rama (sin abrir: esperar el merge del PR de `feature/refactor-perfil`).
-> 2. **F2-2** (Edificios/Unidades, select de unitTypes → cierra B10) re-evaluando
->    la especificación contra el modo ui nuevo. — **HECHA (pendiente de
->    verificar)**, ver "Sesión F2-2".
-> 3. **docs/convenciones-frontend.md** (guía del kit para los demás, parte de
->    F2-11).
-> 4. **F2-5** — IncidentsPage (fechas en DD/MM/AAAA con hora local +
->    CONSERVAR `InterventionMaterials` de Dev 2).
-> 5. **F2-6 → F2-9** — resto de pantallas (pantallas de gestión, espacios +
+> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-5a, 2026-10-25; F2-4,
+> F2-1b, F2-2 y F2-5a hechas — F2-5b/5c son el próximo paso antes de
+> F2-6):**
+> 1. **Verificación por el dueño** de F2-1b, F2-2 (incluida ronda 1) y
+>    F2-5a (checklists en STATUS.md) → abrir PRs de las ramas hechas.
+> 2. **F2-5b** (modales al kit: creación en FormModal con
+>    `incidenciaCrear` y límites de adjunto; detalle con ficha/timeline;
+>    cierra B8 y el defecto de B7 que la captura confirme) y **F2-5c**
+>    (pulido de la pantalla).
+> 3. **docs/convenciones-frontend.md** (guía del kit para los demás,
+>    parte de F2-11; ya va llevada por sesión con una línea por pantalla
+>    en §9).
+> 4. **F2-6 → F2-9** — resto de pantallas (pantallas de gestión, espacios +
 >    políticas, gestión de reservas + CreateReservation, Login rediseño).
+> 5. **F2-10** — pantallas nuevas de Dev 2 (insumos ya integró) y Dev 3
+>    (dashboard): migración del dueño; enlazar drilldowns a
+>    `#/incidencias?estado=...`.
 > 6. **F2-11** — limpieza de CSS, responsive y a11y (unifica el marco legado
 >    del shell y el ErrorBoundary global).
 >
@@ -888,6 +892,130 @@ regresión en F2-4.
 - [ ] **Commit sugerido:** `refactor(users): perfiles al kit y historiales
   fuera (F2-4)`.
 
+## F2-5: análisis y plan (solo lectura 2026-10-25; rama feature/refactor-incidencias)
+
+> **Nota de corrección:** el reporte original de esta sesión llegaría con
+> fragmentos corruptos (glifos/teclas intercaladas); lo verificado por git y
+> lectura directa del código PREVALECE y este texto es la versión corregida
+> y verificada.
+
+**a) Paridad por rol (checklist).** RESIDENTE ("Mis incidencias"):
+listado que el backend filtra por `id_reportante`; columnas #ID,
+Título, Tipo, Prioridad, Estado + botón "Ver detalle"; botón "Nueva
+incidencia" (modal: Título min 5, Descripción min 10, Unidad (SOLO las
+del residente via metadata), Tipo, nota "se registra con prioridad
+Normal", Evidencias con accept de imágenes y PDF); detalle muestra
+datos/tipo/estado/historial/adjuntos (Descargar); NO tiene acción de
+cambio de estado en la UI (el backend le permitiría solo CANCELADA desde
+RECIBIDA/EN_REVISION). TECNICO ("Incidencias asignadas"): listado
+filtrado por `id_personal_asignado` (sin columna Técnico); detalle con
+form de cambio de estado (opciones de `estados_permitidos` ya filtradas
+por rol en el backend) + comentario ≤500, asignaciones, "Registrar
+intervención" (resultado min 5) e InterventionMaterials con `canConsume`
+solo de SUS intervenciones. ADMIN ("Gestión de incidencias"): todo el
+listado + columna Técnico con select de asignación inline (POST
+`/assignments` con Number), prioridad por select en el detalle (PATCH
+`/priority`); NO tiene form de cambio de estado. Los tres descargan
+adjuntos (GET `/incidents/attachments/:id` blob via
+`utils/downloadAttachment`).
+
+**b) Inventario y partición.** `IncidentsPage.jsx` (~112 líneas; JSX de
+líneas gigantes tras la cabecera y el detalle). `InterventionMaterials
+.jsx` (~113 líneas) — de **Dev 2, conservado intacto** (plan: NO
+refactorizarlo; la pantalla lo reusa tal cual). Partición propuesta por
+checkpoint: (1) shell — IncidentsPage con useQuery + PageHeader +
+DataTable + filtros con query param; (2) modal de creación como
+IncidentsCreateModal (FormModal + `incidenciaCrear` + límites de
+adjuntos en cliente) y modal de detalle como IncidentsDetailModal
+(Modal kit + DefinitionList + Timeline + prioridad/asignación/estado con
+useMutation/Toast + `<InterventionMaterials>` intacto); (3) pulido.
+
+**c) Mapa de datos.** Carga en un Promise.all: GET `/incidents` |
+`/priorities` | `/statuses` | residente: `/metadata` (tipos + sus
+unidades) | ADMIN: `/technicians` | técnico/ADMIN: `/maintenance/
+insumos` (catálogo de consumos). Detalle: GET `/incidents/:id`
+(+`estados_permitidos`, `puede_registrar_intervencion`, `adjuntos`
+calculados en services), `/history`, `/assignments` (ADMIN/TEC),
+`/interventions`; cada InterventionMaterials trae su propio GET
+`/maintenance/intervenciones/:id/insumos`. Acciones: POST `/incidents`
+(FormData multipart con adjuntos), PATCH `/priority` (ADMIN), POST
+`/assignments` (ADMIN), PATCH `/status` (3 roles con `estado` +
+`comentario|null`), POST `/interventions`; `onStockChanged` → recarga
+del listado. El backend responde por rol: RESIDENTE solo lo reportado,
+TECNICO solo lo asignado, ADMIN todo.
+
+**d) Bugs.** B8 VERIFICADO (lectura): `error` es un único estado de
+página (antes IncidentsPage:107 render página / :146 `createIncident`);
+el modal de creación no lo muestra (el de detalle sí) → error visible a
+nivel página con el modal abierto. Cierra en F2-5b. B7 NO identificable
+por lectura; candidatos: (1) el detalle no muestra fecha de reporte/
+límite, reportante, edificio ni unidad; (2) ADMIN sin acción de cambio
+de estado; (3) RESIDENTE sin "Cancelar" pese a que el backend lo
+permite; (4) fechas ISO crudas. NO declarar cerrado sin captura.
+
+**e) Validaciones y límites de adjuntos.** `validations/` ya espeja el
+backend: `incidenciaCrear` (título 5-150, desc 10-5000, ids enteros),
+`incidenciaPrioridad`, `intervencionCrear` (5-5000); no hay reglas para
+archivos (van por multipart, no por marshmallow). Límites backend
+(`incidents/attachments.py`): ≤3 archivos, ≤5 MB cada uno,
+.jpg/.jpeg/.png/.pdf con chequeo de firma mágica, nombre ≤200, sin
+vacíos; global `MAX_CONTENT_LENGTH = 16 MB` (`app/__init__.py:36`) →
+413 si el FormData total lo excede. Hoy el front solo pasa `accept`;
+en 5b se validará en cliente conteo/tamaño/tipo con mensajes claros.
+
+**f) Filtros y query params.** Hoy SIN filtros ni búsqueda. Para el
+dashboard: `#/incidencias?estado=...` — el soporte ya existe:
+`rutaDesdeClavePantalla(clave, params)` serializa query
+(routing.js:218-223) y `useHashRoute` parsea el hash a objeto
+(`{ estado: "RECIBIDA" }`). La pantalla SIEMBRA el filtro inicial desde
+`params.estado` (validado contra el catálogo `/statuses`; valor
+desconocido → sin filtro) y NO escribe de vuelta al hash. DashboardPage
+hoy llama `onNavigate("incidents")` sin params (pantalla de Dev 3;
+pasar params es F2-10).
+
+**g) Fechas/estados/prioridades.** ISO crudo visible hoy: `history[]
+.fecha` e `intervention.fecha_inicio` (y el listado trae
+`fecha_reporte`/`fecha_limite` sin mostrarlos) → `formatDate/
+formatDateTime` de utils/format.js al migrar. Estados: StatusBadge YA
+cubre los 9 (RECIBIDA/EN_REVISION/ASIGNADA info, EN_PROCESO/EN_ESPERA
+warning, RESUELTA success, RECHAZADA danger, CANCELADA muted, CERRADA
+neutral; "SIN ESTADO" cae neutral/dot). Prioridades del catálogo
+(seed.sql: Baja/Normal/Alta/Urgente con nivel y SLA en horas): SIN
+presets de kit — presentación por módulo con override tone/glyph.
+
+**h) Plan por checkpoint (máx 3).** F2-5a: shell + tabla + filtros
+(solo IncidentsPage.jsx; modales conservados idénticos en código y
+comportamiento; no cierra bugs). F2-5b: modales extraídos —
+IncidentsCreateModal (FormModal, `incidenciaCrear`, límites de adjunto
+en cliente y mensajes de 400/413) e IncidentsDetailModal (kit: ficha +
+timeline + acciones; cierra B8 y los defectos de B7 que la captura
+confirme). F2-5c: pulido — columna Unidad para RESIDENTE (ya aceptada
+en F2-4), botón "Cancelar" para RESIDENTE (decisión del dueño), mover
+la asignación de técnico al detalle si el dueño lo quiere,
+`fecha_limite` visible, CSS legado `.mg-*` a F2-11.
+
+**i) Riesgo de merge con Dev 2.** Verificado con git (solo lectura):
+`58d58b9` (integración de InterventionMaterials) SÍ está en esta rama
+(`git branch --contains`); el último commit de develop que toca
+`features/incidents/` es `3d2d50b`, ya integrado en la base. PR #34
+(`feature/frontend-maintenance`, mismo 58d58b9) NO es ancestro de
+develop: al merge de esa rama con develop habrá conflicto en
+IncidentsPage.jsx — resolver conservando imports + uso de
+InterventionMaterials y el fetch de insumos (pérdida PROHIBIDA).
+
+**j) Decisiones tomadas (preguntas del análisis, respondidas por el
+dueño en el prompt del checkpoint F2-5a).** (1) QUITAR la columna #ID
+(convención §8-bis; id solo rowKey). (2) La asignación de técnico queda
+inline en la tabla Solo para ADMIN (mover al detalle se decide en
+F2-5c). (3) Añadir columna "Reportada" con `fecha_reporte` (el listado
+ya lo trae). (4) Prioridad con StatusBadge override de MÓDULO (Baja
+muted/dot, Normal neutral/dot, Alta warning/triangle, Urgente danger/
+diamond; resto neutral/dot; sin presets nuevos en el kit). (5)
+"Cancelar para RESIDENTE" queda para el pulido (5c). (6) Títulos por
+rol se mantienen. (7) Límites de adjuntos en cliente en 5b. (8) Definir
+"abiertas" como estados no de cierre (REPÓRTALO: RESUELTA, CERRADA,
+RECHAZADA, CANCELADA).
+
 ## 8. Pendientes y hallazgos abiertos
 
 **Producto de Dev 1:**
@@ -993,6 +1121,19 @@ agenda cuando el dueño lo ordene.
 - [Field (kit)] — las etiquetas de 12px/`--ink-3` se leen débiles sobre
   inputs de 14px (visto en los capturas de F2-4 a 1280px) — evaluar
   13px/`--ink-2` — alcance: kit.
+- [IncidentsPage] — botón **"Cancelar" para RESIDENTE** (el backend ya se
+  lo permite solo desde RECIBIDA/EN_REVISION con usoConfirm; hoy solo el
+  técnico cambia estado) — alcance: pantalla (F2-5c; decisión del dueño).
+- [IncidentsPage] — **mover la asignación de técnico del select inline de
+  la tabla al modal de detalle** (el select funciona y queda en 1280px,
+  pero es una acción pesada para estar en la fila) — alcance: pantalla
+  (F2-5c; decisión del dueño).
+- [IncidentsPage] — **columna Unidad para el RESIDENTE** (el listado la
+  trae del backend y hoy no se muestra; ya fue acordada en F2-4) —
+  alcance: pantalla (F2-5c).
+- [IncidentsPage] — **fecha límite (SLA) visible del registro/histórico**
+  (el detalle no muestra fecha de reporte ni `fecha_limite`) — alcance:
+  pantalla (F2-5c con el modal del kit).
 
 ## 8-ter. Plantilla de migración de pantalla
 

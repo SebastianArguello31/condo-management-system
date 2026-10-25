@@ -172,3 +172,9 @@ solo si su clave no coincide con el id.
   de módulo en `lookups`, misma técnica que Edificios) — el
   edificio de las unidades sigue un input numérico (pendiente de
   decisión, ver plan).
+- **Incidencias (`IncidentsPage`)** — F2-5a: shell y listado al kit por
+  rol (PageHeader con meta "N incidencias · M abiertas", useQuery+Skeleton
+  sin parpadeo, DataTable sin columna ID con estados StatusBadge y
+  prioridad con override de módulo, "Reportada" con formatDate, filters
+  con semilla `?estado=` del hash) — los MODALES siguen legacy (F2-5b los
+  extrae; B8 abierta); InterventionMaterials (Dev 2) intacto.
