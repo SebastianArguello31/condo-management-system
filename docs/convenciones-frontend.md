@@ -114,6 +114,38 @@ solo si su clave no coincide con el id.
 - Fechas ISO crudas en pantalla; textos en otro lenguaje que no sea
   español neutro (tuteo).
 
+## 8-bis. Decisiones ya tomadas (aplicalas sin preguntar en cada migración)
+
+- **Acciones de fila:** botones VISIBLES en `.ui-actions-inline`
+  (Detalle/Editar = `Button quiet size="sm"`; destructiva = `Button
+  danger-ghost size="sm"`). Usa `RowActionsMenu` SOLO cuando la fila
+  tenga más de 3 acciones. aria-label SIEMPRE con el nombre o la fecha
+  del registro (p. ej. "Cancelar reserva del 2026-10-07, Parrillera",
+  "Editar especialidad Técnico Electricista").
+- **Botón de crear:** solo texto (sin ícono) y con nombre específico de
+  la pantalla ("Nueva reserva", "Nueva especialidad"; nunca "Nuevo
+  registro" genérico).
+- **Listados:** sin columna ID (el id solo es `rowKey`, por `idField` en
+  CrudPage); el ESTADO de un registro siempre con `StatusBadge` (presets
+  reales o override tone/glyph, nunca color solo); fechas/horas siempre
+  con `formatDate`/`formatDateTime` (`utils/format.js`); columna
+  Acciones con width token `calc(var(--space-12) * 4)`.
+- **Formularios:** pila de campos en `.ui-form-stack` (gap `--space-4`,
+  máx. `~480px`) y el botón en `.ui-form-actions` (margen superior
+  `--space-6`); en modal, los campos van en el cuerpo del `FormModal`.
+  Todo control vía `Field` con `name` y `autoComplete` correctos.
+- **Separación entre bloques:** `--space-4` entre PageHeader, FilterBar
+  y DataTable (reglas de adyacencia existentes en `ui.css`:
+  `.ui-page-header + .ui-table-shell` y `.ui-filterbar +
+  .ui-table-shell`); NUNCA dos bloques del listado a 0px (dos líneas de
+  1px se leen como doble).
+- **Errores y éxito:** error de una acción de modal DENTRO del modal
+  (FormModal: Alert danger con foco/scroll); éxito SIEMPRE por Toast del
+  padre; confirmaciones con `useConfirm` — cero `window.confirm`.
+- **Formularios inline (perfil y similares):** `Section` + `Field`,
+  error de la acción en `Alert` danger al nivel de la sección, éxito en
+  `Toast` (sin `notice` de página).
+
 ## 9. Registro por pantalla migrada (una línea cada una)
 
 (ninguna todavía — se agrega una línea al cerrar cada migración:

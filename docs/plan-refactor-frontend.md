@@ -889,6 +889,7 @@ agenda cuando el dueño lo ordene.
 - [Button/kit] — `size="sm"` mantiene 44px táctiles (alto de fila), que
   agranda las filas de tabla en desktop; evaluar 32px en escritorio con
   44px en móvil — alcance: kit.
+- [RowActions/kit] — evaluar altura 32px en desktop (kit).
 - [Especialidades] — placeholder de búsqueda genérico ("Buscar
   registros..."); afinarlo al contenido de la pantalla si el dueño
   quiere — alcance: pantalla.
@@ -904,6 +905,26 @@ agenda cuando el dueño lo ordene.
 Checklist canónico para migrar UNA pantalla al kit (se copia al abrir un
 paso F2-x; referencia técnica: `docs/kit-ui-referencia.md`, reglas:
 `docs/convenciones-frontend.md`):
+
+**Aplicar sin preguntar** (decisión fijada; detalle en convenciones
+`docs/convenciones-frontend.md` §8-bis — copiar este bloque en cada
+prompt de migración):
+- Acciones de fila: botones visibles (Editar/Detalle = quiet sm;
+  destructiva = danger-ghost sm); RowActionsMenu solo con más de 3
+  acciones; aria-label con el nombre o la fecha del registro.
+- Botón de crear: solo texto y nombre específico ("Nueva reserva",
+  nunca "Nuevo registro"), sin ícono.
+- Listados: sin columna ID (id solo como rowKey); estado siempre con
+  StatusBadge; fechas con formatDate/formatDateTime; columna Acciones
+  con width `calc(var(--space-12) * 4)`.
+- Formularios: `.ui-form-stack` (gap --space-4, máx. ~480px) y botón en
+  `.ui-form-actions` (--space-6); Field con name y autoComplete.
+- Separación entre bloques: --space-4 entre PageHeader/FilterBar/
+  DataTable (reglas de adyacencia de ui.css); nunca dos bloques a 0px.
+- Errores: de acción dentro del modal; éxito por Toast; sin
+  window.confirm.
+- Perfil/formularios inline: Section + Field, error en Alert, éxito en
+  Toast.
 
 1. **Antes de codificar (solo lectura):** git status/diff/log; grep de
    consumidores related (CrudPage props, Icon usados, CSS de la pantalla);
