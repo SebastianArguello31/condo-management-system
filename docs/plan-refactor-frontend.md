@@ -303,8 +303,9 @@ final, según alcance).
   cancelación useConfirm danger + useMutation + Toast, detalle con
   DefinitionList). Sin cambios en CreateReservation ni en contratos de API.
 - **F2-4** `refactor:` Perfil (residente y técnico) + historiales en pantallas
-  propias ("Mis incidencias" / "Mis reservas"). Cierra **B7 perfil**. *(Su
-  análisis se hará en otra sesión.)*
+  propias ("Mis incidencias" / "Mis reservas"). Cierra **B7 perfil**. —
+  **HECHA (pendiente de verificar):** migrada al kit en la rama
+  `feature/refactor-perfil`; detalle en "Sesión F2-4" más abajo.
 - **F2-5** `refactor:` IncidentsPage en subcomponentes (tabla, form de
   creación con FormModal, modal de detalle, timeline). Cierra **B7 detalle,
   B8**. — Ver "Programación de F2-5" abajo.
@@ -359,10 +360,10 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
 
-> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-3, 2026-10-23; F2-3 ya está
-> hecha: ver "Sesión F2-3: Mis reservas" más abajo):**
-> 1. **F2-4** — Perfil + historiales separados (cierra B7); **empezar por el
->    análisis en solo lectura**, sin editar antes del "ok" del dueño.
+> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-4, 2026-10-24; F2-4 ya está
+> hecha — ver "Sesión F2-4: Perfil + historiales fuera" más abajo):**
+> 1. **Verificación de F2-4 por el dueño** (checklist de la sección de
+>    sesión: paridad y visuals 1280/768/375 por rol) → abrir PR.
 > 2. **docs/convenciones-frontend.md** (guía del kit para los demás, parte de
 >    F2-11).
 > 3. **F2-1b** (CrudPage `variant="ui"` + Especialidades) y **F2-2**
@@ -555,6 +556,151 @@ verificado por el dueño. Los **ajustes visuales de cierre del kit** están SIN
 commit (ver "commit sugerido" en STATUS.md). PR de esta rama: **sin abrir**
 hasta que se mergee el PR de `feature/refactor-frontend-base`.
 
+## Sesión F2-4: Perfil + historiales fuera (rama feature/refactor-perfil)
+
+Rama nacida de `feature/refactor-mis-reservas`. Análisis en solo lectura
+APROBADO por el dueño con estas decisiones: etiqueta del menú residente
+"Mi perfil"; se ACEPTA perder la columna Unidad de las incidencias del
+residente (anotada en §8-bis para F2-5); los historiales NO se recrean
+(van a `#/incidencias` y `#/mis-reservas`); sin enlaces a historiales
+dentro del perfil (anotado en §8-bis); alcance estricto: los 2 JSX + SOLO
+labels en routing.js.
+
+### F2-4: análisis y plan (solo lectura 2026-10-24, persistido)
+
+**a) Qué contiene hoy cada perfil.**
+- Residente (`ResidentHome.jsx`, `#/mi-perfil`, routing.js:49-55): datos
+  personales `GET/PATCH /residents/me` (nombre/apellido/email/telefono;
+  `routes/residents.py:39-51`, solo esos 4 campos); unidades
+  `GET /residents/me/units` (edificio, unidad/código, piso, tipo_unidad,
+  `routes/residents.py:53-57`); **historial de incidencias** con
+  `GET /incidents` (backend ya filtra residente → reporter_id en
+  `incidents/services.py`); **historial de reservas** con
+  `GET /reservations`. Todo en una pantalla con fetch manual y CSS legado
+  (`resident-*`).
+- Técnico (`EmployeeProfile.jsx`, `#/perfil`, routing.js:63-69): datos
+  personales `GET/PATCH /employees/me` (`routes/employees.py:43-55`);
+  especialidades (solo lectura, embebidas en el perfil); tarjeta
+  **"Incidencias asignadas"** con la MISMA `GET /incidents` (backend
+  filtra técnico → technician_id).
+
+**b) Historiales a sacar y destino (verificado: el destino YA existía).**
+- Incidencias del residente → `#/incidencias` (titula "Mis incidencias",
+  IncidentsPage.jsx:106, misma fuente). Quitar del perfil: la tabla era
+  un duplicado.
+- Reservas del residente → `#/mis-reservas` (MisReservasPage, migrada al
+  kit en F2-3). Quitar del perfil.
+- Incidencias asignadas del técnico → `#/incidencias` (titula
+  "Incidencias asignadas"). Quitar tarjeta + fetch del perfil.
+- Sin rutas nuevas: `#/mi-perfil` queda datos+unidades y `#/perfil`
+  datos+especialidades. Intervenciones propias: NO existe endpoint de
+  listado por técnico (solo por incidencia) — no se inventa.
+
+**c) Técnico hoy:** datos editables + especialidades (lectura) + tabla
+sin acciones; cambio de estado vive en el modal de detalle de
+`#/incidencias` (tarea F2-5). Sus historiales van a `#/incidencias`.
+
+**d) "Preferencias del usuario" en el backend: NO EXISTE ninguna.** Solo
+la sección self es: `GET /auth/me` (lectura de sesión), `GET/PATCH
+/residents/me` + `GET /residents/me/units`, `GET/PATCH /employees/me`.
+No hay cambio de contraseña self-service ni endpoints de preferencias →
+NO se inventa ninguna sección (feature futura del backend).
+
+**e) Riesgos verificados en lectura:** (1) la tabla de incidencias del
+residente mostraba columna Unidad que `#/incidencias` no tiene → pérdida
+menor aceptada por el dueño (§8-bis); (2) fechas ISO crudo → formatDate;
+(3) riesgo de merge bajo (archivos propios de Dev 1). Backend verificado
+de paso (solo lectura): schemas de perfil (`residents.py`/`employees.py`
+de backend/app/modules/users/schemas) confirman email OPCIONAL en
+ResidentProfileUpdateSchema y REQUERIDO en EmployeeProfileUpdateSchema —
+coincide con `validations/perfilResidente`/`perfilEmpleado`;
+`update_record` hace PATCH parcial (omitir campo ⇒ no se toca en DB).
+
+### Lo hecho en esta sesión
+
+- **`ResidentHome.jsx`** (residente, `#/mi-perfil`): quitadas las tarjetas de
+  historial de incidencias y reservas + sus fetch/estados. Único
+  `useQuery` (perfil + unidades, `signal`): loading → `Skeleton`, error →
+  `ErrorState` con Reintentar, meta de conteo de unidades en `PageHeader`
+  (título "Mi perfil y unidad", único h1). "Datos personales" en
+  `Section` (badge activo/inactivo con `StatusBadge` override tone/glyph —
+  sin presets nuevos; copy cambia de "Cuenta activa" a "ACTIVA") con
+  `Field`/`Input` (`name` + `autoComplete` given-name/family-name/email/
+  tel, §2.19), validación cliente `validations/perfilResidente`
+  (`noValidate`, email opcional: vacío → se OMITE en el PATCH, el schema
+  es partial y el email no se puede borrar desde acá), `err.errors`
+  (arrays) → mensaje por campo (`Field`) / resto → `Alert` danger
+  controlada; éxito → **Toast** + `reload()` (conserva datos, el form se
+  re-sincroniza desde el perfil nuevo). Error de la ACCIÓN a nivel
+  pantalla (form inline, no modal). "Mis unidades" en `DataTable`
+  (Edificio/Unidad/Piso/Tipo; sin columna #ID; rowKey estable
+  `id_residente:id_unidad`; EmptyState explicativo: sin unidad no puede
+  reportar incidencias). `onProfileUpdated` conservado (App.jsx
+  actualiza el nombre del shell).
+- **`EmployeeProfile.jsx`** (técnico, `#/perfil`): mismo patrón con
+  `validations/perfilEmpleado` (email requerido); QUITADA la tarjeta
+  "Incidencias asignadas" y su fetch (la llamada extra a `/incidents`
+  desaparece). Especialidades en `Section` de lectura con
+  `DefinitionList` (nombre → Activa / "Inactiva en el catálogo") y
+  EmptyState; sin clases legado (adiós `.mg-tag` ni CSS nuevo). PageHeader
+  "Mi perfil" + conteo de especialidades.
+- **`config/routing.js`**: SOLO label — `miPerfil` "Mi perfil y unidad" →
+  **"Mi perfil"** (rutas, GRUPOS, componentes y RUTA_INICIAL intactos).
+- **Docs:** línea en convenciones-frontend.md §9; §7 (F2-4 HECHA),
+  ORDEN RESTANTE VIGENTE, §8 (fuente del historial RESUELTA; clases
+  `resident-*` sin referencias para F2-11), §8-bis (pulido).
+
+### Cambios al kit: NINGUNO
+
+Ni un componente tocado — cero cambios en `components/ui` (grep de usos
+previos: PageHeader/Section/DataTable/Field/Input/Alert/StatusBadge/
+Skeleton/ErrorState/DefinitionList/EmptyState/Button ya cubrían todo el
+perfil inline).
+
+### B7 (parte perfil): POR VERIFICAR
+
+El bug dice "Detalle en el modal de incidencias y en Mi perfil" con causa
+"Por verificar". Por lectura NO se puede identificar el defecto del
+perfil: la pantalla vieja no tenía acción "Detalle" (era una tabla plana
+sin detalle). Con las tablas fuera, si el síntoma era ahí, queda sin
+reproducible; si era en el modal de incidencias, es F2-5. **NO se
+declara cerrado**: queda "por verificar con captura del dueño" y la parte
+del modal pasa a F2-5.
+
+### Punto 4 (reporte, sin corregir): el shell SÍ se actualiza
+
+`AppShell.jsx:55,84` muestra `user.nombre`/`user.apellido` del estado de
+`App.jsx:85-89` (`updateProfile`); ambas pantallas pasan el perfil
+RESPONDIDO por el PATCH a `onProfileUpdated` (igual que hoy), así que el
+nombre/initials de la cabecera y pill se actualizan tras guardar. Sin
+regresión en F2-4.
+
+### Paridad y verificación pendiente (dueño)
+
+- [ ] Paridad RESIDENTE: cargar `#/mi-perfil` (Skeleton
+  sin parpadeo), datos + unidades visibles (sin historiales), guardar los
+  4 campos → Toast + shell actualizado + datos resincronizados; email mal
+  formado → error por campo; email VACÍO → se omite del PATCH (opcional en
+  backend);
+  error de servidor → Alert danger de la acción + Toast no disparado;
+  errores por campo desde `err.errors`; badge ACTIVA/INACTIVA; tabla de
+  unidades (caso vacía → EmptyState "sin unidad no puedes reportar");
+  `#/incidencias` y `#/mis-reservas` intactas (paridad de historiales).
+- [ ] Paridad TÉCNICO: `#/perfil` (datos + especialidades, SIN tabla de
+  incidencias ni fetch extra en Network), guardar → Toast + shell
+  actualizado; email requerido; especialidades "Activa"/"Inactiva en el
+  catálogo"; `#/incidencias` sigue mostrando "Incidencias asignadas"
+  completas.
+- [ ] ADMIN y `#/ui`: sin cambios (grep: las pantallas no comparten
+  código con pantallas de admin; label de ADMIN intacto).
+- [ ] Visual 1280/768/375 + teclado: un h1, tab correcto, foco visible en
+  los 4 inputs + botón (nota: el anillo de foco legacy dentro de
+  `.app-shell` ya está documentado en STATUS.md para F2-11).
+- [ ] `formatDate`: confirmar que NO queda ninguna fecha en los perfiles
+  (los `created_at` del backend no se mostraban antes ni se muestran ahora).
+- [ ] **Commit sugerido:** `refactor(users): perfiles al kit y historiales
+  fuera (F2-4)`.
+
 ## 8. Pendientes y hallazgos abiertos
 
 **Producto de Dev 1:**
@@ -566,9 +712,12 @@ hasta que se mergee el PR de `feature/refactor-frontend-base`.
       (413) y/o Alert explicativo.
 - [x] **`StatusBadge` presets:** alineados a los estados reales del backend
       en CP6c (K3); revisar tonos/glyphs por pantalla al migrar cada una.
-- [ ] **Fuente de datos del historial** de incidencias residente/técnico: el
-      front usa GET `/incidents` (backend filtra por usuario); suposición sin
-      verificar — confirmar con backend al migrar.
+- [x] **Fuente de datos del historial** de incidencias residente/técnico:
+      RESUELTO en F2-4 (2026-10-24, lectura del backend): `GET /incidents`
+      filtra por rol en `backend/app/modules/incidents/services.py`
+      (`list_incidents`: RESIDENTE → `reporter_id`, TECNICO →
+      `technician_id`, ADMIN → todo). "Mis incidencias"/"Mis reservas"
+      consumen el MISMO endpoint que tenía el perfil: nada se perdió.
 - [ ] Drawer del shell sigue con breakpoint 760px (CSS legado); al consolidar
       AppShell final pasarlo a la convención (640px).
 - [ ] ⭐ Paginación (§2.13): decidir UI (pager + DataTable) al migrar
@@ -605,7 +754,12 @@ real a medida que se migren pantallas):
       `.mg-tags`, `.mg-description`, `.mg-required`,
       `.mg-specialty-picker` (+ `is-selected`), `.mg-delete-button`,
       `.mg-delete-summary`, `.mg-pagination`, `.mg-bottom-note`,
-      `.mg-spinner`, `.mg-avatar-square`. (`.tabular-nums` de base.css no
+      `.mg-spinner`, `.mg-avatar-square`; **nuevo tras F2-4** (el perfil ya
+      no consume ninguna): `.resident-dashboard-grid`,
+      `.resident-profile-card`, `.resident-units-card`,
+      `.resident-history-card`, `.resident-card-heading`,
+      `.resident-empty-note`, `.resident-form-actions`. (`.tabular-nums` de
+      base.css no
       tiene consumidores como CLASE, pero el valor CSS
       `font-variant-numeric: tabular-nums` sí se usa en ui.css: decidir en la
       limpieza.)
@@ -618,7 +772,16 @@ NO son esenciales para cerrar el paso (las esenciales van al checklist del
 paso o a §7-bis); el "pulido" se decide y ejecuta después, entrando a la
 agenda cuando el dueño lo ordene.
 
-(nada registrado todavía)
+- [IncidentsPage] — columna **Unidad** para el RESIDENTE (el perfil
+  mostraba la unidad de cada incidencia; al sacar el historial del perfil
+  se decidió PERDER esa info y añadirla acá si el dueño quiere) — alcance:
+  pantalla (F2-5).
+- [Mi perfil] — enlaces directos a los historiales (#/incidencias y
+  #/mis-reservas; decidido NO implementarlos en F2-4) — alcance: pantalla
+  (futuro).
+- [Field (kit)] — las etiquetas de 12px/`--ink-3` se leen débiles sobre
+  inputs de 14px (visto en los capturas de F2-4 a 1280px) — evaluar
+  13px/`--ink-2` — alcance: kit.
 
 ## 8-ter. Plantilla de migración de pantalla
 

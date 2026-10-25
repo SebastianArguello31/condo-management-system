@@ -1158,3 +1158,80 @@ textarea.ui-control {
   display: inline-block;
   width: var(--space-8);
 }
+
+/* =====================================================================
+   Aditivo (ajuste visual F2-4, ronda 1): formularios INLINE del perfil y
+   lista de especialidades. Clases NUEVAS (verificado con grep que no
+   existían); no modifica Field, ni controles, ni estilos previos. Solo
+   tokens.
+   ===================================================================== */
+
+/* Pila vertical de los campos de un formulario inline: separa cada Field
+ * del siguiente (gap) y limita su ancho para que los inputs no corran a
+ * todo lo ancho de la columna (≈480px; bajo 640px ocupa el 100% porque el
+ * contenedor es más angosto). */
+.ui-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: calc(var(--space-12) * 10);
+}
+
+/* Fila de acciones del formulario (alineada con los campos, que comparten
+ * el mismo tope de ancho): margen superior de un paso y medio respecto de
+ * la pila. */
+.ui-form-actions {
+  max-width: calc(var(--space-12) * 10);
+  margin-top: var(--space-6);
+}
+
+/* Nota de ayuda de una sección (p. ej. "Las especialidades son gestionadas
+ * por administración."): un punto más legible que .ui-field-help (fs-13 e
+ * --ink-2 vs fs-12 e --ink-3) para texto informativo a nivel sección.
+ * Ronda 2: mismo tope de ancho que .ui-form-stack/.ui-specialty-list para
+ * que el bloque entero quede alineado con el formulario. */
+.ui-specialty-note {
+  margin: 0 0 var(--space-3);
+  max-width: calc(var(--space-12) * 10);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink-2);
+}
+
+/* Lista simple de solo lectura (especialidades del técnico): sin viñetas,
+ * nombre a la izquierda y su estado (StatusBadge) a la derecha. Ronda 2:
+ * limitada al mismo ancho del formulario (≈480px; sin el tope el badge
+ * quedaba pegado al borde derecho de la columna, a ~1200px del nombre) y
+ * con separador de 1px entre ítems (el último lo suelta). */
+.ui-specialty-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: calc(var(--space-12) * 10);
+  width: 100%;
+}
+
+.ui-specialty-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--ink);
+}
+
+.ui-specialty-list li:last-child {
+  border-bottom: 0;
+}
+
+.ui-specialty-list li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

@@ -48,7 +48,7 @@ const ITEMS = {
   },
   miPerfil: {
     path: "/mi-perfil",
-    label: "Mi perfil y unidad",
+    label: "Mi perfil",
     icon: "residentHome",
     component: ResidentHome,
     roles: [RESIDENTE],

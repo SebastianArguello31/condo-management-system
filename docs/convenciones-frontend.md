@@ -119,3 +119,10 @@ solo si su clave no coincide con el id.
 (ninguna todavía — se agrega una línea al cerrar cada migración:
 
 `<Pantalla> — F2-x: migrada a kit; <lo singular>, <bug cerrado si aplica>`)
+
+- **Mi perfil (residente, `ResidentHome`) y técnico (`EmployeeProfile`)** —
+  F2-4: migradas al kit con formulario inline (validación en cliente con
+  `validations/`, error de la acción en Alert + éxito en Toast, badge de
+  cuenta con StatusBadge override); historiales fuera del perfil (van a
+  `#/incidencias` y `#/mis-reservas`, sin pantallas nuevas); sin CSS
+  nuevo.
