@@ -192,3 +192,15 @@ solo si su clave no coincide con el id.
   solo "Cerrar"; `<InterventionMaterials>` de Dev 2 intacto, con margen
   `--space-4` desde un contenedor envolvente); B7 por verificar con
   captura del dueño.
+- **Usuarios, Empleados y Administradores (`UsersPage`/
+  `EmployeesPage`/`AdminsPage`)** — F2-6a: tres pantallas al kit sobre
+  CrudPage modo ui (sin columna ID, Creada con formatDate, estado de
+  cuenta con StatusBadge override ACTIVA/INACTIVA); crear con schema de
+  `validations/` (cuentaEmpleado/cuenta) y especialidades del empleado
+  como checkboxes del catálogo activo (tipo aditivo "checks"); Detalle
+  compartido en `AccountDetailModal` (Modal + DefinitionList, mismo GET
+  /users/:id) y toggle de acceso con useConfirm/useMutation/Toast,
+  deshabilitado sobre la cuenta propia; sin editar/eliminar/reset
+  (criterio del dueño); B1/B4 por verificar con captura; B2/B3 cerrados
+  por diseño. ManagementPage retirado; CreateAccount queda solo para
+  Residentes (F2-6b).

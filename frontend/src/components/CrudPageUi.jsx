@@ -13,8 +13,22 @@
  * Aditivo de la ronda 1 (F2-1b): acciones de fila como botones visibles
  * vía RowActions (Editar quiet sm + Eliminar danger-ghost sm, patrón de
  * Mis reservas, sin menú) y labels opcionales createLabel/editLabel para
- * el botón de crear y los títulos de los modales. */
-import { useMemo, useState } from "react";
+ * el botón de crear y los títulos de los modales.
+ * Aditivo F2-6a: prop opcional `schema` (objeto de validations/ que espeja
+ * al backend) para validar en cliente en crear/editar; sin `schema` el
+ * comportamiento es IDÉNTICO al anterior (incluido `especialidadCrear`
+ * por endpoint, solo para /specialties). Aditivo F2-6a (extras de
+ * sesión): field type "checks" (grupo de Checkbox del kit, para
+ * especialidad_ids como checkboxes del catálogo; aditivo, sin tocar los
+ * tipos existentes) con props opcionales onlyActive y emptyMessage, y
+ * cuerpo del grupo tratado igual que multiselect (array → números).
+ * Aditivo F2-6a: prop opcional `reloadSignal` (número); al cambiar,
+ * `reload()` con datos previos conservados (la lista no titila a vacío).
+ * Necesario para pantallas con acciones de fila MANEJADAS por la pantalla
+ * (p. ej. Activar/Desactivar el acceso de una cuenta), que no pasan por
+ * las mutaciones internas de este componente. Default undefined → sin
+ * efecto; ningún consumidor actual lo pasa. */
+import { useEffect, useRef, useId, useMemo, useState } from "react";
 import { api } from "../services/api";
 import { routes } from "../services/routes";
 import { useMutation } from "../hooks/useMutation";
@@ -46,7 +60,11 @@ function emptyForm(fields) {
   return Object.fromEntries(
     fields.map((field) => [
       field.name,
-      field.type === "checkbox" ? true : field.type === "multiselect" ? [] : "",
+      field.type === "checkbox"
+        ? true
+        : field.type === "multiselect" || field.type === "checks"
+          ? []
+          : "",
     ])
   );
 }
@@ -71,6 +89,7 @@ function CampoCrud({
   esEdicion,
 }) {
   const error = useFormFieldError(field.name);
+  const grupoId = useId();
 
   if (field.type === "checkbox") {
     return (
@@ -82,6 +101,84 @@ function CampoCrud({
         disabled={deshabilitado}
         onChange={(event) => alCambiar(event.target.checked)}
       />
+    );
+  }
+
+  /* Aditivo F2-6a: GRUPO de checkboxes (uno por opción del lookup; ronda 1:
+   * casilla a la IZQUIERDA y etiqueta a su derecha — .ui-checkbox ya las
+   * ordena así), cabecera con clase existente (ui-field-label) y el bloque
+   * de ayuda + error DEBAJO del grupo, conectados por aria-describedby y
+   * con aria-invalid en cada casilla. Sin Field (todas las casillas
+   * compartirían id) ni Section (h2). */
+  if (field.type === "checks") {
+    const visibles = field.onlyActive
+      ? opciones.filter((option) => Boolean(option.activo))
+      : opciones;
+    const helpId = `${grupoId}-help`;
+    const errorId = `${grupoId}-error`;
+    /* Sin opciones visibles (lookup vacío o todo inactivo) el texto de
+     * ayuda lo explica; con opciones, la ayuda declarada en la pantalla. */
+    const textoAyuda =
+      visibles.length === 0
+        ? field.emptyMessage ?? "No hay opciones disponibles."
+        : ayuda;
+    const descritos = [textoAyuda ? helpId : null, error ? errorId : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
+
+    return (
+      <div>
+        <p className="ui-field-label" id={`${grupoId}-label`}>
+          {field.label}
+          {asteriscoRequerido && (
+            <>
+              <span className="ui-field-required" aria-hidden="true">
+                {" *"}
+              </span>
+              <span className="ui-visually-hidden"> (obligatorio)</span>
+            </>
+          )}
+        </p>
+        <div
+          role="group"
+          aria-labelledby={`${grupoId}-label`}
+          aria-describedby={descritos}
+          style={{ display: "grid", gap: "var(--space-2)" }}
+        >
+          {visibles.map((option) => (
+            <Checkbox
+              key={option[field.optionId]}
+              label={option[field.optionLabel || "nombre"]}
+              name={field.name}
+              autoComplete="off"
+              disabled={deshabilitado}
+              checked={Array.isArray(valor) && valor.includes(option[field.optionId])}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={descritos}
+              onChange={(event) => {
+                const id = option[field.optionId];
+                alCambiar(
+                  event.target.checked
+                    ? Array.isArray(valor) ? [...valor, id] : [id]
+                    : (Array.isArray(valor) ? valor : []).filter(
+                        (item) => item !== id
+                      )
+                );
+              }}
+            />
+          ))}
+        </div>
+        {textoAyuda && (
+          <p className="ui-field-help" id={helpId}>
+            {textoAyuda}
+          </p>
+        )}
+        {error && (
+          <p className="ui-field-error" id={errorId}>
+            {error}
+          </p>
+        )}
+      </div>
     );
   }
 
@@ -156,7 +253,7 @@ export default function CrudPageUi({
   endpoint,
   updateMethod = "PATCH",
   idField,
-  fields,
+  fields = [],
   columns,
   lookups = EMPTY_LOOKUPS,
   renderExtraActions,
@@ -168,6 +265,8 @@ export default function CrudPageUi({
   getRecordLabel,
   createLabel,
   editLabel,
+  schema,
+  reloadSignal,
 }) {
   const { data, loading, error, reload } = useQuery(
     async (signal) => {
@@ -179,6 +278,16 @@ export default function CrudPageUi({
     },
     [endpoint, lookups]
   );
+
+  /* Aditivo F2-6a: señal de refresco externo (acciones de fila de la
+   * pantalla asentadas fuera de este componente). Con `reload()` el
+   * listado anterior se conserva mientras re-consulta. */
+  const primeraSenal = useRef(reloadSignal);
+  useEffect(() => {
+    if (reloadSignal === undefined || reloadSignal === primeraSenal.current) return;
+    primeraSenal.current = reloadSignal;
+    if (!error) reload();
+  }, [reloadSignal, error, reload]);
   const [rows = []] = data || [];
   const options = useMemo(
     () =>
@@ -210,6 +319,12 @@ export default function CrudPageUi({
   );
 
   const busy = guardar.busy || eliminar.busy;
+
+  /* Schema de cliente (aditivo F2-6a): el prop `schema` tiene prioridad;
+   * sin prop, se conserva el comportamiento anterior (solo /specialties
+   * valida con `especialidadCrear` — Edificios/Unidades/Especialidades no
+   * pasan la prop y quedan idénticas). */
+  const schemaActivo = schema ?? (endpoint === routes.specialties ? especialidadCrear : null);
 
   const filtered = rows.filter((row) =>
     columns.some((column) =>
@@ -243,7 +358,10 @@ export default function CrudPageUi({
           field.name,
           field.type === "password"
             ? ""
-            : row[field.name] ?? (field.type === "multiselect" ? [] : ""),
+            : row[field.name] ??
+              (field.type === "multiselect" || field.type === "checks"
+                ? []
+                : ""),
         ])
       )
     );
@@ -293,7 +411,7 @@ export default function CrudPageUi({
 
       if (field.nullable && value === "") {
         value = null;
-      } else if (field.type === "multiselect") {
+      } else if (field.type === "multiselect" || field.type === "checks") {
         value = value.map(Number);
       } else if (field.type === "select" || field.type === "number") {
         value = Number(value);
@@ -314,8 +432,8 @@ export default function CrudPageUi({
     setAccionError("");
     setFieldErrors(null);
 
-    if (endpoint === routes.specialties) {
-      const errores = validate(form, especialidadCrear);
+    if (schemaActivo) {
+      const errores = validate(form, schemaActivo);
       if (Object.keys(errores).length > 0) {
         setFieldErrors(errores);
         return;

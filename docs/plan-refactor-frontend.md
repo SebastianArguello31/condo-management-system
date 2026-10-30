@@ -323,7 +323,12 @@ final, según alcance).
   verificar con captura; detalle en "Sesión F2-5c").
 - **F2-6** `refactor:` ManagementPage + Residentes + CreateAccount
   (+ `validations/` cuenta/perfiles; relación residentes-unidades).
-  Cierra **B1–B5**.
+  Cierra **B1–B5**. — **F2-6a HECHA (pendiente de verificar):** Usuarios,
+  Empleados y Administradores al kit; detalle en "Sesión F2-6" y "Sesión
+  F2-6a" más abajo. **F2-6b PENDIENTE:** Residentes + ResidentUnits +
+  el CreateAccount de residentes (respuesta 9: búsqueda de residentes
+  debe incluir la unidad). B1/B4 por verificar con captura del dueño;
+  B5 queda para 6b.
 - **F2-7** `refactor:` Espacios + Políticas. Cierra **B6**.
 - **F2-8** `refactor:` Gestión de reservas + CreateReservation.
 - **F2-9** `feat:` Rediseño del Login (login.css nuevo sobre tokens;
@@ -372,25 +377,26 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
 
-> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-5c, 2026-10-25; F2-4,
-> F2-1b, F2-2, F2-5a, F2-5b y F2-5c hechas — verificación antes de
-> F2-6):**
+> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-6a, 2026-10-30; F2-4,
+> F2-1b, F2-2, F2-5a, F2-5b, F2-5c y F2-6a hechas — verificación antes de
+> F2-6b):**
 > 1. **Verificación por el dueño** de F2-1b, F2-2 (incluida ronda 1),
->    F2-5a, F2-5b y F2-5c (checklists en STATUS.md) → abrir PRs de las
->    ramas hechas (en la de incidencias, **B7 con captura**).
-> 2. **F2-5 COMPLETO:** 5a listado, 5b creación (cierra B8) y 5c detalle
->    al kit; el pulido de la pantalla (§8-bis: Cancelar del residente,
->    mover la asignación al detalle, columna Unidad) se decide y ejecuta
->    cuando el dueño lo ordene.
-> 3. **docs/convenciones-frontend.md** (guía del kit para los demás,
+>    F2-5a, F2-5b, F2-5c y F2-6a (checklists en STATUS.md; en la de
+>    incidencias, **B7 con captura**; en F2-6a, **B1/B4 con captura**)
+>    → abrir PRs de las ramas hechas.
+> 2. **F2-6b** — Residentes + ResidentUnits + CreateAccount de
+>    residentes (cierre B5; búsqueda de residentes incluye la unidad).
+> 3. **F2-5 COMPLETO pulido** (§8-bis: Cancelar del residente, mover la
+>    asignación al detalle, columna Unidad) cuando el dueño lo ordene.
+> 4. **docs/convenciones-frontend.md** (guía del kit para los demás,
 >    parte de F2-11; ya va llevada por sesión con una línea por pantalla
 >    en §9).
-> 4. **F2-6 → F2-9** — resto de pantallas (pantallas de gestión, espacios +
+> 5. **F2-7 → F2-9** — resto de pantallas (espacios +
 >    políticas, gestión de reservas + CreateReservation, Login rediseño).
-> 5. **F2-10** — pantallas nuevas de Dev 2 (insumos ya integró) y Dev 3
+> 6. **F2-10** — pantallas nuevas de Dev 2 (insumos ya integró) y Dev 3
 >    (dashboard): migración del dueño; enlazar drilldowns a
 >    `#/incidencias?estado=...`.
-> 6. **F2-11** — limpieza de CSS, responsive y a11y (unifica el marco legado
+> 7. **F2-11** — limpieza de CSS, responsive y a11y (unifica el marco legado
 >    del shell y el ErrorBoundary global).
 >
 > Lo explícito del sprint tiene prioridad al elegir dentro de este orden.
@@ -1146,6 +1152,117 @@ ni otras pantallas; CERO cambios al kit.
   cambio de estado, (3) RESIDENTE sin "Cancelar".
 - Verificación pendiente del dueño: checklist F2-5c en STATUS.md.
 
+## Sesión F2-6: análisis y plan (2026-10-30)
+
+Solo lectura. Alcance del análisis: ManagementPage.jsx (= Usuarios,
+Empleados y Administradores), CreateAccount.jsx, ResidentsPage.jsx y
+ResidentUnits.jsx. Decidida la PARTICIÓN: **F2-6a** (aprobada) = Usuarios +
+Empleados + Administradores al kit; **F2-6b** = Residentes + ResidentUnits +
+el CreateAccount de residentes (una sola fuente de creación de cuentas si
+converge; decisión del dueño en 6b).
+
+**a) Paridad (tabla del análisis).**
+
+| Pantalla | Listado | Crear | Otras acciones |
+|---|---|---|---|
+| Usuarios | GET `/users` (filas con `rol` y `created_at`) | NO (decisión) | Detalle: GET `/users/:id` · Toggle: PATCH `/users/:id` `{activo}` |
+| Empleados | GET `/employees` (+`especialidad_ids`, `especialidades`, `rol`, `created_at`) | POST `/employees` `{nombre, apellido, email, telefono, password, especialidad_ids:[ids NUMBER] min 1}` | ídem Usuarios |
+| Administradores | GET `/admins` (`rol`, `created_at`) | POST `/admins` `{nombre, apellido, email, telefono, password}` — SIN `id_rol`: `AdminCreateSchema`=AccountSchema y unknown=RAISE → `id_rol` daría 400 | ídem Usuarios |
+
+- El GET `/users/roles` del legado (ManagementPage) era REDUNDANTE: las
+  filas de los tres listados ya traen `r.nombre AS rol`; se elimina el
+  fetch (misma presentación). Retrofit de trim/lowercase del email: backend
+  (`pre_load`); el front pinta lo que devuelve el GET.
+- Sin editar cuentas, sin Eliminar, sin reset de contraseña (criterio del
+  dueño; el backend ofrece UPDATE/DELETE de cuentas pero la pantalla no los
+  usaba).
+
+**b) Bugs del paso.** B1/B4 (detalle en `<dialog open>` SIN backdrop,
+foco ni estilo en las tres pantallas): "por verificar con captura del
+dueño" — igual que B7; NO se declaran cerrados. B2/B3 cerrados POR
+DISEÑO con la migración del crear (FormModal con `name`+`autoComplete`
+y error DENTRO del modal). B5 es F2-6b.
+
+**c) Decisiones del dueño para F2-6a.** (1) Detalle conservado como
+Modal + DefinitionList (mantener el patrón F2-3/F2-5c). (2)
+Especialidades del crear-empleado como checkboxes del catálogo activo
+(como hoy), mínimo 1. (3) Sin Eliminar. (4) Sin reset de contraseña.
+(5) Sin editar cuentas. (6) Columna "Creada" (formatDate) en Empleados y
+Administradores. (7) Español neutro en todo el copy visible (voseo
+fuera; mensajes del backend intactos). (8) Prop ADITIVA `schema` en
+CrudPageUi y partición F2-6a/6b aprobada. (9) La búsqueda de residentes
+debe incluir la unidad (se registra para F2-6b).
+
+## Sesión F2-6a: Usuarios, Empleados y Administradores al kit (2026-10-30)
+
+Alcance RESPETADO: `UsersPage.jsx`, `EmployeesPage.jsx`,
+`AdminsPage.jsx`, `CrudPageUi.jsx` (prop `schema` + extras reportados),
+`AccountDetailModal.jsx` (NUEVO, compartido) y retirada de
+`ManagementPage.jsx` (cero consumidores tras migrar). `CreateAccount.jsx`
+NO se retira: `ResidentsPage` sigue importándolo (kind="residents") —
+queda para F2-6b. Sin npm/node; sin tocar api.js, routes.js, backend, CSS
+legado ni otras pantallas.
+
+- **Pantallas sobre CrudPage modo ui:** las tres (usuarios, empleados y
+  administradores) con
+  `idField="id_usuario"`, sin columna ID, useQuery con signal (Skeleton
+  sin parpadeo — B9; ErrorState con Reintentar), Toast de éxito,
+  `showRequiredNote`, fechas con `formatDate` ("Creada") y estado con
+  `StatusBadge` override ACTIVA success+check / INACTIVA muted (helper
+  `estadoCuenta`, única fuente en AccountDetailModal — técnica
+  priorities.js). Usuarios SIN crear/editar/eliminar
+  (`canCreate/canEdit/canDelete=false`). Empleados/Administradores en
+  crear con `createLabel` específico ("Nuevo empleado"/"Nuevo
+  administrador"), sin Editar ni Eliminar. Búsqueda del CrudPageUi sobre
+  Usuario (`nombre`), Email y Rol; la columna Estado se declara con
+  `name: "estado"` (inexistente en la fila) para que los booleanos
+  `activo` no actúen como texto de búsqueda (decisión de presentación
+  reportada en §8-bis).
+- **`schema` (aditivo):** en crear/editar, `validate(form, schemaActivo)`
+  con `schemaActivo = schema ?? especialidadCrear-solo-especialidades`
+  (default idéntico; Edificios/Unidades/Especialidades no pasan la prop
+  — verificado con grep). Empleado → `cuentaEmpleado`; Administrador →
+  `cuenta` (desviación JUSTIFICADA de la decisión "cuentaAdmin":
+  `cuentaAdmin` espeja UserCreateSchema con `id_rol` requerido y POST
+  /admins lo rechazaría como campo desconocido; `cuenta` es el espejo
+  exacto de AccountSchema/AdminCreateSchema).
+- **Reporte de extras en CrudPageUi (más que "solo schema", necesarios
+  para las decisiones del dueño):** (1) field type aditivo **"checks"**
+  — grupo de Checkbox del kit con `onlyActive` y `emptyMessage`
+  opcionales — para especialidad_ids como checkboxes (decisión 2); sin
+  Field (compartirían id) ni Section (h2): cabecera/avisos con clases
+  existentes de ui.css y `aria-describedby` por casilla; el cuerpo se
+  envía igual que multiselect (array → números). (2) prop aditiva
+  **`reloadSignal`** (número): refresco externo con datos conservados
+  para acciones de fila manejadas por la pantalla (toggle de accesos);
+  default sin efecto.
+- **Acciones de fila (`useCuentaAcceso` + `AccountDetailModal`, archivos
+  compartidos):** "Detalle" (quiet sm, aria-label con el nombre) abre el
+  modal nuevo; "Activar/Desactivar" (quiet sm al activar, danger-ghost
+  sm al desactivar) — mismo endpoint y payload que el legado (PATCH
+  /users/:id `{activo}`), useConfirm (danger SOLO al desactivar,
+  "Se desactivará la cuenta de <n>. No podrá iniciar sesión mientras
+  esté inactiva."), useMutation con dedupe, Toast "Cuenta
+  activada./desactivada." y refresco (reloadSignal) sin titilar; error
+  por Toast danger. "Desactivar" deshabilitado sobre la propia cuenta
+  del ADMIN con aria-label que lo explica ("es tu propia cuenta, acción
+  no permitida").
+- **Detalle (`AccountDetailModal`):** Modal con backdrop (el legacy
+  `<dialog open>` no lo tenía — B1/B4 "por verificar con captura"),
+  useQuery GET /users/:id con signal, Skeleton/ErrorState solo SIN
+  datos, UN solo h2, DefinitionList (estado, nombre, email, teléfono,
+  rol, "Creada" formatDate — sin ISO), footer solo "Cerrar". Sin
+  editar/eliminar/reset (criterio del dueño).
+- **Español neutro:** "Marca todas las especialidades que
+  correspondan." (antes voseo "Marcá"); "Seleccioná al menos una
+  especialidad" del legacy lo sustituye el schema
+  ("Este campo es requerido." / "Agrega al menos un elemento.").
+  Mensajes del backend intactos.
+- **Retiro:** `ManagementPage.jsx` eliminado (grep: cero consumidores
+  tras migrar; su estado/JSX vivía en las 3 pantallas nuevas + hook).
+  `CreateAccount` sigue vivo SOLO para `ResidentsPage` (reporte).
+- Verificación pendiente del dueño: checklist F2-6a en STATUS.md.
+
 ## 8. Pendientes y hallazgos abiertos
 
 **Producto de Dev 1:**
@@ -1272,6 +1389,19 @@ agenda cuando el dueño lo ordene.
   Resumen del modal muestra fecha de reporte y fecha límite (más
   reportante, edificio y unidad), datos que GET /incidents/:id ya
   devolvía.
+- [Usuarios/Empleados/Administradores] — la columna Estado no entra en la
+  búsqueda (`name: "estado"` inexistente; decisión de F2-6a para que los
+  booleanos `activo` no sirvan de texto); si el dueño quiere buscar por
+  "activa/inactiva", hacer columna computada de texto — alcance:
+  pantalla.
+- [Usuarios/Empleados/Administradores] — el toggle de acceso no ocupa el
+  spinner del botón mientras corre SU mutación (el disabled llega del
+  hook; dedupe evita dobles envíos); unificar el busy de RowActions si se
+  quiere fino — alcance: kit.
+- [CrudPageUi] — el grupo tipo "checks" (especialidades del crear
+  empleado) usa clases existentes de ui.css; si otra pantalla lo
+  necesita, evaluar componente Field-group en el kit — alcance: kit
+  (futuro).
 - [InterventionMaterials (Dev 2)] — **InterventionMaterials con estilo
   legado, formulario sin separación (Dev 2)**, visto dentro del modal
   nuevo (F2-5c): etiquetas y botón "Registrar consumo" pegados, sin la
