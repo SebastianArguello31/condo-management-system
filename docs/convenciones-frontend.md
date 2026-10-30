@@ -184,3 +184,11 @@ solo si su clave no coincide con el id.
   la acción DENTRO — **cierra B8** —, éxito por Toast y reload sin
   titilar); modal de detalle e InterventionMaterials intactos; el badge
   "SIN ESTADO" es dato/backend, no pantalla (reportado).
+- **Incidencias (`IncidentsPage`)** — F2-5c: detalle al kit en
+  `IncidentsDetailModal` (useQuery con signal y contenido conservado en
+  los reload, Resumen en DefinitionList con StatusBadge y fechas de
+  `utils/format`, Timeline del historial, prioridad/estado/intervención
+  con useMutation, error de la acción DENTRO y éxito por Toast, footer
+  solo "Cerrar"; `<InterventionMaterials>` de Dev 2 intacto, con margen
+  `--space-4` desde un contenedor envolvente); B7 por verificar con
+  captura del dueño.

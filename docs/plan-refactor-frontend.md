@@ -312,12 +312,15 @@ final, según alcance).
   **HECHA (pendiente de verificar):** migrada al kit en la rama
   `feature/refactor-perfil`; detalle en "Sesión F2-4" más abajo.
 - **F2-5** `refactor:` IncidentsPage en subcomponentes (tabla, form de
-  creación con FormModal, modal de detalle, timeline). Cierra **B7 detalle,
-  B8**. — **F2-5a HECHA (pendiente de verificar):** shell + listado +
+  creación con FormModal, modal de detalle, timeline). Cierra **B8**;
+  **B7 detalle** por verificar con captura del dueño. —
+  **F2-5a HECHA (pendiente de verificar):** shell + listado +
   filtros al kit en `feature/refactor-incidencias` (detalle en "F2-5:
   análisis y plan" más abajo). **F2-5b HECHA (pendiente de verificar):**
   creación en `IncidentsCreateModal` (FormModal; cierra B8; detalle en
-  "Sesión F2-5b"). F2-5c pendiente.
+  "Sesión F2-5b"). **F2-5c HECHA (pendiente de verificar):** detalle en
+  `IncidentsDetailModal` (Modal + DefinitionList + Timeline; B7 por
+  verificar con captura; detalle en "Sesión F2-5c").
 - **F2-6** `refactor:` ManagementPage + Residentes + CreateAccount
   (+ `validations/` cuenta/perfiles; relación residentes-unidades).
   Cierra **B1–B5**.
@@ -369,15 +372,16 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
 
-> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-5b, 2026-10-25; F2-4,
-> F2-1b, F2-2, F2-5a y F2-5b hechas — verificación y F2-5c antes de
+> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-5c, 2026-10-25; F2-4,
+> F2-1b, F2-2, F2-5a, F2-5b y F2-5c hechas — verificación antes de
 > F2-6):**
 > 1. **Verificación por el dueño** de F2-1b, F2-2 (incluida ronda 1),
->    F2-5a y F2-5b (checklists en STATUS.md) → abrir PRs de las ramas
->    hechas.
-> 2. **F2-5b**: HECHA (creación al kit, cierra B8); queda el **detalle**
->    (ficha/timeline con los defectos de B7 que la captura confirme) y
->    **F2-5c** (pulido de la pantalla).
+>    F2-5a, F2-5b y F2-5c (checklists en STATUS.md) → abrir PRs de las
+>    ramas hechas (en la de incidencias, **B7 con captura**).
+> 2. **F2-5 COMPLETO:** 5a listado, 5b creación (cierra B8) y 5c detalle
+>    al kit; el pulido de la pantalla (§8-bis: Cancelar del residente,
+>    mover la asignación al detalle, columna Unidad) se decide y ejecuta
+>    cuando el dueño lo ordene.
 > 3. **docs/convenciones-frontend.md** (guía del kit para los demás,
 >    parte de F2-11; ya va llevada por sesión con una línea por pantalla
 >    en §9).
@@ -1058,6 +1062,90 @@ ni otras pantallas; CERO cambios al kit.
   showRequiredNote, useMutation con dedupe, cero window.confirm).
 - Verificación pendiente del dueño: checklist F2-5b en STATUS.md.
 
+## Sesión F2-5c: modal de detalle de incidencias al kit (2026-10-25)
+
+Alcance: `IncidentsDetailModal.jsx` (NUEVO) + `IncidentsPage.jsx` (solo
+para montar el modal y retirar el detalle legado y su estado).
+`InterventionMaterials.jsx` (Dev 2) NO se tocó ni reformateó: se importa
+tal cual con las MISMAS props (`intervention`/`items`/`canConsume`) y el
+mismo `onStockChanged` (ahora `onChanged` del modal = `reload` del
+listado); el margen superior `--space-4` va en un contenedor envolvente
+del modal. Sin npm/node; sin tocar api.js, routes.js, backend, CSS legado
+ni otras pantallas; CERO cambios al kit.
+
+- **Paridad del detalle:** un solo useQuery con signal (GET /incidents/:id
+  + /history + /assignments SOLO técnico/ADMIN + /interventions, mismas
+  condiciones por rol que el openDetail legado), loading → Skeleton,
+  error → ErrorState con Reintentar, defaults por posición. Ajuste de
+  ronda: Skeleton/ErrorState solo aparecen SIN datos — durante los
+  reload posteriores a una acción el contenido se CONSERVA montado
+  (useQuery ya conserva datos previos), para no re-fetchear los consumos
+  de cada InterventionMaterials ni perder el foco de los formularios.
+  Resumen (DefinitionList): estado y prioridad con StatusBadge
+  (prioridad con override de MÓDULO, copia de la constante de 5a para no
+  crear dependencia circular página↔modal; sin presets nuevos), tipo,
+  título, descripción, fecha de reporte, fecha límite, reportante,
+  edificio y unidad — TODOS ya los devolvía GET /incidents/:id (el
+  detalle legado no los mostraba; los nulos por LEFT JOIN se omiten).
+  Adjuntos: lista con "Descargar" vía downloadAttachment y error de
+  descarga DENTRO (Alert). Historial: Timeline del kit (formatDateTime;
+  estado como título, autor como meta, comentario como detail, tone del
+  preset de StatusBadge). Asignaciones: solo técnico/ADMIN, lectura
+  (fecha formateada + técnico). Intervenciones: fecha formateada +
+  resultado + cada InterventionMaterials; el form "Registrar
+  intervención" va tras una regla de 1px `--line` bajo la lista.
+- **Acciones (mismos endpoints y payloads):** ADMIN — select de prioridad
+  en Field, PATCH /priority `{id_prioridad: Number}` con validación
+  `incidenciaPrioridad`; TÉCNICO — PATCH /status
+  `{estado: solo de estados_permitidos, comentario: trim()||null ≤500}`
+  con schema LOCAL espejo del backend (requerido + maximo(500); no
+  existe en validations/ porque el endpoint no es de creación); TÉCNICO
+  — POST /interventions `{resultado}` con
+  `validate(form, intervencionCrear)` (min 5). Errores por campo como
+  prop `error` directa del Field (NO useFormFieldError fuera de
+  FormModal — lección de la ronda 1 de F2-5b). Cada acción con SU
+  useMutation (dedupe) y SU busy; error de la acción en Alert danger
+  DENTRO (por sección); éxito SIEMPRE por Toast ("Prioridad
+  actualizada."/"Estado actualizado."/"Intervención registrada.") +
+  reload del detalle + onChanged (reload del listado sin titilar); el
+  modal NO se cierra por una acción y su footer solo trae "Cerrar"
+  (quiet). Botones siempre activos con verbo específico ("Actualizar
+  estado", "Guardar prioridad", "Registrar intervención"; solo busy),
+  formularios en `.ui-form-stack` con botón en `.ui-form-actions`
+  (`--space-6`, a la izquierda).
+- **Secciones:** encabezados h3 propios (Section del kit descartado
+  DENTRO del modal: su título es un h2 y el modal exige un solo h2);
+  orden Resumen → Adjuntos → acción del rol (ADMIN "Prioridad", TÉCNICO
+  "Cambiar estado") → Historial → Asignaciones → Intervenciones. Fix de
+  ronda: el spread del estilo de los h3 con margen propio ("Resumen" y
+  "Registrar intervención") estaba en el orden inverso y el margen
+  quedaba muerto.
+- **Ajuste de ronda (aria):** retirado el aria-label del select de
+  prioridad — el `Field` con su etiqueta visible "Nueva prioridad" ya
+  nombra el control y el aria-label lo SOBREESCRIBÍA (WCAG 2.5.3
+  label-in-name).
+- **Padre:** "Detalle" (RowActions quiet sm, aria-label con el título)
+  guarda la fila en `selected` y monta el modal con rol, idUsuario,
+  catálogos ya cargados (prioridades/statuses/insumos) y
+  `onChanged={reload}`. Se retiraron detail/nextStatus/statusComment/
+  history/assignments/interventions/interventionResult/error,
+  openDetail/updatePriority/changeStatus/addIntervention, el Modal
+  legado y la Alert de página (sin consumidores: cada acción reporta
+  DENTRO del modal o por Toast). `assign` (columna Técnico del ADMIN)
+  queda IDÉNTICO (POST /assignments Number, Toast, busy). Cero
+  window.confirm.
+- **Aspecto de InterventionMaterials (NO corregido por alcance, archivo
+  de Dev 2; anotado en §8-bis):** dentro del modal nuevo se ve con su
+  estilo legado — tarjeta `.detail-section` (CSS viejo con hex) y su
+  formulario con etiquetas y botón "Registrar consumo" pegados (sin
+  `.ui-form-stack` ni Field).
+- **B7:** NO se declara cerrado — por verificar con captura del dueño.
+  Candidatos resueltos en este modal: (1) fechas de reporte/límite,
+  reportante, edificio y unidad ahora visibles; (4) ISO crudo → fechas
+  formateadas. Siguen en pulido por decisión del dueño: (2) ADMIN sin
+  cambio de estado, (3) RESIDENTE sin "Cancelar".
+- Verificación pendiente del dueño: checklist F2-5c en STATUS.md.
+
 ## 8. Pendientes y hallazgos abiertos
 
 **Producto de Dev 1:**
@@ -1180,7 +1268,26 @@ agenda cuando el dueño lo ordene.
   alcance: pantalla (F2-5c).
 - [IncidentsPage] — **fecha límite (SLA) visible del registro/histórico**
   (el detalle no muestra fecha de reporte ni `fecha_limite`) — alcance:
-  pantalla (F2-5c con el modal del kit).
+  pantalla (F2-5c con el modal del kit). — **RESUELTO en F2-5c:** el
+  Resumen del modal muestra fecha de reporte y fecha límite (más
+  reportante, edificio y unidad), datos que GET /incidents/:id ya
+  devolvía.
+- [InterventionMaterials (Dev 2)] — **InterventionMaterials con estilo
+  legado, formulario sin separación (Dev 2)**, visto dentro del modal
+  nuevo (F2-5c): etiquetas y botón "Registrar consumo" pegados, sin la
+  pila de `.ui-form-stack` ni Field (usa `.detail-section`/`.mg-*` del
+  CSS legado) — NO se corrigió (archivo de Dev 2, fuera de alcance): se
+  importó tal cual, con margen superior `--space-4` desde un contenedor
+  envolvente del modal — alcance: Dev 2 (pantalla; F2-11 si no lo toma).
+  **BLOQUEADO para el markup (2026-10-29, ronda 2 F2-5c):** PASO 0 detectó
+  trabajo de Dev 2 SIN integrar que toca este archivo — remoto
+  `feature/frontend-maintenance` avanzó `58d58b9..3a3d0de`
+  ("fix(maintenance): mejorar formulario de consumo y cantidades"; +15-4
+  en `InterventionMaterials.jsx`: toggle "Registrar insumo/Cancelar
+  consumo", `formatQuantity`, markup del form cambiado) y `3a3d0de` NO
+  está contenido en `feature/refactor-incidencias` → se DETUVO sin editar
+  el archivo; retomar solo cuando esos cambios estén integrados (o
+  acordados) y reevaluar el estilo legado contra el form nuevo.
 
 ## 8-ter. Plantilla de migración de pantalla
 
