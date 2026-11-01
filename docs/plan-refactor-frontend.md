@@ -198,8 +198,8 @@ frontend/src/
     ├── units/                 BuildingsPage.jsx, UnitsPage.jsx.
     ├── users/                 UsersPage, EmployeesPage, AdminsPage,
     │                          SpecialtiesPage, ResidentsPage, ResidentHome,
-    │                          EmployeeProfile, ManagementPage, CreateAccount,
-    │                          ResidentUnits.
+    │                          EmployeeProfile, AccountDetailModal (compartido
+    │                          6a), ResidentCreateModal, ResidentUnitsModal.
     ├── incidents/             IncidentsPage.jsx (modal de detalle legacy).
     ├── espacios-comunes/      EspaciosPage.jsx, SpacePolicies.jsx.
     └── reservas/              MisReservasPage.jsx, GestionReservasPage.jsx,
@@ -325,10 +325,12 @@ final, según alcance).
   (+ `validations/` cuenta/perfiles; relación residentes-unidades).
   Cierra **B1–B5**. — **F2-6a HECHA (pendiente de verificar):** Usuarios,
   Empleados y Administradores al kit; detalle en "Sesión F2-6" y "Sesión
-  F2-6a" más abajo. **F2-6b PENDIENTE:** Residentes + ResidentUnits +
-  el CreateAccount de residentes (respuesta 9: búsqueda de residentes
-  debe incluir la unidad). B1/B4 por verificar con captura del dueño;
-  B5 queda para 6b.
+  F2-6a" más abajo. **F2-6b HECHA (pendiente de verificar)** en la rama
+  `feature/refactor-residentes` (nacida de
+  `feature/refactor-gestion-usuarios`): Residentes + ResidentUnits + el
+  CreateAccount de residentes; detalle en "Sesión F2-6b" más abajo.
+  B1/B4 por verificar con captura del dueño; B2/B3 cerradas POR DISEÑO
+  (CreateAccount retirado); B5 por verificar con captura del dueño.
 - **F2-7** `refactor:` Espacios + Políticas. Cierra **B6**.
 - **F2-8** `refactor:` Gestión de reservas + CreateReservation.
 - **F2-9** `feat:` Rediseño del Login (login.css nuevo sobre tokens;
@@ -365,10 +367,10 @@ terminado un paso mientras sus bugs sigan abiertos.
 | ID | Pantalla / rol | Síntoma | Causa | Paso que lo resuelve (§7) |
 |----|----------------|---------|-------|---------------------------|
 | B1 | Usuarios y accesos (admin) | Detalle en Usuarios y accesos | Por verificar | F2-6 |
-| B2 | Nuevo empleado (modal, admin) | Popup de correo del navegador al escribir el nombre | Verificada: `CreateAccount.jsx:50` — inputs sin `name` ni `autoComplete` (solo password tiene) y `CrudPage.jsx:310-312`; el navegador adivina el campo y ofrece correo guardado | F2-6 (CreateAccount) |
-| B3 | Nuevo empleado | Mensaje suelto bajo el botón al cerrar el modal | Verificada: `CreateAccount.jsx:44` renderiza el error como `<p>` sin estilos (`mg-alert`) fuera del modal al cerrarlo | F2-6 (CreateAccount) |
-| B4 | Empleados (admin) | Detalle en Empleados | Por verificar | F2-6 |
-| B5 | Residentes (admin) | Ver unidades en Residentes | Por verificar | F2-6 (relación residentes-unidades) |
+| B2 | Nuevo empleado (modal, admin) | Popup de correo del navegador al escribir el nombre | Verificada: `CreateAccount.jsx:50` — inputs sin `name` ni `autoComplete` (solo password tiene) y `CrudPage.jsx:310-312`; el navegador adivina el campo y ofrece correo guardado | **CERRADA POR DISEÑO** (F2-6a en el crear del kit; el archivo CreateAccount quedó sin consumidores y se RETIRÓ en F2-6b) |
+| B3 | Nuevo empleado | Mensaje suelto bajo el botón al cerrar el modal | Verificada: `CreateAccount.jsx:44` renderiza el error como `<p>` sin estilos (`mg-alert`) fuera del modal al cerrarlo | **CERRADA POR DISEÑO** (F2-6a; el error vive DENTRO del FormModal y CreateAccount se retiró en F2-6b) |
+| B4 | Empleados (admin) | Detalle en Empleados | Por verificar | F2-6 (HECHA 6a; por verificar con captura del dueño) |
+| B5 | Residentes (admin) | Ver unidades en Residentes | Por verificar | F2-6b HECHA (ResidentUnitsModal al kit; **por verificar con captura del dueño**, NO se declara cerrado) |
 | B6 | Espacios (admin) | Transición rota Espacios → Políticas de reserva | Por verificar | F2-7 |
 | B7 | Incidencias (técnico) / Mi perfil | Detalle en el modal de incidencias y en Mi perfil | Por verificar | F2-5 (detalle) / F2-4 (perfil) |
 | B8 | Nueva incidencia (modal, residente) | Error de backend se renderiza al fondo de la página con el modal abierto | Verificada: el `error` es estado único de página — `IncidentsPage.jsx:55` lo setea al crear y se renderiza solo a nivel página (`IncidentsPage.jsx:103`); el modal de creación (línea 105) no lo muestra adentro (el de detalle sí, línea 106) | F2-5 |
@@ -377,26 +379,24 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
 
-> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-6a, 2026-10-30; F2-4,
-> F2-1b, F2-2, F2-5a, F2-5b, F2-5c y F2-6a hechas — verificación antes de
-> F2-6b):**
+> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-6b, 2026-10-30; F2-4,
+> F2-1b, F2-2, F2-5a, F2-5b, F2-5c, F2-6a y F2-6b hechas — verificación
+> pendiente):**
 > 1. **Verificación por el dueño** de F2-1b, F2-2 (incluida ronda 1),
->    F2-5a, F2-5b, F2-5c y F2-6a (checklists en STATUS.md; en la de
->    incidencias, **B7 con captura**; en F2-6a, **B1/B4 con captura**)
->    → abrir PRs de las ramas hechas.
-> 2. **F2-6b** — Residentes + ResidentUnits + CreateAccount de
->    residentes (cierre B5; búsqueda de residentes incluye la unidad).
-> 3. **F2-5 COMPLETO pulido** (§8-bis: Cancelar del residente, mover la
+>    F2-5a, F2-5b, F2-5c, F2-6a y F2-6b (checklists en STATUS.md; en la de
+>    incidencias, **B7 con captura**; en F2-6a, **B1/B4 con captura**; en
+>    F2-6b, **B5 con captura**) → abrir PRs de las ramas hechas.
+> 2. **F2-5 COMPLETO pulido** (§8-bis: Cancelar del residente, mover la
 >    asignación al detalle, columna Unidad) cuando el dueño lo ordene.
-> 4. **docs/convenciones-frontend.md** (guía del kit para los demás,
+> 3. **docs/convenciones-frontend.md** (guía del kit para los demás,
 >    parte de F2-11; ya va llevada por sesión con una línea por pantalla
 >    en §9).
-> 5. **F2-7 → F2-9** — resto de pantallas (espacios +
+> 4. **F2-7 → F2-9** — resto de pantallas (espacios +
 >    políticas, gestión de reservas + CreateReservation, Login rediseño).
-> 6. **F2-10** — pantallas nuevas de Dev 2 (insumos ya integró) y Dev 3
+> 5. **F2-10** — pantallas nuevas de Dev 2 (insumos ya integró) y Dev 3
 >    (dashboard): migración del dueño; enlazar drilldowns a
 >    `#/incidencias?estado=...`.
-> 7. **F2-11** — limpieza de CSS, responsive y a11y (unifica el marco legado
+> 6. **F2-11** — limpieza de CSS, responsive y a11y (unifica el marco legado
 >    del shell y el ErrorBoundary global).
 >
 > Lo explícito del sprint tiene prioridad al elegir dentro de este orden.
@@ -1263,6 +1263,114 @@ legado ni otras pantallas.
   `CreateAccount` sigue vivo SOLO para `ResidentsPage` (reporte).
 - Verificación pendiente del dueño: checklist F2-6a en STATUS.md.
 
+## Sesión F2-6b: Residentes + unidades del residente al kit (2026-10-30)
+
+Rama `feature/refactor-residentes` NACIDA de `feature/refactor-gestion-usuarios`
+(que ya lleva a F2-6a commiteada `7c88a47`). Alcance RESPETADO:
+`ResidentsPage.jsx`, NUEVOS `ResidentCreateModal.jsx` y
+`ResidentUnitsModal.jsx`, retirada de `CreateAccount.jsx` y
+`ResidentUnits.jsx` (cero consumidores tras migrar, verificado con grep).
+Sin npm/node; sin tocar api.js, routes.js, backend, CSS legado, CrudPage ni
+CrudPageUi ni las otras pantallas. Único cambio de kit (aditivo y acotado):
+`.ui-checkbox` en ui.css (detalle abajo, pulido §8-bis).
+
+- **Paridad (listado):** mismo GET `/residents` — una fila POR UNIDAD
+  vinculada (LEFT JOIN del backend, `un.codigo NULLS LAST`). Fila por
+  RESIDENTE con deduplicado conservando la PRIMERA (MISMO criterio que el
+  `groupResidents` del legado); el conteo de la columna "Unidades" y el
+  texto de búsqueda (nombre, apellido, email, teléfono Y unidad/edificio,
+  como lo promete el placeholder del legado) usan TODAS las filas del
+  residente. Búsqueda en cliente con SearchInput ("Buscar en residentes"),
+  botón "Actualizar" como la FilterBar de CrudPageUi; EmptyState DISTINTO:
+  "No hay residentes que coincidan." (búsqueda sin resultados, sin acción)
+  vs "No hay residentes" (con descripción y el trigger "Nuevo residente",
+  única instancia con el PageHeader). Columnas Residente, Email, Teléfono,
+  Unidades (conteo calculado del grupo), Estado (StatusBadge override
+  ACTIVA success+check / INACTIVA muted, `estadoCuenta` única fuente de
+  6a, misma técnica que 5a) y Acciones — sin columna ID, rowKey
+  id_usuario, width de acciones `calc(var(--space-12) * 4)`. useQuery con
+  signal (Skeleton sin parpadeo, ErrorState con Reintentar), reload()
+  conserva datos (sin titilar). Meta del PageHeader: descripción del
+  legado + "N residentes".
+- **Acciones de fila (RowActions):** "Ver unidades" (quiet sm →
+  ResidentUnitsModal) y "Activar/Desactivar" (quiet sm al activar,
+  danger-ghost sm al desactivar) con useConfirm danger SOLO al desactivar
+  ("Se desactivará la cuenta de <n>. No podrá iniciar sesión mientras esté
+  inactiva." — mismos textos que useCuentaAcceso de 6a), useMutation con
+  dedupe, Toast "Cuenta activada./desactivada." y reload sin titilar;
+  error por Toast danger. MISMO endpoint y payload del legado: PATCH
+  /residents/:id `{activo}` (no /users/:id como en 6a: aquí el legado
+  usaba /residents y el prompt lo fija; ResidentUpdateSchema acepta
+  `activo`).
+- **Crear (ResidentCreateModal, NUEVO):** FormModal "Nuevo residente",
+  showRequiredNote, campos Nombre/Apellido/Email/Teléfono/Contraseña y
+  "Unidad inicial" (Select de GET /units con etiquetas "Edificio · código",
+  mismo catálogo del legado; ayuda "Aún no hay unidades registradas;
+  primero registra una unidad." — catalanismo del legado neutralizado),
+  name + autoComplete="off" (password "new-password") en todos. El error
+  por campo va DIRECTO al Field (JSX inline fuera del FormErrorsContext,
+  lección F2-5b). Validación en cliente con `validate(form,
+  cuentaResidente)` + `err.errors` normalizado (arrays → string); payload
+  IDÉNTICO al legado (trim de strings que no son password, password sin
+  tocar, id_unidad Number); 400/409 de vínculo duplicado en la Alert
+  DENTRO del modal con foco/scroll; éxito → Toast "Residente creado." +
+  cierre + reload sin titilar; foco al PRIMER campo inválido tras un envío
+  fallido. GET /units ocurre al abrir el modal (se monta condicional), con
+  ErrorState+Reintentar si el catálogo falla; cierre bloqueado en busy.
+- **Unidades del residente (ResidentUnitsModal, NUEVO — B5):** Modal del
+  kit con backdrop, UN solo h2 = título "Unidades de <nombre>" (sin
+  description que repita el nombre; secciones con h3 propios — Section
+  descartado dentro del modal, patrón 5c). useQuery con signal (GET /units
+  + GET /users/:id/units en un Promise.all): Skeleton/ErrorState solo SIN
+  datos, reload conserva contenido en las acciones. "Unidades vinculadas":
+  lista con etiqueta "Edificio · código" y "Desvincular" (danger-ghost sm,
+  aria-label con la unidad y el residente) con useConfirm danger (CERO
+  window.confirm — el legado lo tenía) + useMutation DELETE
+  /users/:id/units/:id + Toast "Unidad desvinculada."; EmptyState breve
+  sin vinculadas. "Vincular unidad": Field + Select de disponibles (todas
+  − vinculadas) y "Vincular" SIEMPRE activo en .ui-form-actions con margen
+  superior --space-6 (ya proviene de la regla existente de ui.css): sin
+  unidad elegida → error de campo "Este campo es requerido." bajo el
+  Select; sin disponibles → texto de ayuda (sin opciones). La 400 "Debes
+  activar al residente antes de vincularlo" sobre un residente inactivo se
+  muestra DENTRO del modal como mensaje claro (Alert + mensaje del
+  backend); todo error de acción DENTRO (Alert controlada, mas no
+  FormModal: no es un form de registro), éxito por Toast + reload de
+  vinculadas + onChanged (reload del listado) SIN titilar. Footer solo
+  "Cerrar".
+- **Retiro:** grep confirmó cero consumidores → `CreateAccount.jsx` y
+  `ResidentUnits.jsx` eliminados del árbol (B2/B3 quedan cerradas por
+  diseño: no existe ya la pantalla con inputs sin name/autoComplete ni el
+  error suelto al cerrar).
+- **Pulido §8-bis (ítem del prompt, REVISADO — causa REAL encontrada):**
+  las casillas del grupo "checks" (especialidades del crear empleado)
+  seguían centradas/en columna en el modal según la captura. Causa
+  verificada por cascada: `index.css` cascada DESPUÉS de ui.css
+  (main.jsx:20-22 importa index.css casi al final) y su regla LEGADA
+  `label { display: flex; flex-direction: column }` (index.css:104-108)
+  no era anulada por el kit — `.ui-checkbox` declaraba display/align-
+  items/gap pero NO flex-direction → `column` ganaba (casilla arriba,
+  etiqueta debajo, y el bloque "centrado" por `align-items: center`).
+  El diagnóstico de la ronda 1 de F2-6a ("ya iban a la izquierda por
+  .ui-checkbox con input primero") era incompleto: orden del DOM ≠
+  dirección del flex. FIX aditivo y acotado en ui.css: (1)
+  `.ui-checkbox { flex-direction: row; }` explícito y (2) `.ui-checkbox >
+  input` (especificidad 0,2,1) para ganar el empate contra
+  `input[type="checkbox"] { width/height: 20px }` de index.css:119
+  (16px del kit). Las casillas del crear de 6a salen beneficiadas; la de
+  residentes no usa casillas (sin regresión posible). Verificado
+  parcialmente por lectura; captura del dueño pendiente para darlo por
+  cerrado.
+- **Reporte (sin tocar backend):** el servicio `link_unit`
+  (resident_units.py:32) responde éxito aunque `ON CONFLICT DO NOTHING` no
+  inserte; como el Select del modal ya omite las vinculadas, la UI no
+  puede provocarlo (solo se registra, no se corrige por alcance).
+- Verificación pendiente del dueño: checklist F2-6b en STATUS.md
+  (incluye **B5 con captura del dueño** — NO se declara cerrado:
+  modal con un solo h2 y el nombre una sola vez, "Vincular" separado del
+  select por --space-6, desvincular con confirmación danger, vincular con
+  validación de campo).
+
 ## 8. Pendientes y hallazgos abiertos
 
 **Producto de Dev 1:**
@@ -1418,6 +1526,14 @@ agenda cuando el dueño lo ordene.
   está contenido en `feature/refactor-incidencias` → se DETUVO sin editar
   el archivo; retomar solo cuando esos cambios estén integrados (o
   acordados) y reevaluar el estilo legado contra el form nuevo.
+- [Kit/Checkboxes] — casillas del grupo "checks" centradas/en columna
+  dentro del modal (captura del dueño tras F2-6a; el reporte decía que ya
+  iban a la izquierda): **RESUELTO en F2-6b** — causa real: `index.css`
+  cascada después de ui.css y su `label { flex-direction: column }`
+  (index.css:104) no era anulada por `.ui-checkbox` (sin flex-direction);
+  fix aditivo en ui.css (`.ui-checkbox { flex-direction: row }` +
+  `.ui-checkbox > input` 16px vs el 20px legado). Verificar con captura
+  que ya quedan a la izquierda — alcance: kit (hecho).
 
 ## 8-ter. Plantilla de migración de pantalla
 

@@ -392,8 +392,14 @@ textarea.ui-control {
 }
 
 /* -- Checkbox (etiqueta a la derecha del control) --------------------------- */
+/* Ronda F2-6b: `flex-direction: row` explícito — index.css cascada DESPUÉS
+ * de ui.css (main.jsx) y su regla legada `label { flex-direction: column }`
+ * (index.css:104) no la anulaba ninguna declaración del kit: las casillas
+ * quedaban en columna (control arriba, etiqueta debajo) y centradas por
+ * `align-items: center` (visto en la captura del modal de empleados). */
 .ui-checkbox {
   display: inline-flex;
+  flex-direction: row;
   align-items: center;
   gap: var(--space-2);
   font-size: var(--fs-14);
@@ -402,7 +408,10 @@ textarea.ui-control {
   cursor: pointer;
 }
 
-.ui-checkbox input {
+/* Selector ">" con especificidad (0,2,1): gana los empates contra la regla
+ * legada `input[type=checkbox] { width/height: 20px }` de index.css:119
+ * (misma causa de cascada de arriba; índice 20px vs el 16px del kit). */
+.ui-checkbox > input {
   width: var(--space-4);
   height: var(--space-4);
   flex: none;

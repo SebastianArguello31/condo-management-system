@@ -31,12 +31,16 @@ export function useMutation(mutationFn) {
     mutationRef.current = mutationFn;
   });
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    /* Restaura la bandera: en StrictMode (dev) la simulación de desmonte
+     * ejecuta el cleanup SIN recrear los refs, así que si el flag solo se
+     * ponía false en el cleanup quedaba false para siempre y el `finally`
+     * saltaba el busy=false (spinner atascado). */
+    mountedRef.current = true;
+    return () => {
       mountedRef.current = false;
-    },
-    []
-  );
+    };
+  }, []);
 
   const run = useCallback((...args) => {
     if (inFlightRef.current) return inFlightRef.current;

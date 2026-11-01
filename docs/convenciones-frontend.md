@@ -204,3 +204,14 @@ solo si su clave no coincide con el id.
   (criterio del dueño); B1/B4 por verificar con captura; B2/B3 cerrados
   por diseño. ManagementPage retirado; CreateAccount queda solo para
   Residentes (F2-6b).
+- **Residentes (`ResidentsPage`)** — F2-6b: listado al kit (PageHeader
+  con meta "N residentes", FilterBar+SearchInput que buscan también por
+  unidad/edificio, DataTable sin columna ID con conteo de unidades y
+  StatusBadge, dedupe por unidad igual al legado, EmptyState distinto
+  para búsqueda y para vacío); crear en `ResidentCreateModal` (FormModal
+  + `cuentaResidente`, errores por campo,   unidad inicial opcional del
+  catálogo) y "Ver unidades" en `ResidentUnitsModal` (un h2 del Modal,
+  secciones h3, error de la acción DENTRO, useConfirm danger solo al
+  desvincular) — **cierra B2/B3 por diseño; B5 por verificar**; toggle
+  con PATCH /residents/:id {activo}; CreateAccount y ResidentUnits
+  retirados (cero consumidores).
