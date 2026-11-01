@@ -1,4 +1,4 @@
-# Convenciones frontend — guía del kit (Dev 1, refactor FE)
+﻿# Convenciones frontend — guía del kit (Dev 1, refactor FE)
 
 Borrador a partir del plan (`docs/plan-refactor-frontend.md` §2–§8) y de la
 referencia técnica (`docs/kit-ui-referencia.md`, generada del código real).
@@ -215,3 +215,10 @@ solo si su clave no coincide con el id.
   desvincular) — **cierra B2/B3 por diseño; B5 por verificar**; toggle
   con PATCH /residents/:id {activo}; CreateAccount y ResidentUnits
   retirados (cero consumidores).
+- **Espacios comunes (`EspaciosPage`)** — F2-7a: listado al kit sobre
+  CrudPage modo ui (sin columna ID, estado con StatusBadge override
+  ACTIVA/INACTIVA, search+EmptyState del kit, sin Eliminar); crear/editar
+  con schema `espacioCrear` de `validations/` (POST sin `activo`, PATCH
+  con `activo`); Detalle en Modal + DefinitionList con GET anidado
+  (Skeleton/ErrorState, footer Cerrar); Políticas sigue subvista legada
+  con estado local (hash y B6 en F2-7b).

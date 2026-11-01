@@ -331,7 +331,12 @@ final, según alcance).
   CreateAccount de residentes; detalle en "Sesión F2-6b" más abajo.
   B1/B4 por verificar con captura del dueño; B2/B3 cerradas POR DISEÑO
   (CreateAccount retirado); B5 por verificar con captura del dueño.
-- **F2-7** `refactor:` Espacios + Políticas. Cierra **B6**.
+- **F2-7** `refactor:` Espacios + Políticas. Cierra **B6**. — **F2-7a
+  HECHA (pendiente de verificar):** Espacios comunes al kit en la rama
+  `feature/refactor-espacios-politicas`; detalle en "Sesión F2-7: análisis
+  y plan" y "Sesión F2-7a" más abajo. **B6 se cierra en F2-7b** (hash
+  `#/espacios?politicas=<id>`; decisión del dueño 2026-11-01). La limpieza
+  del modo legado de CrudPage (ex-7c) pasa a **F2-11**.
 - **F2-8** `refactor:` Gestión de reservas + CreateReservation.
 - **F2-9** `feat:` Rediseño del Login (login.css nuevo sobre tokens;
   mantener `onLogin(result)` intacto).
@@ -371,7 +376,7 @@ terminado un paso mientras sus bugs sigan abiertos.
 | B3 | Nuevo empleado | Mensaje suelto bajo el botón al cerrar el modal | Verificada: `CreateAccount.jsx:44` renderiza el error como `<p>` sin estilos (`mg-alert`) fuera del modal al cerrarlo | **CERRADA POR DISEÑO** (F2-6a; el error vive DENTRO del FormModal y CreateAccount se retiró en F2-6b) |
 | B4 | Empleados (admin) | Detalle en Empleados | Por verificar | F2-6 (HECHA 6a; por verificar con captura del dueño) |
 | B5 | Residentes (admin) | Ver unidades en Residentes | Por verificar | F2-6b HECHA (ResidentUnitsModal al kit; **por verificar con captura del dueño**, NO se declara cerrado) |
-| B6 | Espacios (admin) | Transición rota Espacios → Políticas de reserva | Por verificar | F2-7 |
+| B6 | Espacios (admin) | Transición rota Espacios → Políticas de reserva | **Verificada con descripción del dueño (2026-11-01):** es frontend, no backend — la subvista se abre con estado local (`EspaciosPage` setea `policySpace`) y la URL NO cambia; F5 y "Atrás" pierden el contexto (F5 recae en la pantalla o aterrizaje de sesión; el historial no registra la subvista). La lectura de `EspaciosPage.jsx`/`SpacePolicies.jsx`/`CrudPage.jsx`/rutas backend era coherente; la causa era de diseño (subvista sin hash) | **F2-7b** (hash `#/espacios?politicas=<id>`: navigate para entrar y para Volver; id inexistente → EmptyState con "Volver a espacios") |
 | B7 | Incidencias (técnico) / Mi perfil | Detalle en el modal de incidencias y en Mi perfil | Por verificar | F2-5 (detalle) / F2-4 (perfil) |
 | B8 | Nueva incidencia (modal, residente) | Error de backend se renderiza al fondo de la página con el modal abierto | Verificada: el `error` es estado único de página — `IncidentsPage.jsx:55` lo setea al crear y se renderiza solo a nivel página (`IncidentsPage.jsx:103`); el modal de creación (línea 105) no lo muestra adentro (el de detalle sí, línea 106) | F2-5 |
 | B9 | Edificios, Unidades, Especialidades (admin) | Botón azul "Reintentar carga" parpadeante: aparece y desaparece al abrir la pantalla | Verificada: condición `!ready` en `CrudPage.jsx:239-240`; `ready` inicia `false` (línea 43) y pasa a `true` al resolver la carga (línea 78) — botón visible en cada montaje hasta que llega la lista | F2-1b (CrudPage sobre useQuery; se migra Especialidades) |
@@ -1371,6 +1376,81 @@ CrudPageUi ni las otras pantallas. Único cambio de kit (aditivo y acotado):
   select por --space-6, desvincular con confirmación danger, vincular con
   validación de campo).
 
+## Sesión F2-7: análisis y plan (2026-11-01; rama feature/refactor-espacios-politicas)
+
+Solo lectura sobre `4bd5db7`: legacy (EspaciosPage/SpacePolicies/CrudPage
+legado), kit (CrudPageUi completo, Specialties/Units de referencia), backend
+(`common_spaces/routes|services|schemas|repositories/*`,
+`reservations/routes.py` con `GET /reservations/event-types`),
+`validations/`, `utils/format.js` y `config/routing.js`. Decisiones del
+dueño al cierre del análisis (2026-11-01):
+
+- **B6 CONFIRMADA por el dueño (captura/descripción):** en `#/espacios` al
+  tocar "Políticas de reserva" la subvista se muestra (con "Volver") pero
+  la URL no cambia → F5/Atrás pierden el contexto. **Causa de diseño, es
+  frontend**: la subvista vive en estado local sin hash. Solución fijada:
+  **F2-7b** con hash `#/espacios?politicas=<id>` (`navigate` para entrar y
+  para Volver; id inexistente → EmptyState con "Volver a espacios").
+- **Eliminar en Políticas:** con `useConfirm` danger + Toast (el backend
+  SÍ tiene DELETE de política; el legado borraba con window.confirm).
+- **Validaciones:** crear `espacioCrear` y `politicaCrear` en
+  `validations/schemas.js` espejando `SpaceCreateSchema`/`PolicySchema`
+  (sin inventar; `rate` de origen anotado en el archivo).
+- **Limpieza del modo legado de CrudPage (ex-7c):** pasa a **F2-11**.
+- Paridad registrada del legacy: col ID/nombre/capacidad/edificio; crear
+  POST sin `activo` (deshabilitado al crear); editar PATCH con `activo`;
+  canDelete={false}; detalle GET anidado; placeholder de búsqueda por
+  columnas; políticas: PUT `/<id>/policies/<pid>` cuerpo completo,
+  lookup `events` (GET /reservations/event-types), tiempos "HH:MM" y
+  montos como string (::TEXT) → `Number()` al guardar. Sin consumidores
+  mutantes de espacios fuera de estas dos pantallas (MisReservas/
+  CreateReservation/GestionReservas solo listan/consultan availability).
+
+## Sesión F2-7a: Espacios comunes al kit (2026-11-01)
+
+Rama `feature/refactor-espacios-politicas` sobre `4bd5db7` (árbol limpio).
+Alcance: `EspaciosPage.jsx` + `espacioCrear` en `validations/schemas.js`
+(`index.js` ya reexporta schemas con `*`, sin cambio). **SpacePolicies.jsx
+NO se toca** (sigue legado y subvista con estado local; hash en F2-7b), ni
+CrudPage legado, ni reservas, ni api/routes/backend/CSS.
+
+- **Listado:** CrudPage `variant="ui"` — PageHeader "Espacios comunes"
+  (descripción "Administra los espacios comunes del condominio." + meta
+  con conteo), FilterBar + SearchInput + "Actualizar", DataTable SIN
+  columna ID (rowKey `id_espacio_comun`): Nombre/Capacidad/Edificio/
+  Estado (StatusBadge override **ACTIVA success+check / INACTIVA muted**;
+  el backend manda boolean `activo` sin preset) — misma técnica que
+  6a/6b. useQuery con signal (Skeleton sin parpadeo B9-closed), EmptyState
+  distinto (búsqueda vs vacío con trigger real "Nuevo espacio"), reload()
+  sin titilar.
+- **Acciones de fila:** RowActions con Editar (interno), "Detalle" y
+  "Políticas" quiet sm vía `renderExtraActions` (children de RowActions)
+  con aria-label que incluye el nombre del espacio; **canDelete={false}**
+  → sin Eliminar (paridad). El ancho de acciones lo reserva CrudPageUi.
+- **Crear/editar:** FormModal "Nuevo espacio"/"Editar espacio",
+  showRequiredNote, name + autoComplete="off", error de acción DENTRO
+  (`err.errors` → fieldErrors), validación en cliente con **`espacioCrear`**
+  (nueva en validations/schemas.js: nombre requerido ≤150, descripción
+  ≤1000 opcional, capacidad entero ≥1, edificio entero — espejo EXACTO de
+  SpaceCreateSchema; SIN `activo`), Toast "Cambios guardados." + reload.
+  Payloads idénticos al legado (trim, nullable → null descripción vacía,
+  select/number → Number; **"activo" omitido del POST** por
+  isFieldDisabled cuando !row y presente en el PATCH de edición).
+  getRecordLabel `espacio <nombre>`.
+- **Detalle:** "Detalle" abre `EspacioDetalleModal` (mismo archivo) —
+  Modal del kit (un solo h2 = título), GET anidado
+  `/common-spaces/:id` con signal, Skeleton/ErrorState solo SIN datos
+  (reload conserva), DefinitionList Estado (badge)/Capacidad/Edificio/
+  Descripción (omitida si vacía), footer solo "Cerrar". Sin datos HORARIOS
+  en este detalle (no aplica formatTime). Se retiró el `<button hidden>`
+  muerto del legado y el estado duplicado detalle/selected.
+- **"Políticas de reserva"** sigue abriendo la subvista legada
+  (`SpacePolicies` estado local, sin cambios); lookups como constantes de
+  módulo (`LOOKUPS`/FIELDS/COLUMNS fuera del componente).
+- Verificación pendiente del dueño: checklist F2-7a en STATUS.md (B6
+  sigue ABIERTO hasta F2-7b). Sin cambios de kit (CrudPageUi/ui.css
+  intactos), sin schemas inventados.
+
 ## 8. Pendientes y hallazgos abiertos
 
 **Producto de Dev 1:**
@@ -1451,9 +1531,11 @@ agenda cuando el dueño lo ordene.
   mostraba la unidad de cada incidencia; al sacar el historial del perfil
   se decidió PERDER esa info y añadirla acá si el dueño quiere) — alcance:
   pantalla (F2-5).
-- [CrudPageUi] — `renderExtraActions` se renderiza inline junto al menú de
-  fila (su JSX propio); formalizar como ítems del RowActionsMenu cuando
-  Espacios migre (F2-7) — alcance: kit/UI (futuro).
+- [CrudPageUi] — `renderExtraActions` se renderiza inline junto a las
+  acciones internas del RowActions (su JSX propio); Espacios ya migró así
+  (F2-7a: Detalle/Políticas como Buttons quiet sm en children) —
+  formalizar como ítems del RowActionsMenu si el dueño lo decide —
+  alcance: kit/UI (futuro).
 - [CrudPageUi] — el modo ui distingue vacío real ("No hay registros") de
   búsqueda sin resultados ("No hay registros que coincidan."); el legado
   usaba una sola frase. Si el dueño prefiere la frase del legado en ambos

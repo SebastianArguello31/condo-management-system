@@ -95,6 +95,16 @@ export const reservaCrear = {
   observaciones: [maximo(500)],
 };
 
+/* Origen: backend/app/modules/common_spaces/schemas.py — SpaceCreateSchema.
+ * Sin `activo`: el POST de espacios no lo acepta (solo PATCH al editar).
+ */
+export const espacioCrear = {
+  nombre: [requerido(), longitud(1, 150)],
+  descripcion: [maximo(1000)],
+  capacidad: [requerido(), entero(1)],
+  id_edificio: [requerido(), entero(1)],
+};
+
 /* Origen: backend/app/modules/users/schemas/specialties.py — SpecialtyCreateSchema. */
 export const especialidadCrear = {
   nombre: [requerido(), longitud(1, 100)],
