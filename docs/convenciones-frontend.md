@@ -220,5 +220,22 @@ solo si su clave no coincide con el id.
   ACTIVA/INACTIVA, search+EmptyState del kit, sin Eliminar); crear/editar
   con schema `espacioCrear` de `validations/` (POST sin `activo`, PATCH
   con `activo`); Detalle en Modal + DefinitionList con GET anidado
-  (Skeleton/ErrorState, footer Cerrar); Políticas sigue subvista legada
-  con estado local (hash y B6 en F2-7b).
+  (Skeleton/ErrorState, footer Cerrar); Políticas seguía subvista legada
+  con estado local (reemplazada por F2-7b, abajo).
+- **Espacios comunes + Políticas (`EspaciosPage` / `SpacePolicies`)** —
+  F2-7b: listado de espacios RE-migrado a composición del kit (patrón
+  Residentes) para "fields según modo": crear SIN "Activo" (el POST no lo
+  acepta) y editar CON checkbox, en un único `EspacioFormModal` (patrón
+  `ResidentCreateModal`: errores por campo con err.errors, foco al primer
+  inválido, Toast + reload); CrudPageUi sin tocar. "Políticas de reserva"
+  subvista por HASH `#/espacios?politicas=<id>` con `useHashRoute` (F5 y
+  Atrás conservan; id inexistente → EmptyState con "Volver a espacios";
+  foco al h1 al entrar y al contenedor del listado al volver); CrudPage
+  modo ui sobre `/common-spaces/:id/policies` con `updateMethod="PUT"`,
+  idField `id_politica_reserva`, Evento/Apertura/Cierre/Aforo/Costo sin
+  ID, delete con useConfirm; schema FACTORY `politicaCrear(capacidad)` en
+  `validations/` con reglas cruzadas del backend (cierre>apertura,
+  anticipación max≥min, duración 1–24, montos ≥0/2 decimales) y aforo
+  sobre capacidad a nivel pantalla (el backend responde 409); strip
+  "Volver a espacios" sobre la tabla (la acción de PageHeader del kit
+  aún no existe). B6 por verificar con el dueño.

@@ -332,10 +332,12 @@ final, según alcance).
   B1/B4 por verificar con captura del dueño; B2/B3 cerradas POR DISEÑO
   (CreateAccount retirado); B5 por verificar con captura del dueño.
 - **F2-7** `refactor:` Espacios + Políticas. Cierra **B6**. — **F2-7a
-  HECHA (pendiente de verificar):** Espacios comunes al kit en la rama
-  `feature/refactor-espacios-politicas`; detalle en "Sesión F2-7: análisis
-  y plan" y "Sesión F2-7a" más abajo. **B6 se cierra en F2-7b** (hash
-  `#/espacios?politicas=<id>`; decisión del dueño 2026-11-01). La limpieza
+  HECHA** (verificada y commiteada `9696cda`): Espacios comunes al kit en
+  la rama `feature/refactor-espacios-politicas`; detalle en "Sesión F2-7:
+  análisis y plan" y "Sesión F2-7a" más abajo. **F2-7b HECHA (pendiente de
+  verificar):** Políticas al kit + subvista por hash
+  `#/espacios?politicas=<id>` (detalle en "Sesión F2-7b"); **B6 por
+  verificar con captura del dueño — NO se declara cerrado**. La limpieza
   del modo legado de CrudPage (ex-7c) pasa a **F2-11**.
 - **F2-8** `refactor:` Gestión de reservas + CreateReservation.
 - **F2-9** `feat:` Rediseño del Login (login.css nuevo sobre tokens;
@@ -376,7 +378,7 @@ terminado un paso mientras sus bugs sigan abiertos.
 | B3 | Nuevo empleado | Mensaje suelto bajo el botón al cerrar el modal | Verificada: `CreateAccount.jsx:44` renderiza el error como `<p>` sin estilos (`mg-alert`) fuera del modal al cerrarlo | **CERRADA POR DISEÑO** (F2-6a; el error vive DENTRO del FormModal y CreateAccount se retiró en F2-6b) |
 | B4 | Empleados (admin) | Detalle en Empleados | Por verificar | F2-6 (HECHA 6a; por verificar con captura del dueño) |
 | B5 | Residentes (admin) | Ver unidades en Residentes | Por verificar | F2-6b HECHA (ResidentUnitsModal al kit; **por verificar con captura del dueño**, NO se declara cerrado) |
-| B6 | Espacios (admin) | Transición rota Espacios → Políticas de reserva | **Verificada con descripción del dueño (2026-11-01):** es frontend, no backend — la subvista se abre con estado local (`EspaciosPage` setea `policySpace`) y la URL NO cambia; F5 y "Atrás" pierden el contexto (F5 recae en la pantalla o aterrizaje de sesión; el historial no registra la subvista). La lectura de `EspaciosPage.jsx`/`SpacePolicies.jsx`/`CrudPage.jsx`/rutas backend era coherente; la causa era de diseño (subvista sin hash) | **F2-7b** (hash `#/espacios?politicas=<id>`: navigate para entrar y para Volver; id inexistente → EmptyState con "Volver a espacios") |
+| B6 | Espacios (admin) | Transición rota Espacios → Políticas de reserva | **Verificada con descripción del dueño (2026-11-01):** es frontend, no backend — la subvista se abre con estado local (`EspaciosPage` setea `policySpace`) y la URL NO cambia; F5 y "Atrás" pierden el contexto (F5 recae en la pantalla o aterrizaje de sesión; el historial no registra la subvista). La lectura de `EspaciosPage.jsx`/`SpacePolicies.jsx`/`CrudPage.jsx`/rutas backend era coherente; la causa era de diseño (subvista sin hash) | **F2-7b HECHA:** hash `#/espacios?politicas=<id>` (navigate para entrar y para Volver; id inexistente/inválido → EmptyState con "Volver a espacios"; foco al h1 de Políticas y al contenedor del listado al volver). **Por verificar con captura del dueño — NO se declara cerrado** |
 | B7 | Incidencias (técnico) / Mi perfil | Detalle en el modal de incidencias y en Mi perfil | Por verificar | F2-5 (detalle) / F2-4 (perfil) |
 | B8 | Nueva incidencia (modal, residente) | Error de backend se renderiza al fondo de la página con el modal abierto | Verificada: el `error` es estado único de página — `IncidentsPage.jsx:55` lo setea al crear y se renderiza solo a nivel página (`IncidentsPage.jsx:103`); el modal de creación (línea 105) no lo muestra adentro (el de detalle sí, línea 106) | F2-5 |
 | B9 | Edificios, Unidades, Especialidades (admin) | Botón azul "Reintentar carga" parpadeante: aparece y desaparece al abrir la pantalla | Verificada: condición `!ready` en `CrudPage.jsx:239-240`; `ready` inicia `false` (línea 43) y pasa a `true` al resolver la carga (línea 78) — botón visible en cada montaje hasta que llega la lista | F2-1b (CrudPage sobre useQuery; se migra Especialidades) |
@@ -384,13 +386,15 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
 
-> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-6b, 2026-10-30; F2-4,
-> F2-1b, F2-2, F2-5a, F2-5b, F2-5c, F2-6a y F2-6b hechas — verificación
-> pendiente):**
+> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-7b, 2026-11-01; F2-4,
+> F2-1b, F2-2, F2-5a, F2-5b, F2-5c, F2-6a, F2-6b, F2-7a y F2-7b hechas —
+> verificación pendiente):**
 > 1. **Verificación por el dueño** de F2-1b, F2-2 (incluida ronda 1),
->    F2-5a, F2-5b, F2-5c, F2-6a y F2-6b (checklists en STATUS.md; en la de
->    incidencias, **B7 con captura**; en F2-6a, **B1/B4 con captura**; en
->    F2-6b, **B5 con captura**) → abrir PRs de las ramas hechas.
+>    F2-5a, F2-5b, F2-5c, F2-6a, F2-6b, F2-7a y F2-7b (checklists en
+>    STATUS.md; en la de incidencias, **B7 con captura**; en F2-6a,
+>    **B1/B4 con captura**; en F2-6b, **B5 con captura**; en F2-7b,
+>    **B6 con captura** — NO se declara cerrado) → abrir PRs de las ramas
+>    hechas.
 > 2. **F2-5 COMPLETO pulido** (§8-bis: Cancelar del residente, mover la
 >    asignación al detalle, columna Unidad) cuando el dueño lo ordene.
 > 3. **docs/convenciones-frontend.md** (guía del kit para los demás,
@@ -1449,7 +1453,115 @@ CrudPage legado, ni reservas, ni api/routes/backend/CSS.
   módulo (`LOOKUPS`/FIELDS/COLUMNS fuera del componente).
 - Verificación pendiente del dueño: checklist F2-7a en STATUS.md (B6
   sigue ABIERTO hasta F2-7b). Sin cambios de kit (CrudPageUi/ui.css
-  intactos), sin schemas inventados.
+  intactos), sin schemas inventados. — **Verificada y commiteada por el
+  dueño: `9696cda`** "refactor(spaces): Espacios comunes al kit (F2-7a)".
+
+## Sesión F2-7b: Políticas de reserva al kit + subvista por hash (2026-11-01)
+
+Misma rama `feature/refactor-espacios-politicas` sobre `9696cda` (árbol
+completo del checkpoint). Alcance PERMITIDO por el dueño: SOLO
+`SpacePolicies.jsx`, `EspaciosPage.jsx` y `validations/schemas.js` (agregar
+`politicaCrear`). PROHIBIDO tocar: CrudPage/CrudPageUi legado,
+MisReservasPage, CreateReservation, GestionReservasPage, api.js, routes.js,
+config/routing.js, backend, CSS legado. Criterio de stop: si el cambio
+requiere modificar CrudPageUi más allá de un prop aditivo mínimo → reportar
+y frenar (**NO se necesitaron cambios de kit**). Todo lo decidido en
+"Sesión F2-7: análisis y plan" se aplicó aquí.
+
+- **Campo Activo en espacio (item 1 del dueño, decisión anticipada):**
+  CrudPageUi NO puede ocultar un campo solo en la creación → el listado de
+  Espacios PASÓ de CrudPage `variant="ui"` a **composición del kit**
+  (patrón `ResidentsPage` de F2-6b): PageHeader (meta conteo; actions
+  "Nuevo espacio" oculto cuando el listado está vacío → trigger real
+  dentro del EmptyState), FilterBar + SearchInput + "Actualizar", DataTable
+  (mismas columnas del 7a: Nombre/Capacidad/Edificio/Estado con StatusBadge
+  override ACTIVA success+check / INACTIVA muted — SIN columna ID,
+  rowKey `id_espacio_comun`, búsqueda cliente por [nombre, capacidad,
+  edificio]), RowActions con **Editar / Detalle / Políticas** (quiet,
+  aria-labels con nombre del espacio). CrudPageUi quedó INTACTO; ambos
+  modales de espacio viven en el archivo. El detalle sigue igual al 7a
+  (`EspacioDetalleModal`, GET anidado + Modal + DefinitionList).
+- **Crear/editar de espacio = UN modal por modo** (`EspacioFormModal`,
+  patrón `ResidentCreateModal` de F2-5b/6b): `fields según modo` — la
+  creación armaría el formulario SIN "Activo" (el POST no lo acepta; el
+  registro nace activo) y la edición SUMA un `Checkbox` "Activo". Un solo
+  `FormModal` con `esEdicion = Boolean(espacio)`. Payload idéntico al
+  legado: POST sin `activo`; PATCH con `activo: Boolean(form.activo)`
+  además del cuerpo del POST (trim, descripción vacía → null,
+  capacidad/id_edificio → Number). Validación con `validate(form,
+  espacioCrear)` (el extra `activo` se ignora: `validate` recorre SOLO las
+  claves del schema); `err.errors` del backend directo a Field
+  (normalizada de arrays→string), foco al primer `.ui-control-invalid`,
+  cierre bloqueado en busy, Toast "Espacio creado."/"Cambios guardados." +
+  `onGuardado()` = reload() del listado (useMutation run/busy). Lookup de
+  edificios (GET /buildings) SOLO dentro del modal — el fetch no dispara
+  al cargar la pantalla; error de carga → ErrorState + reintentar dentro
+  del modal.
+- **B6 — subvista por hash:** `EspaciosPage` usa `useHashRoute`; el botón
+  "Políticas" navega `#/espacios` con param `politicas` =
+  `fila.id_espacio_comun`; "Volver a espacios" de la subvista navega
+  `/espacios` sin param. F5/Atrás del navegador conservan la
+  subvista (el hash registra el id). **Foco:** al entrar, el h1 de
+  Políticas (efecto ligado a `listo = Boolean(espacio)`, h1 con
+  tabIndex=-1); al volver, el contenedor `<section tabIndex={-1}>` del
+  listado (el RowActions de la fila original no es trivial de ubicar desde
+  la pantalla — sería un pequeño override en CrudPageUi prohibido; regla
+  del dueño: mínimo aditivo o reportar). El id inválido (no numérico,
+  fuera de rango) va a `SpacePolicies` como `idEspacio=null` → EmptyState
+  "Políticas de reserva no disponibles" con acción "Volver a espacios" +
+  foco al mismo h1; id inexistente (404 del GET de detalle) → igual.
+  Estados de "crear/editar política" de la subvista NO se persisten en la
+  URL (decisión del dueño) — al refrescar se vuelve al listado de
+  políticas.
+- **SpacePolicies.jsx al kit:** recibe `idEspacio` + `onVolver` (props de
+  `EspaciosPage`; el archivo NO usa useHashRoute directamente). useQuery
+  del detalle del espacio (`enabled: idEspacio !== null`) para título y
+  capacidad. Wire con CrudPage `variant="ui"` — automáticos del kit
+  aplican (skeleton/error/EMPTY de la tabla, reload, búsqueda, foco de
+  modales, Toast de acción): título "Políticas de ${espacio.nombre}",
+  descripción "Administra las políticas de reserva del espacio.",
+  endpoint nested `/common-spaces/:id/policies`, `updateMethod="PUT"`
+  (PolicySchema full al editar), `idField="id_politica_reserva"`,
+  createLabel "Nueva política", editLabel "Editar política",
+  getRecordLabel `política de ${row.tipo_evento}`, canDelete por defecto
+  (DELETE con useConfirm danger + Toast). **Fields/COLUMNS como
+  constantes de módulo** (patrón 7a): FIELDS (select `id_tipo_evento` con
+  lookup "events" y emptyMessage, dos `time` apertura/cierre, duración y
+  anticipaciones `number` con help, aforo ≥1, montos `number` con
+  min/step), COLUMNS sin ID (Evento/Apertura/Cierre/Aforo/Costo — montos
+  del backend llegan como string "0.00"); hora sin formato extra (paridad
+  "HH:MM"). Strip SIEMPRE visible "Volver a espacios" encima de la tabla
+  (Button quiet alineado a la derecha) porque la subvista reemplaza al
+  listado (la advertencia de "se pierde la selección" del legado ya no
+  aplica); skeleton de línea 6 en carga, ErrorState con reintentar para
+  errores fuera del 404/EmptyState → no queda nada del legado de
+  Políticas.
+- **validations/schemas.js:** `politicaCrear(capacidad = null)` FACTORY
+  (agregada tras `espacioCrear`; `index.js` reexporta `*` sin cambio): la
+  capacidad del espacio entra por parámetro (del GET de detalle del
+  espacio, número) y alimenta la regla de aforo a NIVEL PANTALLA
+  ("El aforo de la política supera la capacidad del espacio", omitida si
+  capacidad null — el backend responde Conflict 409 con el MISMO texto).
+  Reglas cruzadas del `@validates_schema` del backend copiadas con
+  MENSAJE EXACTO en el campo disparador: cierre > apertura
+  ("El cierre debe ser posterior a la apertura"), anticipación max ≥ min
+  ("La anticipación máxima debe ser mayor o igual a la mínima");
+  duración 1–24 enteros ("Debe ser un número entero."/"Debe ser un número
+  entero entre 1 y 24."); aforo ≥1; montos (costo/depósito/penalizaciones,
+  requeridos ≥0, ≤2 decimales; el backend los devuelve como string
+  "0.00" — el form los edita como string). Arrow rules INLINE en
+  schemas.js (archivo permitido); rules.js SIN cambios de export (se usan
+  `requerido`, `hora`, `entero` existentes).
+- **Git evidence:** `SpacePolicies.jsx` (186 líneas reescritas),
+  `EspaciosPage.jsx` (reescritura ~539 líneas diff del 7a → 7b),
+  `schemas.js` (+63: factory `politicaCrear` + helper `monto`
+  module-local). `git diff --stat` solo en los 3 archivos permitidos +
+  docs (plan/STATUS/convenciones, no cuentan para el checkpoint).
+- **Pendiente:** verificación DOM del dueño con la checklist F2-7b de
+  STATUS.md (B6 sigue ABIERTO oficialmente hasta esa captura — NO se
+  declara cerrado aquí). Pulido/riesgo armado en §8-bis ("Políticas" Volver
+  como acción del PageHeader cuando el kit exponga actions extras; la
+  búsqueda del listado no cubre Estado booleano).
 
 ## 8. Pendientes y hallazgos abiertos
 
@@ -1616,6 +1728,20 @@ agenda cuando el dueño lo ordene.
   fix aditivo en ui.css (`.ui-checkbox { flex-direction: row }` +
   `.ui-checkbox > input` 16px vs el 20px legado). Verificar con captura
   que ya quedan a la izquierda — alcance: kit (hecho).
+- [Políticas] — el strip "Volver a espacios" queda ENCIMA de la tabla
+  (PageHeader de CrudPageUi no expone slot para actions propias; meterlo
+  ahí sería más que un prop aditivo mínimo y el dueño lo prohibió):
+  cuando el kit exponga `actions` extra en PageHeader, mover el botón
+  ahí y quitar el strip — alcance: kit/UI (futuro).
+- [Espacios] — la búsqueda del listado no cubre Estado (mismo criterio
+  que F2-6a: los booleanos `activo` no sirven de texto); columna
+  computada si el dueño quiere buscar "activa/inactiva" — alcance:
+  pantalla.
+- [Espacios] — el foco al volver de Políticas va al contenedor del
+  listado (`<section tabIndex={-1}>`); ubicar el botón "Políticas" de la
+  fila original exigiría exponer los RowActions de CrudPageUi al padre
+  (más que un prop aditivo) — si el dueño lo quiere, pedirlo como
+  mejora de kit — alcance: kit/UI (futuro).
 
 ## 8-ter. Plantilla de migración de pantalla
 
