@@ -339,7 +339,11 @@ final, según alcance).
   `#/espacios?politicas=<id>` (detalle en "Sesión F2-7b"); **B6 por
   verificar con captura del dueño — NO se declara cerrado**. La limpieza
   del modo legado de CrudPage (ex-7c) pasa a **F2-11**.
-- **F2-8** `refactor:` Gestión de reservas + CreateReservation.
+- **F2-8** `refactor:` Gestión de reservas + CreateReservation. —
+  **F2-8a HECHA (pendiente de verificar):** Gestión de reservas (ADMIN) al
+  kit en la rama `feature/refactor-gestion-reservas` (detalle en "Sesión
+  F2-8: análisis y plan" y "Sesión F2-8a" más abajo). CreateReservation y
+  el pulido quedan para F2-8b/8c según las decisiones del dueño.
 - **F2-9** `feat:` Rediseño del Login (login.css nuevo sobre tokens;
   mantener `onLogin(result)` intacto).
 - **F2-10** `refactor:` Pantallas nuevas de Dev 2 (inventario) y Dev 3
@@ -400,8 +404,9 @@ terminado un paso mientras sus bugs sigan abiertos.
 > 3. **docs/convenciones-frontend.md** (guía del kit para los demás,
 >    parte de F2-11; ya va llevada por sesión con una línea por pantalla
 >    en §9).
-> 4. **F2-7 → F2-9** — resto de pantallas (espacios +
->    políticas, gestión de reservas + CreateReservation, Login rediseño).
+> 4. **F2-7 → F2-9** — resto de pantallas (espacios + políticas, gestión
+>    de reservas (F2-8a HECHA, pendiente de verificar) + CreateReservation
+>    (F2-8b), Login rediseño).
 > 5. **F2-10** — pantallas nuevas de Dev 2 (insumos ya integró) y Dev 3
 >    (dashboard): migración del dueño; enlazar drilldowns a
 >    `#/incidencias?estado=...`.
@@ -1563,8 +1568,147 @@ y frenar (**NO se necesitaron cambios de kit**). Todo lo decidido en
   como acción del PageHeader cuando el kit exponga actions extras; la
   búsqueda del listado no cubre Estado booleano).
 
-## 8. Pendientes y hallazgos abiertos
+## Sesión F2-8: análisis y plan (2026-11-02; rama feature/refactor-gestion-reservas)
 
+Solo lectura sobre `a5147fa` (F2-7b commiteado): legado
+(`GestionReservasPage.jsx`, `CreateReservation.jsx`), referencia migrada
+(`MisReservasPage.jsx` de F2-3), backend `reservations/` (routes, schemas,
+services, rules, repositories) y `common_spaces` (availability). Decisiones
+del dueño al cierre del análisis (2026-11-02):
+
+1. **Rechazo directo SIN motivo** (el backend no lo soporta:
+   `ReservationStatusSchema` solo acepta el estado; el motivo va a pulido
+   y exigiría backend).
+2. **Filtro "Residente" como Select** de GET /residents deduplicado por
+   usuario (el input "ID de usuario" era in-usuable).
+3. **Hash `#/gestion/reservas?estado=…`** (sembrado para el dashboard,
+   patrón de IncidentsPage 5a; sin escribir de vuelta).
+4. **Acciones visibles con RowActions** (Aprobar/Rechazar/Cancelar).
+5. **Los 5 estados como constante de módulo** (técnica priorities.js;
+   el catálogo no tiene endpoint de estados de reserva).
+6. **CreateReservation pasa a FormModal en 8b** (mantiene el contrato
+   `spaces/events/onCreated` de Mis reservas).
+
+Partición de checkpoints: **F2-8a** Gestión de reservas,
+**F2-8b** CreateReservation, **F2-8c** pulido.
+
+**a) Paridad (checklist base).** GestionReservasPage (ADMIN): listado con
+columnas ID/Fecha/Espacio/Residente/Tipo de evento/Horario/Personas/Estado/
+Acciones; filtros SERVIDOR-side (espacio, estado, fecha, residente) que
+re-consultan el GET; acciones de fila — Aprobar y Rechazar solo PENDIENTE,
+Cancelar PENDIENTE/CONFIRMADA — con window.confirm y notice/error A NIVEL
+PÁGINA (defecto 1); sin modal de detalle. CreateReservation (RESIDENTE):
+disparado desde MisReservasPage (2 instancias del MISMO componente:
+PageHeader y EmptyState), modal con Espacio/Tipo/Fecha/Horas/Personas/
+Observaciones, availability `GET /common-spaces/:id/availability` al cambiar
+espacio/fecha/tipo, guardar deshabilitado sin políticas, éxito cierra +
+`onCreated` = `reload()` del listado de Mis reservas.
+
+**c) Mapa de datos.** Listado `GET /reservations` (params `espacio`,
+`estado`, `fecha`, `residente`; RESIDENTE se autofiltra, el query es de
+ADMIN); catálogos `GET /common-spaces`/`GET /residents`; acciones
+`PATCH /reservations/:id/status` `{ estado: CONFIRMADA|RECHAZADA|CANCELADA }`
+(estado bloqueado del backend); crear `POST /reservations` (id_espacio,
+fecha, hora_inicio/fin HH:MM, cantidad_personas, id_tipo_evento,
+observaciones ≤500); availability `GET .../availability?fecha_inicio&fecha
+_fin&id_tipo_evento` (rango ≤31 días); `GET /reservations/event-types`.
+
+**d) Defectos por lectura (F2-8a cierra 1, 2, 4 y 5).** (1) notice/error
+de página con `#id` + window.confirm; (2) filtro "ID de usuario" numérico
+in-usuable; (4) `load()` sin AbortController (carreras al cambiar filtros:
+useQuery lo resuelve); (5) fechas ISO crudas. (3) Rechazo sin motivo →
+decisión 1; a pulido en §8-bis.
+
+**e) Validaciones.** `reservaCrear` (validations/schemas.js) YA espeja
+`ReservationCreateSchema` completo; se conecta en F2-8b (errores por campo
+en el FormModal). Solapamiento, horario dentro de la política, duración,
+anticipación y aforo/mín(capacidad, aforo) quedan SOLO backend (Conflict
+409 con mensajes exactos: "Ya existe una reserva activa en ese horario",
+"El horario debe estar entre X y Y", "La duración supera el máximo de N
+horas", "La fecha debe tener entre X y Y días de anticipación", "La
+cantidad de personas supera el aforo máximo de N", "La hora de fin debe
+ser posterior a la hora de inicio"); transiciones de estado — el backend
+valida la transición
+(solo PENDIENTE→CONFIRMADA/RECHAZADA/CANCELADA y CONFIRMADA→CANCELADA;
+aprobar/rechazar solo ADMIN; no se cancela una reserva pasada, mensaje
+"No se puede cancelar una reserva pasada") — el front no la duplica.
+
+**f) Estados/fechas.** StatusBadge presets reales sin override
+(PENDIENTE/CONFIRMADA/RECHAZADA/CANCELADA/FINALIZADA ya en el kit);
+`formatDate` en Fecha; Horario "HH:MM - HH:MM" como lo trae el backend.
+
+**g) Availability en el formulario (F2-8b).** Mismo endpoint, sin
+inventar: políticas como filas legibles y tramos ocupados como lista; **el
+SELECT no bloquea tramos ni calcula reglas en el cliente** — el backend
+responde los 409 y el FormModal los muestra. Decisiones de UX (dueño):
+mantener el texto "Seleccioná espacio y fecha…" y consultas al vuelo al
+cambiar espacio/fecha/tipo.
+
+**i) Riesgo de merge.** El único trabajo ajeno sobre
+`features/reservas/` es `1ffdf43` (`feature/frontend-reservations`),
+YA contenido en develop (verificado `--is-ancestor`) e integrado en la
+base; `CreateReservation.jsx` no existe en esa rama (dif HEAD↔rama solo
+muestra archivos propios). Riesgo BAJO.
+
+## Sesión F2-8a: Gestión de reservas (ADMIN) al kit (2026-11-02)
+
+Rama `feature/refactor-gestion-reservas` sobre `a5147fa` (árbol limpio).
+Alcance RESPETADO: SOLO `GestionReservasPage.jsx` (+ docs). CreateReservation,
+MisReservasPage, kit, api/routes/routing, backend y CSS legado SIN tocar.
+Único desvío de convención reportado: **ancho de la columna Acciones
+`calc(var(--space-12) * 5)` (240px)** porque la fila PENDIENTE lleva TRES
+botones visibles (Aprobar/Rechazar/Cancelar) y el estándar de 2 acciones
+(`calc(var(--space-12) * 4)`, 192px) los corta.
+
+- **Datos:** dos `useQuery` con signal — (1) catálogos (Promise.all GET
+  /common-spaces + GET /residents, deps `[]`: no se repite al cambiar un
+  filtro; Residente deduplicado por usuario conservando la PRIMERA fila,
+  igual que el grupo de ResidentsPage); (2) listado GET /reservations con
+  los MISMOS filtros de SERVIDOR del legado (espacio/estado/fecha/
+  residente, vacíos omitidos) dependiendo de la query string construida
+  (`useMemo`): al cambiar un filtro se aborta la consulta en vuelo y se
+  descartan datos viejos (cierra el defecto de carreras del `load()`
+  sin AbortController). Defaults por posición en la desestructuración.
+- **Sembrado por hash (decisión 3):** `#/gestion/reservas?estado=…`
+  validado contra la constante ESTADOS (desconocido → sin filtro);
+  `useEffect` sobre `estadoDesdeUrl` reacciona al cambio del hash
+  estando en la pantalla y NUNCA escribe de vuelta (mismo patrón de
+  IncidentsPage). "Limpiar filtros" (onReset del FilterBar) vacía los 4.
+- **Listado:** PageHeader "Gestión de reservas" SIN eyebrow con meta
+  descripción (español neutro) + "N reservas · M pendientes" (patrón
+  ResidentsPage: descripción + conteo en la línea mono; cuenta sobre las
+  filas del filtro activo). FilterBar con Field/Select Espacio y Estado
+  (5 reales, constante de módulo), Field/Input date Fecha y Field/Select
+  Residente ("nombre apellido"; help de Field si el catálogo va vacío) +
+  "Actualizar" (reload sin titilar). DataTable SIN columna ID (rowKey
+  id_reserva), Fecha con formatDate (mono), Horario "HH:MM - HH:MM" como
+  lo trae el backend (mono), Personas align right, Estado con StatusBadge
+  presets reales SIN overrides, caption "Listado de reservas del
+  condominio". EmptyState DISTINTO: con filtros activos "No hay reservas
+  que coincidan." + acción "Limpiar filtros"; vacío real "No hay
+  reservas" sin acción (el ADMIN no crea reservas).
+- **Acciones (decisiones 1 y 4):** RowActions visibles — "Aprobar"
+  (quiet sm, solo PENDIENTE), "Rechazar" (danger-ghost sm, solo
+  PENDIENTE), "Cancelar" (danger-ghost sm, PENDIENTE/CONFIRMADA) con
+  aria-label residente + espacio + fecha (SIN "#id"); UN solo
+  `useMutation((id, estado))` con dedupe → PATCH /reservations/:id/status
+  `{ estado }` (payload idéntico al legado para los 3 destinos;
+  RECHAZADA DIRECTO sin motivo); useConfirm — "Aprobar" no-danger con
+  etiqueta "Aprobar", "Rechazar" danger "Rechazar", "Cancelar" danger
+  "Sí, cancelar reserva" mensajes con residente, espacio y fecha
+  ("La reserva de <n> en <espacio> del <fecha> quedará CONFIRMADA/
+  RECHAZADA/CANCELADA." + "No hay vuelta atrás." solo en CANCELADA);
+  éxito Toast "Reserva aprobada./Reserva rechazada./Reserva cancelada."
+  + reload sin titilar; error de acción por Toast danger (desaparecen el
+  notice y la Alert `mg-alert-error` de página). Todos los botones
+  disabled con el busy de la mutación. Cero window.confirm.
+- **Retiro:** `ESTADOS_APROBAR` fusionado en el render (condición
+  `estado === "PENDIENTE"`) y `ESTADOS_CANCELABLES` conservado (misma
+  regla de reservas/rules.py y Mis reservas); sin CSS nuevo (solo clases
+  de kit); español neutro (el voseo del legado desaparece con el shell).
+- **Verificación pendiente del dueño:** checklist F2-8a en STATUS.md.
+
+## 8. Pendientes y hallazgos abiertos
 **Producto de Dev 1:**
 - [x] Verificación final de CP6b: guía `#/ui` — completada por el dueño y
       commiteada (`21d79f0`).
@@ -1628,6 +1772,29 @@ real a medida que se migren pantallas):
       limpieza.)
 
 ## 8-bis. Pulido pendiente
+
+Formato de cada entrada: `- [Pantalla] — idea — alcance:
+kit | pantalla`. Se llena a medida que se migran pantallas con mejoras que
+NO son esenciales para cerrar el paso (las esenciales van al checklist del
+paso o a §7-bis); el "pulido" se decide y ejecuta después, entrando a la
+agenda cuando el dueño lo ordene.
+
+- [GestionReservasPage] — **motivo del rechazo** (el backend no lo
+  soporta hoy: `ReservationStatusSchema` solo acepta el estado; decisión
+  del dueño: rechazo directo); exigiría backend — alcance: backend +
+  pantalla (F2-8c/futuro).
+- [GestionReservasPage] — **modal de detalle de la reserva para ADMIN**
+  (el legado no lo tenía; Mis reservas ya lo tiene; el listado trae
+  costo_total/observaciones/created_at que hoy no se ven) — decisión del
+  dueño en F2-8c — alcance: pantalla.
+- [GestionReservasPage] — el select de Residente del filtro requiere
+  cargar TODOS los residentes del condominio (GET /residents) para
+  filtrar por uno; si el listado crece, definir búsqueda/paginación —
+  alcance: pantalla (futuro).
+- [GestionReservasPage] — los "Tramos ocupados"/políticas NO se muestran
+  en esta pantalla (solo en el form del residente, F2-8b); el ADMIN ve el
+  estado en la columna, no el motivo del rechazo ni el costo — alcance:
+  pantalla (si el dueño pide detalle).
 
 Lista VACÍA. Formato de cada entrada: `- [Pantalla] — idea — alcance:
 kit | pantalla`. Se llena a medida que se migran pantallas con mejoras que

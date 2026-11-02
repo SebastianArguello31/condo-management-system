@@ -239,3 +239,12 @@ solo si su clave no coincide con el id.
   sobre capacidad a nivel pantalla (el backend responde 409); strip
   "Volver a espacios" sobre la tabla (la acción de PageHeader del kit
   aún no existe). B6 por verificar con el dueño.
+- **Gestión de reservas (`GestionReservasPage`)** — F2-8a: listado ADMIN
+  a composición del kit (PageHeader con meta descripción + "N reservas ·
+  M pendientes", filtros de SERVIDOR en FilterBar — espacio/estado/fecha/
+  residente-Select con sembrado `?estado=` del hash sin escribir de
+  vuelta —, DataTable sin ID con formatDate/StatusBadge, EmptyState distinto
+  por filtro; acciones Aprobar/Rechazar/Cancelar en RowActions con
+  useConfirm + useMutation + Toast — sin motivo de rechazo: el backend
+  solo acepta el estado; ancho de acciones 5×--space-12 por las 3
+  acciones de la fila PENDIENTE); CreateReservation queda para F2-8b.
