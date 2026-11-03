@@ -239,6 +239,10 @@ solo si su clave no coincide con el id.
   sobre capacidad a nivel pantalla (el backend responde 409); strip
   "Volver a espacios" sobre la tabla (la acción de PageHeader del kit
   aún no existe). B6 por verificar con el dueño.
+- **Mis reservas (`MisReservasPage`)** — F2-3: listado/detalle/cancelación
+  al kit (useQuery sin parpadeo, DataTable con estados reales,
+  RowActions visibles, detalle Modal + DefinitionList, fechas con
+  formatDate). "Nueva reserva" quedó para F2-8b (abajo).
 - **Gestión de reservas (`GestionReservasPage`)** — F2-8a: listado ADMIN
   a composición del kit (PageHeader con meta descripción + "N reservas ·
   M pendientes", filtros de SERVIDOR en FilterBar — espacio/estado/fecha/
@@ -247,4 +251,14 @@ solo si su clave no coincide con el id.
   por filtro; acciones Aprobar/Rechazar/Cancelar en RowActions con
   useConfirm + useMutation + Toast — sin motivo de rechazo: el backend
   solo acepta el estado; ancho de acciones 5×--space-12 por las 3
-  acciones de la fila PENDIENTE); CreateReservation queda para F2-8b.
+  acciones de la fila PENDIENTE).
+- **Nueva reserva (`CreateReservation`)** — F2-8b: FormModal con
+  disponibilidad en useQuery (`enabled` cuando espacio+fecha+tipo están
+  completos; 409 sin políticas como Alert info que NO bloquea Guardar;
+  otro error → ErrorState con Reintentar local), ocupados en lista
+  formatDate/formatTime, políticas en DefinitionList y CERO cálculo de
+  reglas en cliente (los 409 del POST llegan a la Alert danger del
+  modal); errores por campo `reservaCrear` + foco al primer inválido;
+  payload y contrato { spaces, events, onCreated } idénticos al legado;
+  éxito con Toast + cierre + onCreated (reload de Mis reservas); sin CSS
+  nuevo.

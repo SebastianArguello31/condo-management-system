@@ -342,8 +342,10 @@ final, según alcance).
 - **F2-8** `refactor:` Gestión de reservas + CreateReservation. —
   **F2-8a HECHA (pendiente de verificar):** Gestión de reservas (ADMIN) al
   kit en la rama `feature/refactor-gestion-reservas` (detalle en "Sesión
-  F2-8: análisis y plan" y "Sesión F2-8a" más abajo). CreateReservation y
-  el pulido quedan para F2-8b/8c según las decisiones del dueño.
+  F2-8: análisis y plan" y "Sesión F2-8a" más abajo). **F2-8b HECHA
+  (pendiente de verificar):** "Nueva reserva" (CreateReservation) a
+  FormModal (detalle en "Sesión F2-8b" más abajo). El pulido queda para
+  F2-8c según las decisiones del dueño.
 - **F2-9** `feat:` Rediseño del Login (login.css nuevo sobre tokens;
   mantener `onLogin(result)` intacto).
 - **F2-10** `refactor:` Pantallas nuevas de Dev 2 (inventario) y Dev 3
@@ -405,8 +407,8 @@ terminado un paso mientras sus bugs sigan abiertos.
 >    parte de F2-11; ya va llevada por sesión con una línea por pantalla
 >    en §9).
 > 4. **F2-7 → F2-9** — resto de pantallas (espacios + políticas, gestión
->    de reservas (F2-8a HECHA, pendiente de verificar) + CreateReservation
->    (F2-8b), Login rediseño).
+>    de reservas (F2-8a HECHA, pendiente de verificar) + "Nueva reserva"
+>    (F2-8b HECHA, pendiente de verificar), Login rediseño).
 > 5. **F2-10** — pantallas nuevas de Dev 2 (insumos ya integró) y Dev 3
 >    (dashboard): migración del dueño; enlazar drilldowns a
 >    `#/incidencias?estado=...`.
@@ -1708,6 +1710,90 @@ botones visibles (Aprobar/Rechazar/Cancelar) y el estándar de 2 acciones
   de kit); español neutro (el voseo del legado desaparece con el shell).
 - **Verificación pendiente del dueño:** checklist F2-8a en STATUS.md.
 
+## Sesión F2-8b: "Nueva reserva" (CreateReservation) a FormModal (2026-11-02)
+
+Rama `feature/refactor-crear-reserva` indicada por el dueño, NACIDA de
+`feature/refactor-gestion-reservas` (F2-8a). Alcance RESPETADO: SOLO
+`features/reservas/CreateReservation.jsx` (+ docs). MisReservasPage
+(instancias del trigger intactas en PageHeader y EmptyState),
+GestionReservasPage, kit, ui.css, api/routes/routing, backend y CSS legado
+SIN tocar. Sin npm/node. Firma INTACTA: `({ spaces, events, onCreated })`;
+`onCreated` sigue siendo `reload()` de Mis reservas.
+
+- **Paridad conservada (Network):** POST /reservations con payload
+  IDÉNTICO al legado — `{ ...form, id_espacio: Number,
+  id_tipo_evento: Number, cantidad_personas: Number, observaciones:
+  (form.observaciones || "").trim() }` (fecha y horas como strings del
+  date/time input; observaciones "" si queda vacía, NO null); misma
+  consulta GET /common-spaces/:id/availability?fecha_inicio&fecha_fin
+  (&id_tipo_evento) al cambiar espacio/fecha/tipo (rango ≤31 días lo
+  valida el endpoint; aquí siempre un solo día); mismos catálogos que
+  pasan MisReservasPage (spaces/events sin refetch); contrato de props
+  íntegro (el trigger sigue DENTRO del componente, 2 instancias del mismo
+  componente en Mis reservas).
+- **Paridad de contenido:** catálogos con "Seleccionar...", Personas
+  min=1, Observaciones ≤500; políticas del availability como Listas
+  legibles (h4 por `tipo_evento` + DefinitionList con Apertura/Cierre/
+  Duración máxima (`N h`)/Anticipación (`min–max días`)/Aforo/Costo/
+  Depósito/Penalización, TODOS los campos que el endpoint devuelve); los
+  mismos valores string/numéricos del backend (costo "0.00" sin
+  transformar).
+- **Disponibilidad (decisión 1):** `useQuery` con `signal`, deps
+  `[open, id_espacio, fecha, id_tipo_evento]` y
+  `enabled: open && (espacio && fecha && tipo)` — al cambiar una clave
+  aborta en vuelo y DESCARTA datos previos (sin mezcla; equivale al
+  `setAvailability(null)` del legado, sin parpadeo de Reintentar; el
+  fetcher se lee por ref como en F2-7b/F2-8a). Error
+  de disponibilidad LOCAL: status 409 ("Sin política configurada para
+  este espacio y tipo de evento" / espacio inactivo) → `Alert tone="info"`
+  (role=status) INFORMATIVO que NO bloquea Guardar; cualquier otro error
+  → `ErrorState` con Reintentar (`reload` local); con consulta en curso
+  y sin datos → `<p role="status">Consultando la
+  disponibilidad...</p>`; sin claves completas → texto "Selecciona
+  espacio, fecha y tipo de evento para consultar la disponibilidad."
+- **Ocupados (decisión 2):** lista de solo lectura `<ul>` con
+  `formatDate(t.fecha)` + `formatTime(t.hora_inicio/hora_fin)` + estado
+  entre paréntesis; vacío explícito `EmptyState` "Sin reservas en ese
+  período" (el legacy decía "Sin reservas para esta fecha.").
+- **Reglas de negocio en BACKEND (decisión 4):** solapamiento, horario
+  dentro de la política, duración, anticipación y aforo NO se calculan ni
+  bloquean en cliente: Guardar SIEMPRE activo (decisión 5, sin disabled
+  por validez; solo el busy de useMutation deshabilita) — el 409 del POST
+  llega a la Alert danger DENTRO del FormModal (foco/scroll gratis del
+  FormModal).
+- **Campos (decisión 6):** `.ui-form-stack` (máx ~480px) en el cuerpo del
+  FormModal; Espacio y Tipo de evento `Select`, Fecha `date`, Horas
+  `time`, Personas `number` (min 1), Observaciones `Textarea` con
+  `maxLength` 500 y ayuda "Máximo 500 caracteres."; todo vía `Field`
+  con `name` y `autoComplete="off"`; `showRequiredNote` (todos los
+  campos obligatorios menos observaciones); submitLabel "Crear reserva"
+  (paridad del botón).
+- **Errores:** submit valida primero `validate(form, reservaCrear)`
+  (espejo de ReservationCreateSchema, ya existía en validations/), luego
+  `err.errors` del backend → `normalizarErrores` (arrays → primer mensaje
+  por campo, técnica EspaciosPage F2-7b); errores por campo DIRECTOS al
+  `error=` del Field (lesión F2-5b: fuera del FormErrorsContext no se usa
+  `useFormFieldError`); foco al PRIMER `.ui-control-invalid` del modal
+  con contador `intento` (solo cambian intentos fallidos, patrón
+  F2-5b/7b); el error de campo se limpia al editar ese campo. Error de la
+  ACCIÓN DENTRO (FormModal `error` → Alert danger con foco/scroll; misma
+  combinación alert+campos que IncidentsCreateModal en el catch).
+- **Éxito (decisión 7):** cierre del modal + reset del form/errores +
+  Toast "Reserva creada." (emitido por el componente, patrón
+  IncidentsCreateModal: región Toast global) + `await onCreated()` =
+  reload() de Mis reservas sin titilar. Cierre del modal bloqueado
+  mientras `busy` (FormModal/Modal gratis). Cero window.confirm.
+- **Trigger:** `Button` del kit (texto "Nueva reserva", sin ícono,
+  §8-bis) reemplaza el `mg-primary`; Mis reservas SIN tocar (sus 2
+  instancias del componente siguen idénticas).
+- **Sin cambios de kit y SIN CSS nuevo:** solo clases existentes
+  (`.ui-form-stack`, Field/controls, DefinitionList, Alert, EmptyState,
+  ErrorState); el bloque de ocupados es `<ul>/<li>` plano y los estados
+  intermedios son párrafos con `role="status"` (ver §8-bis). Español
+  neutro ("Selecciona…", "Sin reservas en ese período" — el voseo
+  "Seleccioná" del legado desaparece).
+- Verificación pendiente del dueño: checklist F2-8b en STATUS.md.
+
 ## 8. Pendientes y hallazgos abiertos
 **Producto de Dev 1:**
 - [x] Verificación final de CP6b: guía `#/ui` — completada por el dueño y
@@ -1779,6 +1865,19 @@ NO son esenciales para cerrar el paso (las esenciales van al checklist del
 paso o a §7-bis); el "pulido" se decide y ejecuta después, entrando a la
 agenda cuando el dueño lo ordene.
 
+- [CreateReservation] — el bloque de disponibilidad usa `<p role="status">`
+  y `<ul>/<li>` PLANO (sin clase de kit para listas simples; DefinitionList
+  sí es del kit): si el dueño lo quiere UID, agregar un estilo de lista
+  simple en ui.css y cambiar la clase aquí — alcance: kit.
+
+- [CreateReservation] — contador EN VIVO de caracteres para Observaciones
+  (hoy solo la ayuda estática "Máximo 500 caracteres." + maxLength) —
+  alcance: pantalla.
+- [CreateReservation] — el campo Fecha NO restringe horizonte con min=/
+  max= del calendario (la anticipación mín/máx lo valida el backend con
+  su 409 exacto; min nativo duplicaría reglas que el dueño prohibió
+  copiar en cliente) — alcance: pantalla (si el dueño pide restricción
+  de calendario).
 - [GestionReservasPage] — **motivo del rechazo** (el backend no lo
   soporta hoy: `ReservationStatusSchema` solo acepta el estado; decisión
   del dueño: rechazo directo); exigiría backend — alcance: backend +
