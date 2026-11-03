@@ -95,6 +95,79 @@ export const reservaCrear = {
   observaciones: [maximo(500)],
 };
 
+/* Origen: backend/app/modules/common_spaces/schemas.py — SpaceCreateSchema.
+ * Sin `activo`: el POST de espacios no lo acepta (solo PATCH al editar).
+ */
+export const espacioCrear = {
+  nombre: [requerido(), longitud(1, 150)],
+  descripcion: [maximo(1000)],
+  capacidad: [requerido(), entero(1)],
+  id_edificio: [requerido(), entero(1)],
+};
+
+/* Origen: backend/app/modules/common_spaces/schemas.py — PolicySchema.
+ * politicaCrear(capacidad) es un FACTORY (la pantalla le pasa la capacidad
+ * del espacio como número, o null si no la tiene): NO vive una regla de
+ * capacidad en el schema del backend (la superación llega como Conflict
+ * 409 de services.save_policy), así que el aforo es REGLA DE PANTALLA y
+ * con capacidad null se omite (el backend responde de todos modos). Las
+ * reglas cruzadas del @validates_schema del backend se copian con su
+ * MENSAJE EXACTO montadas en el campo que las dispara. */
+const monto = (value) => {
+  const texto = String(value ?? "").trim();
+  const numero = Number(texto);
+  if (texto === "" || Number.isNaN(numero)) return "Ingresa un número válido.";
+  if (numero < 0) return "No puede ser menor que 0.";
+  if (!/^\d+(\.\d{1,2})?$/.test(texto)) return "Máximo 2 decimales.";
+  return null;
+};
+
+export function politicaCrear(capacidad = null) {
+  return {
+    id_tipo_evento: [requerido(), entero(1)],
+    hora_apertura: [requerido(), hora()],
+    hora_cierre: [
+      requerido(),
+      hora(),
+      (value, form) =>
+        value && form?.hora_apertura && value <= form.hora_apertura
+          ? "El cierre debe ser posterior a la apertura"
+          : null,
+    ],
+    duracion_max_horas: [
+      requerido(),
+      (value) => {
+        const numero = Number(value);
+        if (!Number.isInteger(numero)) return "Debe ser un número entero.";
+        return numero < 1 || numero > 24
+          ? "Debe ser un número entero entre 1 y 24."
+          : null;
+      },
+    ],
+    dias_anticipacion_min: [requerido(), entero(0)],
+    dias_anticipacion_max: [
+      requerido(),
+      entero(0),
+      (value, form) =>
+        value !== undefined && value !== null && value !== "" &&
+        Number(value) < Number(form?.dias_anticipacion_min ?? 0)
+          ? "La anticipación máxima debe ser mayor o igual a la mínima"
+          : null,
+    ],
+    aforo_maximo: [
+      requerido(),
+      entero(1),
+      (value) =>
+        capacidad != null && Number(value) > capacidad
+          ? "El aforo de la política supera la capacidad del espacio"
+          : null,
+    ],
+    costo: [requerido(), monto],
+    deposito_garantia: [requerido(), monto],
+    penalizaciones: [requerido(), monto],
+  };
+}
+
 /* Origen: backend/app/modules/users/schemas/specialties.py — SpecialtyCreateSchema. */
 export const especialidadCrear = {
   nombre: [requerido(), longitud(1, 100)],

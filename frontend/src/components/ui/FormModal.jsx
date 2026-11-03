@@ -9,9 +9,13 @@
  *   Modal ya atrapa onCancel cuando busy).
  * - Footer estándar Cancelar/Guardar con spinner en el submit.
  * API: <FormModal title description open busy error fieldErrors submitLabel
- * cancelLabel onSubmit onClose>children</FormModal>.
+ * cancelLabel onSubmit onClose showRequiredNote>children</FormModal>.
+ * showRequiredNote (opcional, default false): línea de nota sobre los
+ * campos "Los campos marcados con * son obligatorios." con id referenciado
+ * por el <form> (aria-describedby); el padre decide cuándo (CrudPageUi la
+ * activa si algún field es required).
  */
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useId, useRef } from "react";
 import Modal from "./Modal";
 import Button from "./Button";
 import Alert from "./Alert";
@@ -35,6 +39,7 @@ export default function FormModal({
   busy = false,
   error,
   fieldErrors = null,
+  showRequiredNote = false,
   submitLabel = "Guardar",
   cancelLabel = "Cancelar",
   onSubmit,
@@ -42,6 +47,7 @@ export default function FormModal({
   children,
 }) {
   const alertRef = useRef(null);
+  const notaId = useId();
 
   useEffect(() => {
     if (open && error) {
@@ -56,6 +62,7 @@ export default function FormModal({
     <Modal title={title} description={description} busy={busy} onClose={onClose} backdrop>
       <form
         noValidate
+        aria-describedby={showRequiredNote ? notaId : undefined}
         onSubmit={(event) => {
           event.preventDefault();
           if (busy) return;
@@ -69,6 +76,11 @@ export default function FormModal({
                 {error}
               </Alert>
             </div>
+          )}
+          {showRequiredNote && (
+            <p id={notaId} className="ui-form-required">
+              Los campos marcados con * son obligatorios.
+            </p>
           )}
           <FormErrorsContext.Provider value={fieldErrors}>{children}</FormErrorsContext.Provider>
         </div>

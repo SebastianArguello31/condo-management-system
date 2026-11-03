@@ -34,7 +34,7 @@ const TECNICO = "TECNICO";
 const ITEMS = {
   dashboard: {
     path: "/dashboard",
-    label: "Dashboard e Indicadores",
+    label: "Indicadores",
     icon: "dashboard",
     component: DashboardPage,
     roles: [ADMIN, TECNICO],
@@ -48,7 +48,7 @@ const ITEMS = {
   },
   miPerfil: {
     path: "/mi-perfil",
-    label: "Mi perfil y unidad",
+    label: "Mi perfil",
     icon: "residentHome",
     component: ResidentHome,
     roles: [RESIDENTE],

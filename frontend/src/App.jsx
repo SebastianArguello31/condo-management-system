@@ -23,6 +23,7 @@ import {
 } from "./config/routing";
 import { setAccessToken } from "./services/api";
 import AppShell from "./components/AppShell";
+import ErrorBoundary from "./components/ui/ErrorBoundary";
 import { ConfirmDialog, ToastProvider } from "./components/ui";
 import "./styles/users-ui.css";
 
@@ -75,6 +76,12 @@ function AppRoutes() {
     if (ruta) navigate(ruta);
   }
 
+  /* Para el ErrorBoundary: regresar a la pantalla por defecto del rol
+   * (defaultRouteFor) cuando una pantalla falla al renderizar. */
+  function volverAlInicio() {
+    if (fallback && shown?.path !== fallback.path) navigate(fallback.path);
+  }
+
   function updateProfile(profile) {
     setUser((current) => current?.id_usuario === profile.id_usuario
       ? { ...current, nombre: profile.nombre, apellido: profile.apellido, email: profile.email, telefono: profile.telefono }
@@ -120,7 +127,11 @@ function AppRoutes() {
 
   return <AppShell user={user} groups={groups} activePath={shown.path} onNavigate={(target) => navigate(target)} onLogout={logout}>
     <Suspense fallback={<p>Cargando…</p>}>
-      <Page key={shown.path} user={user} onProfileUpdated={updateProfile} onNavigate={navegarPantalla} />
+      {/* Boundary por pantalla: si su render falla, el shell y el menú siguen
+        * vivos. key = ruta → al navegar el boundary se renueva (limpio). */}
+      <ErrorBoundary key={shown.path} resetKey={shown.path} onVolverInicio={volverAlInicio}>
+        <Page user={user} onProfileUpdated={updateProfile} onNavigate={navegarPantalla} />
+      </ErrorBoundary>
     </Suspense>
   </AppShell>;
 }

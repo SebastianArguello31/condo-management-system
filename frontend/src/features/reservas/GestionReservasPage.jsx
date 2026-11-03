@@ -1,217 +1,321 @@
-import { useCallback, useEffect, useState } from "react";
+/* GestionReservasPage — F2-8a: Gestión de reservas (ADMIN) al kit.
+ * Reemplaza el shell legado (mg-* / status-badge CSS). Paridad con el
+ * legado: listado GET /reservations con los MISMOS filtros de SERVIDOR
+ * (espacio, estado, fecha, residente; valores vacíos omitidos) y acciones
+ * PATCH /reservations/:id/status { estado: CONFIRMADA | RECHAZADA |
+ * CANCELADA }: "Aprobar" y "Rechazar" SOLO con PENDIENTE, "Cancelar" con
+ * PENDIENTE/CONFIRMADA (= reservas/rules.py).
+ * Cambios por convención (§8-bis) y decisiones del dueño (§ "Sesión F2-8"):
+ * meta de conteo en PageHeader sin eyebrow (español neutro, sin voseo);
+ * useQuery con signal por SEPARADO para catálogos (espacios + residentes,
+ * deps []) y listado (deps [consulta]: cada cambio de filtro aborta la
+ * búsqueda en vuelo — sin carreras); ErrorState con Reintentar /
+ * Skeleton sin parpadeo / EmptyState DISTINTO para "sin resultados por
+ * filtro" (con "Limpiar filtros") y "sin reservas"; columnas SIN ID,
+ * Fecha con formatDate, Personas alineación right, Estado con StatusBadge
+ * (presets reales, sin overrides); acciones con RowActions visibles
+ * (Aprobar quiet sm / Rechazar y Cancelar danger-ghost sm, aria-label con
+ * residente, espacio y fecha SIN "#id"), confirmaciones con useConfirm
+ * (danger en Rechazar y Cancelar) + useMutation con dedupe + Toast (error
+ * por Toast danger); filtro de estado sembrado desde params.estado del
+ * hash (#/gestion/reservas?estado=…) reaccionando al cambio SIN escribir
+ * de vuelta; cero window.confirm.
+ */
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
-import Icon from "../../components/ui/Icon";
+import { useHashRoute } from "../../hooks/useHashRoute";
+import { useQuery } from "../../hooks/useQuery";
+import { useMutation } from "../../hooks/useMutation";
+import { useConfirm } from "../../hooks/useConfirm";
+import { formatDate } from "../../utils/format";
+import {
+  Button,
+  DataTable,
+  Field,
+  FilterBar,
+  Input,
+  PageHeader,
+  RowActions,
+  Select,
+  StatusBadge,
+  useToast,
+} from "../../components/ui";
 
+const DESCRIPCION =
+  "Revisa todas las reservas del condominio y gestiona su aprobación, rechazo o cancelación.";
+
+/* Los 5 estados REALES del catálogo estado_reservas (database/seed.sql),
+ * como los pinta el backend; no hay endpoint de catálogo de estados de
+ * reserva (constante de módulo, decisión 5 del análisis). */
 const ESTADOS = ["PENDIENTE", "CONFIRMADA", "RECHAZADA", "CANCELADA", "FINALIZADA"];
+
+/* Estados desde los que el residente puede cancelar (paridad del legado
+ * y de reservas/rules.py + Mis reservas). */
 const ESTADOS_CANCELABLES = ["PENDIENTE", "CONFIRMADA"];
-const ESTADOS_APROBAR = ["PENDIENTE"];
+
+/* Textos por estado destino (confirmación + Toast), sin "#id" en los
+ * mensajes (paridad de los mensajes del legado sin su formato). */
+const CONFIRMACION = {
+  CONFIRMADA: {
+    title: "Aprobar reserva",
+    confirmLabel: "Aprobar",
+    danger: false,
+    toast: "Reserva aprobada.",
+  },
+  RECHAZADA: {
+    title: "Rechazar reserva",
+    confirmLabel: "Rechazar",
+    danger: true,
+    toast: "Reserva rechazada.",
+  },
+  CANCELADA: {
+    title: "Cancelar reserva",
+    confirmLabel: "Sí, cancelar reserva",
+    danger: true,
+    toast: "Reserva cancelada.",
+  },
+};
 
 const EMPTY_FILTERS = { espacio: "", estado: "", fecha: "", residente: "" };
 
+/* El listado de reservas trae residente_nombre/residente_apellido. */
+const nombreCompleto = (row) =>
+  [row?.residente_nombre, row?.residente_apellido].filter(Boolean).join(" ") || "—";
+
 export default function GestionReservasPage() {
-  const [rows, setRows] = useState([]);
-  const [espacios, setEspacios] = useState([]);
-  const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const notify = useToast();
+  const confirmar = useConfirm();
+  const { params } = useHashRoute();
 
-  const load = useCallback(async () => {
-    const params = new URLSearchParams();
-    if (filters.espacio) params.set("espacio", filters.espacio);
-    if (filters.estado) params.set("estado", filters.estado);
-    if (filters.fecha) params.set("fecha", filters.fecha);
-    if (filters.residente) params.set("residente", filters.residente);
-    const query = params.toString();
-    const [reservas, espacios] = await Promise.all([
-      api(`${routes.reservations}${query ? `?${query}` : ""}`),
-      api(routes.commonSpaces),
+  /* Catálogos en una consulta separada con deps []: NO se repite al
+   * cambiar un filtro (la dep de recarga es solo `consulta`). */
+  const { data: catalogos } = useQuery(async (signal) => {
+    const [espacios, residentes] = await Promise.all([
+      api(routes.commonSpaces, { signal }),
+      api(routes.residents, { signal }),
     ]);
-    setRows(reservas || []);
-    setEspacios(espacios || []);
-  }, [filters]);
+    return [espacios ?? [], residentes ?? []];
+  }, []);
+  const [espacios = [], residentes = []] = catalogos || [];
 
+  const [filtros, setFiltros] = useState({ ...EMPTY_FILTERS });
+
+  /* Filtro de estado SEMBRADO desde el hash (decisión 3): reacciona si
+   * cambia params.estado estando en la pantalla (enlaces del dashboard);
+   * valor desconocido → sin filtro. NUNCA se escribe de vuelta a la URL
+   * (mismo patrón de IncidentsPage). */
+  const estadoDesdeUrl =
+    typeof params.estado === "string" && ESTADOS.includes(params.estado)
+      ? params.estado
+      : "";
   useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError("");
-    load()
-      .catch((err) => {
-        if (active) setError(err.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [load]);
+    setFiltros((prev) => ({ ...prev, estado: estadoDesdeUrl }));
+  }, [estadoDesdeUrl]);
 
-  function updateFilter(event) {
+  function actualizarFiltro(event) {
     const { name, value } = event.target;
-    setFilters((previous) => ({ ...previous, [name]: value }));
+    setFiltros((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function cancelar(row) {
-    if (!window.confirm(`¿Cancelar la reserva #${row.id_reserva}?`)) return;
-    setBusy(true);
-    setError("");
-    setNotice("");
+  const limpiarFiltros = () => setFiltros({ ...EMPTY_FILTERS });
+
+  /* Query string de SERVIDOR con los valores vacíos omitidos (paridad del
+   * load() del legado); la dep es la string ya construida. */
+  const consulta = useMemo(() => {
+    const queryParams = new URLSearchParams();
+    Object.entries(filtros).forEach(([clave, valor]) => {
+      if (valor !== "") queryParams.set(clave, valor);
+    });
+    return queryParams.toString();
+  }, [filtros]);
+
+  /* Listado con filtros de servidor: cada cambio re-consulta con signal
+   * (useQuery aborta la consulta en vuelo y descarta datos de deps
+   * viejas). */
+  const { data, loading, error, reload } = useQuery(
+    (signal) =>
+      api(`${routes.reservations}${consulta ? `?${consulta}` : ""}`, { signal }),
+    [consulta]
+  );
+  const rows = data ?? [];
+
+  /* Residente como Select (decisión 2): deduplicado por usuario
+   * conservando la PRIMERA fila (los GET /residents llegan ordenados por
+   * apellido y nombre, mismo criterio del dedicado de ResidentsPage). */
+  const residentesUnicos = useMemo(() => {
+    const grupos = new Map();
+    residentes.forEach((fila) => {
+      if (!grupos.has(fila.id_usuario)) grupos.set(fila.id_usuario, fila);
+    });
+    return [...grupos.values()];
+  }, [residentes]);
+
+  const cambiarEstado = useMutation((id, estado) =>
+    api(`${routes.reservations}/${id}/status`, { method: "PATCH", body: { estado } })
+  );
+
+  async function pedirCambio(row, estado) {
+    if (cambiarEstado.busy) return;
+    const textos = CONFIRMACION[estado];
+    const ok = await confirmar({
+      title: textos.title,
+      message: `La reserva de ${nombreCompleto(row)} en ${row.espacio} del ${row.fecha} quedará ${estado}.${
+        estado === "CANCELADA" ? " No hay vuelta atrás." : ""
+      }`,
+      confirmLabel: textos.confirmLabel,
+      danger: textos.danger,
+    });
+    if (!ok) return;
     try {
-      await api(`${routes.reservations}/${row.id_reserva}/status`, { method: "PATCH", body: { estado: "CANCELADA" } });
-      setNotice(`Reserva #${row.id_reserva} cancelada.`);
-      await load();
+      await cambiarEstado.run(row.id_reserva, estado);
+      notify(textos.toast);
+      await reload();
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
+      notify(err.message || "No se pudo actualizar la reserva.", {
+        tone: "danger",
+      });
     }
   }
 
-  async function aprobar(row) {
-    if (!window.confirm(`¿Aprobar la reserva #${row.id_reserva}?`)) return;
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      await api(`${routes.reservations}/${row.id_reserva}/status`, { method: "PATCH", body: { estado: "CONFIRMADA" } });
-      setNotice(`Reserva #${row.id_reserva} aprobada.`);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
+  const pendientes = rows.filter((row) => row.estado === "PENDIENTE").length;
+  const conteo = loading
+    ? undefined
+    : rows.length > 0
+      ? `${rows.length} ${rows.length === 1 ? "reserva" : "reservas"} · ${pendientes} ${pendientes === 1 ? "pendiente" : "pendientes"}`
+      : undefined;
+  const meta = [DESCRIPCION, conteo].filter(Boolean).join(" · ") || undefined;
 
-  async function rechazar(row) {
-    if (!window.confirm(`¿Rechazar la reserva #${row.id_reserva}?`)) return;
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      await api(`${routes.reservations}/${row.id_reserva}/status`, { method: "PATCH", body: { estado: "RECHAZADA" } });
-      setNotice(`Reserva #${row.id_reserva} rechazada.`);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
+  const hayFiltros = consulta !== "";
+
+  const columns = [
+    {
+      key: "fecha",
+      header: "Fecha",
+      cellClassName: "ui-mono",
+      render: (row) => formatDate(row.fecha),
+    },
+    { key: "espacio", header: "Espacio", render: (row) => row.espacio },
+    { key: "residente", header: "Residente", render: (row) => nombreCompleto(row) },
+    { key: "tipo_evento", header: "Tipo de evento" },
+    {
+      key: "horario",
+      header: "Horario",
+      cellClassName: "ui-mono",
+      render: (row) => `${row.hora_inicio} - ${row.hora_fin}`,
+    },
+    { key: "personas", header: "Personas", align: "right", render: (row) => row.cantidad_personas },
+    { key: "estado", header: "Estado", render: (row) => <StatusBadge estado={row.estado} /> },
+    {
+      key: "acciones",
+      header: "Acciones",
+      /* Tres botones en la fila PENDIENTE (Aprobar/Rechazar/Cancelar)
+       * no caben en el ancho de 192px de 2 acciones: 240px reservados. */
+      width: "calc(var(--space-12) * 5)",
+      render: (row) => (
+        <RowActions
+          actions={[
+            ...(row.estado === "PENDIENTE"
+              ? [
+                  {
+                    label: "Aprobar",
+                    ariaLabel: `Aprobar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${row.fecha}`,
+                    disabled: cambiarEstado.busy,
+                    onSelect: () => pedirCambio(row, "CONFIRMADA"),
+                  },
+                  {
+                    label: "Rechazar",
+                    danger: true,
+                    ariaLabel: `Rechazar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${row.fecha}`,
+                    disabled: cambiarEstado.busy,
+                    onSelect: () => pedirCambio(row, "RECHAZADA"),
+                  },
+                ]
+              : []),
+            ...(ESTADOS_CANCELABLES.includes(row.estado)
+              ? [
+                  {
+                    label: "Cancelar",
+                    danger: true,
+                    ariaLabel: `Cancelar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${row.fecha}`,
+                    disabled: cambiarEstado.busy,
+                    onSelect: () => pedirCambio(row, "CANCELADA"),
+                  },
+                ]
+              : []),
+          ]}
+        />
+      ),
+    },
+  ];
 
   return (
-    <section className="management-page">
-      <div className="mg-page-heading">
-        <div>
-          <p className="mg-eyebrow">GESTIÓN OPERATIVA</p>
-          <h1>Gestión de reservas</h1>
-          <p>Revisá todas las reservas del condominio, filtrá por espacio, estado, fecha o residente, y cancelá las que correspondan.</p>
-        </div>
-        <button className="mg-icon-button" title="Actualizar listado" aria-label="Actualizar listado" disabled={loading || busy} onClick={() => { setError(""); setNotice(""); load(); }}>
-          <Icon name="refresh" size={18} />
-        </button>
-      </div>
+    <section>
+      <PageHeader title="Gestión de reservas" meta={meta} />
 
-      {error && <div className="mg-alert mg-alert-error" role="alert">{error}</div>}
-      {notice && <div className="mg-alert mg-alert-success" role="status">{notice}</div>}
+      <FilterBar onReset={limpiarFiltros}>
+        <Field
+          label="Espacio"
+          help={espacios.length === 0 ? "Aún no hay espacios comunes registrados." : undefined}
+        >
+          <Select name="espacio" value={filtros.espacio} onChange={actualizarFiltro}>
+            <option value="">Todos los espacios</option>
+            {espacios.map((espacio) => (
+              <option key={espacio.id_espacio_comun} value={espacio.id_espacio_comun}>
+                {espacio.nombre}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        {/* Constante de módulo: siempre las 5 opciones, sin esperar al
+         * catálogo (también permite sembrar desde el hash al abrir). */}
+        <Field label="Estado">
+          <Select name="estado" value={filtros.estado} onChange={actualizarFiltro}>
+            <option value="">Todos los estados</option>
+            {ESTADOS.map((estado) => (
+              <option key={estado} value={estado}>{estado}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Fecha">
+          <Input type="date" name="fecha" value={filtros.fecha} onChange={actualizarFiltro} />
+        </Field>
+        <Field
+          label="Residente"
+          help={residentesUnicos.length === 0 ? "Aún no hay residentes registrados." : undefined}
+        >
+          <Select name="residente" value={filtros.residente} onChange={actualizarFiltro}>
+            <option value="">Todos los residentes</option>
+            {residentesUnicos.map((residente) => (
+              <option key={residente.id_usuario} value={residente.id_usuario}>
+                {[residente.nombre, residente.apellido].filter(Boolean).join(" ")}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Button variant="quiet" disabled={loading} onClick={reload}>
+          Actualizar
+        </Button>
+      </FilterBar>
 
-      <div className="mg-panel">
-        <div className="mg-toolbar">
-          <div className="mg-filters">
-            <label>
-              <span className="mg-sr-only">Filtrar por espacio</span>
-              <select name="espacio" value={filters.espacio} onChange={updateFilter}>
-                <option value="">Todos los espacios</option>
-                {espacios.map((espacio) => (
-                  <option key={espacio.id_espacio_comun} value={espacio.id_espacio_comun}>
-                    {espacio.nombre}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="mg-sr-only">Filtrar por estado</span>
-              <select name="estado" value={filters.estado} onChange={updateFilter}>
-                <option value="">Todos los estados</option>
-                {ESTADOS.map((estado) => (
-                  <option key={estado} value={estado}>{estado}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="mg-sr-only">Filtrar por fecha</span>
-              <input type="date" name="fecha" value={filters.fecha} onChange={updateFilter} />
-            </label>
-            <label>
-              <span className="mg-sr-only">Filtrar por residente (ID de usuario)</span>
-              <input type="number" name="residente" placeholder="ID de usuario" value={filters.residente} onChange={updateFilter} />
-            </label>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="mg-empty" role="status">Cargando reservas...</div>
-        ) : rows.length === 0 ? (
-          <div className="mg-empty">
-            <h2>Sin reservas</h2>
-            <p>No hay reservas que coincidan con los filtros seleccionados.</p>
-          </div>
-        ) : (
-          <div className="mg-table-scroll">
-            <table className="mg-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Fecha</th>
-                  <th>Espacio</th>
-                  <th>Residente</th>
-                  <th>Tipo de evento</th>
-                  <th>Horario</th>
-                  <th>Personas</th>
-                  <th>Estado</th>
-                  <th className="mg-actions-heading">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id_reserva}>
-                    <td className="mg-muted">#{row.id_reserva}</td>
-                    <td className="mg-muted">{row.fecha}</td>
-                    <td><strong>{row.espacio}</strong></td>
-                    <td>{row.residente_nombre} {row.residente_apellido}</td>
-                    <td className="mg-muted">{row.tipo_evento}</td>
-                    <td>{row.hora_inicio} - {row.hora_fin}</td>
-                    <td>{row.cantidad_personas}</td>
-                    <td><span className={`status-badge status-${row.estado}`}>{row.estado}</span></td>
-                    <td>
-                      <div className="mg-row-actions">
-                        {ESTADOS_CANCELABLES.includes(row.estado) && (
-                          <button type="button" className="mg-icon-button" title="Cancelar reserva" aria-label="Cancelar reserva" disabled={busy} onClick={() => cancelar(row)}>
-                            <Icon name="trash" size={18} />
-                          </button>
-                        )}
-                        {row.estado === "PENDIENTE" && (
-                          <>
-                            <button type="button" className="mg-icon-button" title="Aprobar reserva" aria-label="Aprobar reserva" disabled={busy} onClick={() => aprobar(row)}>
-                              <Icon name="check" size={18} />
-                            </button>
-                            <button type="button" className="mg-icon-button" title="Rechazar reserva" aria-label="Rechazar reserva" disabled={busy} onClick={() => rechazar(row)}>
-                              <Icon name="trash" size={18} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => row.id_reserva}
+        caption="Listado de reservas del condominio"
+        loading={loading}
+        error={error}
+        onRetry={reload}
+        emptyTitle={hayFiltros ? "No hay reservas que coincidan." : "No hay reservas"}
+        emptyDescription={
+          hayFiltros
+            ? "Ajusta los filtros para ver resultados."
+            : "Las solicitudes de reserva de los residentes aparecerán aquí."
+        }
+        emptyAction={
+          hayFiltros ? <Button variant="quiet" onClick={limpiarFiltros}>Limpiar filtros</Button> : undefined
+        }
+      />
     </section>
   );
 }
