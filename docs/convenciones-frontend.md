@@ -262,3 +262,13 @@ solo si su clave no coincide con el id.
   payload y contrato { spaces, events, onCreated } idénticos al legado;
   éxito con Toast + cierre + onCreated (reload de Mis reservas); sin CSS
   nuevo.
+- **Login (`Login`)** — F2-9: rediseñado al kit (Field/Input/Button
+  primary/Alert danger con foco) con panel tokens-only (`.login-panel`,
+  sin hex, radio --radius-md, sin sombra ni bloque de marca de color),
+  etiquetas alineadas a la izquierda con glifo inline vía ReactNode de
+  `Field` (regla acotada a `.login-panel` en login.css), validación en
+  cliente con schema `login` (noValidate) + `err.errors` por campo,
+  contrato `{ onLogin }` y payload intactos; el guard de 401 de api.js
+  excluye el login (no toca api.js); sin CSS para controles (ui.css); CSS
+  muerto `.login-container`/`.login-form` de index.css reportado a
+  F2-11.

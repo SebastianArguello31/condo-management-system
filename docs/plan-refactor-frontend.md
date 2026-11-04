@@ -340,14 +340,18 @@ final, según alcance).
   verificar con captura del dueño — NO se declara cerrado**. La limpieza
   del modo legado de CrudPage (ex-7c) pasa a **F2-11**.
 - **F2-8** `refactor:` Gestión de reservas + CreateReservation. —
-  **F2-8a HECHA (pendiente de verificar):** Gestión de reservas (ADMIN) al
+  **F2-8a HECHA y VERIFICADA por el dueño:** Gestión de reservas (ADMIN) al
   kit en la rama `feature/refactor-gestion-reservas` (detalle en "Sesión
-  F2-8: análisis y plan" y "Sesión F2-8a" más abajo). **F2-8b HECHA
-  (pendiente de verificar):** "Nueva reserva" (CreateReservation) a
-  FormModal (detalle en "Sesión F2-8b" más abajo). El pulido queda para
-  F2-8c según las decisiones del dueño.
+  F2-8: análisis y plan" y "Sesión F2-8a" más abajo). **F2-8b HECHA y
+  VERIFICADA por el dueño:** "Nueva reserva" (CreateReservation) a
+  FormModal (detalle en "Sesión F2-8b" más abajo). **F2-8c DESCARTADA** por
+  el dueño (2026-11-03: verificó 8a/8b y no la necesita); sus ítems de
+  pulido pasan a §8-bis (detalle de reserva ADMIN ya estaba como pulido;
+  el pulido 375px de reservas se añade abajo).
 - **F2-9** `feat:` Rediseño del Login (login.css nuevo sobre tokens;
-  mantener `onLogin(result)` intacto).
+  mantener `onLogin(result)` intacto). — **HECHA (pendiente de verificar):**
+  Login migrado al kit en la rama `feature/refactor-login` (nacida de
+  `feature/refactor-gestion-reservas`); detalle en "Sesión F2-9" más abajo.
 - **F2-10** `refactor:` Pantallas nuevas de Dev 2 (inventario) y Dev 3
   (dashboard) cuando lleguen: el dueño las migra. El dashboard se diseña con
   el kit: cifras en serif, tokens `--chart-*`, enlaces a listados filtrados
@@ -392,28 +396,27 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
 
-> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-7b, 2026-11-01; F2-4,
-> F2-1b, F2-2, F2-5a, F2-5b, F2-5c, F2-6a, F2-6b, F2-7a y F2-7b hechas —
-> verificación pendiente):**
-> 1. **Verificación por el dueño** de F2-1b, F2-2 (incluida ronda 1),
->    F2-5a, F2-5b, F2-5c, F2-6a, F2-6b, F2-7a y F2-7b (checklists en
->    STATUS.md; en la de incidencias, **B7 con captura**; en F2-6a,
->    **B1/B4 con captura**; en F2-6b, **B5 con captura**; en F2-7b,
->    **B6 con captura** — NO se declara cerrado) → abrir PRs de las ramas
->    hechas.
+> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-9, 2026-11-03; F2-8a y
+> F2-8b VERIFICADAS por el dueño — F2-8c DESCARTADA; F2-4, F2-1b, F2-2,
+> F2-5a, F2-5b, F2-5c, F2-6a, F2-6b, F2-7a y F2-7b hechas — verificación
+> pendiente; F2-9 HECHA — pendiente de verificar):**
+> 1. **Verificación por el dueño** de F2-9 (checklist del Login en
+>    STATUS.md), F2-1b, F2-2 (incluida ronda 1), F2-5a, F2-5b, F2-5c,
+>    F2-6a, F2-6b, F2-7a y F2-7b (checklists en STATUS.md; en la de
+>    incidencias, **B7 con captura**; en F2-6a, **B1/B4 con captura**; en
+>    F2-6b, **B5 con captura**; en F2-7b, **B6 con captura** — NO se
+>    declara cerrado) → abrir PRs de las ramas hechas.
 > 2. **F2-5 COMPLETO pulido** (§8-bis: Cancelar del residente, mover la
 >    asignación al detalle, columna Unidad) cuando el dueño lo ordene.
 > 3. **docs/convenciones-frontend.md** (guía del kit para los demás,
 >    parte de F2-11; ya va llevada por sesión con una línea por pantalla
 >    en §9).
-> 4. **F2-7 → F2-9** — resto de pantallas (espacios + políticas, gestión
->    de reservas (F2-8a HECHA, pendiente de verificar) + "Nueva reserva"
->    (F2-8b HECHA, pendiente de verificar), Login rediseño).
-> 5. **F2-10** — pantallas nuevas de Dev 2 (insumos ya integró) y Dev 3
+> 4. **F2-10** — pantallas nuevas de Dev 2 (insumos ya integró) y Dev 3
 >    (dashboard): migración del dueño; enlazar drilldowns a
 >    `#/incidencias?estado=...`.
-> 6. **F2-11** — limpieza de CSS, responsive y a11y (unifica el marco legado
->    del shell y el ErrorBoundary global).
+> 5. **F2-11** — limpieza de CSS (incluye .login-container/.login-form
+>    muertos de index.css, ver §8-bis), responsive y a11y (unifica el
+>    marco legado del shell y el ErrorBoundary global).
 >
 > Lo explícito del sprint tiene prioridad al elegir dentro de este orden.
 
@@ -1794,6 +1797,77 @@ SIN tocar. Sin npm/node. Firma INTACTA: `({ spaces, events, onCreated })`;
   "Seleccioná" del legado desaparece).
 - Verificación pendiente del dueño: checklist F2-8b en STATUS.md.
 
+## F2-9: análisis y plan (solo lectura 2026-11-03; rama feature/refactor-login)
+
+Rama nacida de `feature/refactor-gestion-reservas` (`3fc81c4`, merge de
+develop incluido; árbol limpio). Análisis APROBADO por el dueño con las 6
+recomendaciones: (1) `noValidate` + `validate(form, login)`; (2)
+`err.errors` → Field y resto → Alert; (3) `autoFocus` en Email; (4) sin
+bloque de marca de color; (5) botón siempre activo con dedupe; (6) el CSS
+muerto de index.css se reporta a F2-11 sin tocarlo.
+
+**Hallazgos del análisis:** (a) `login.css` era 100% hex hardcodeado con
+radio 16px, sombra decorativa, icono sobre cuadrado de color (prohibido §3)
+y breakpoint propio 480px; (b) grep `.login-*`: solo Login.jsx consume
+`login.css`; `.login-container`/`.login-form` de `index.css:161-177` están
+muertos (cero consumidores; grep fresco 2026-11-03; el listado de §8 CSS
+legado ya los incluía desde CP6b) → limpieza F2-11; (c) el guard de 401 de api.js ya
+excluye el login (`path !== routes.auth/login`, api.js:48) → sin sesión
+expirada al fallar credenciales; (d) el schema `login` de validations/
+(exacto espejo de LoginSchema: password 1–200 sin política) no estaba
+conectado; (e) contrato: `Login({ onLogin })` → POST → `onLogin(result)`
+directo a App.jsx (token+user); redirección/aterrizaje por rol 100% de App.
+
+## Sesión F2-9: Login al kit (2026-11-03)
+
+Alcance RESPETADO: SOLO `features/auth/Login.jsx` + `login.css` (+ docs).
+Kit/ui.css, index.css, api.js, routes.js, routing.js, App.jsx,
+validations/ y backend SIN tocar. Cero npm/node.
+
+- **Paridad:** firma `({ onLogin })` intacta; POST `/auth/login` con
+  `{ email: email.trim(), password }` (mismo payload, mismo endpoint);
+  `result` va DIRECTO a `onLogin(result)` sin transformar. Cambia TODO lo
+  presentacional: componentes del kit (Field/Input/Button/Alert/Icon),
+  validación en cliente con el schema `login` (noValidate; mensajes en
+  español neutro: "Este campo es requerido."/"Ingresa un correo
+  válido."), `err.errors` del backend → errores por campo (arrays →
+  primer mensaje), resto (401 credenciales, red) → Alert danger con
+  foco, dedupe por `useMutation` (busy → spinner en el Button), etiquetas
+  a la izquierda con glifo mail/lock inline (aria-hidden del Icon,
+  nativo), sin marca de color (glifo `buildings` en `--brand` sin
+  contenedor junto al kicker "CONDOMINIO" en --ink-3), un solo h1
+  ("Iniciar sesión", --font-display --fs-28).
+- **Etiquetas con icono a la izquierda (decisión del equipo):** Field SÍ
+  acepta `label` como ReactNode (lo renderiza tal cual dentro del
+  `<label htmlFor>`) → NO tocó el kit. La regla legada
+  `label { display: flex; flex-direction: column }` de index.css ya
+  estaba neutra por `.ui-field-label { display: block }` (K1 de ui.css);
+  para el gap del glifo y su alineación se añadió UNA regla acotada a
+  `.login-panel .ui-field-label { display: inline-flex; align-items:
+  center; gap: var(--space-2) }` en login.css (especificidad 0,2,0 gana a
+  .ui-field-label y al selector de elemento legacy; sin tocar index.css
+  ni ui.css).
+- **Estados:** errores por campo con foco al PRIMER `.ui-control-invalid`
+  (contador `intento`, patrón F2-8b: solo cuenta intentos fallidos); el
+  error de campo se limpia al editar ese campo; error de la ACCIÓN en
+  `Alert tone="danger"` como primer hijo del form (role="alert" por tono)
+  dentro de un envoltorio `tabIndex={-1}` que recibe el foco (Alert no es
+  forwardRef: sin cambio de kit, foco al contenedor accesible).
+- **login.css REESCRITO tokens-only:** página en `--bg`, panel
+  `.login-panel` en `--surface` con borde 1px `--line` y `--radius-md`,
+  SIN sombra/gradiente; ancho `min(100%, calc(var(--space-12) * 8))`
+  (384px); padding `--space-4` (móvil) → `--space-6` en UNA media query
+  `min-width: 640px` (el 480px del legado fue eliminado); h1 serif,
+  descripción `--ink-2`; form en `.ui-form-stack` con botón en
+  `.ui-form-actions` (clases del kit, sin CSS nuevo para controles);
+  transiciones solo color/opacidad (ya definidas en ui.css). Botón
+  "Iniciar sesión" /
+  "Ingresando…" (busy), SIEMPRE activo salvo busy.
+- **Reporte (sin corregir, alcance F2-11):** `.login-container` y
+  `.login-form` de index.css siguen sin consumidores (grep fresco); ya
+  figuraban en el inventario de §8 y quedan confirmados para la limpieza.
+- Verificación pendiente del dueño: checklist F2-9 en STATUS.md.
+
 ## 8. Pendientes y hallazgos abiertos
 **Producto de Dev 1:**
 - [x] Verificación final de CP6b: guía `#/ui` — completada por el dueño y
@@ -1885,7 +1959,19 @@ agenda cuando el dueño lo ordene.
 - [GestionReservasPage] — **modal de detalle de la reserva para ADMIN**
   (el legado no lo tenía; Mis reservas ya lo tiene; el listado trae
   costo_total/observaciones/created_at que hoy no se ven) — decisión del
-  dueño en F2-8c — alcance: pantalla.
+  dueño en F2-8c — alcance: pantalla. — **F2-8c DESCARTADA (2026-11-03,
+  el dueño). Pasa a pulido pendiente de este listado.**
+- [GestionReservasPage] — **pulido 375px de reservas** (heredado de la
+  F2-8c descartada: revisión detallada del listado/filterbar/acciones en
+  móvil angosto) — pasa a pulido pendiente por decisión del dueño.
+- [Login] — CSS muerto de index.css para F2-11: `.login-container` y
+  `.login-form` (index.css:161-177) sin consumidores (grep fresco);
+  figuraban en el inventario de §8 desde CP6b — borrarlos en la limpieza
+  final — alcance: F2-11 (CSS legado).
+- [Login] — el glifo de la marca no tiene variante con márgenes si el
+  dueño quiere un wordmark más desarrollado (hoy glifo `buildings` en
+  --brand sin contenedor + kicker de texto) — alcance: pantalla (si se
+  pide).
 - [GestionReservasPage] — el select de Residente del filtro requiere
   cargar TODOS los residentes del condominio (GET /residents) para
   filtrar por uno; si el listado crece, definir búsqueda/paginación —
