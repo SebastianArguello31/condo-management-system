@@ -270,5 +270,17 @@ solo si su clave no coincide con el id.
   cliente con schema `login` (noValidate) + `err.errors` por campo,
   contrato `{ onLogin }` y payload intactos; el guard de 401 de api.js
   excluye el login (no toca api.js); sin CSS para controles (ui.css); CSS
-  muerto `.login-container`/`.login-form` de index.css reportado a
-  F2-11.
+   muerto `.login-container`/`.login-form` de index.css reportado a
+   F2-11.
+- **Insumos (`MaintenancePage`)** — F2-10a: shell y listado al kit
+  (PageHeader con meta "desc · N insumos · M con stock bajo" de la lista
+  cargada, filtros de SERVIDOR buscar/categoria/bajo_stock con vacíos
+  omitidos — Buscar aplica con Enter, categoría/stock bajo al cambiar —,
+  sembrado `?bajo_stock=true` sin escribir de vuelta, catálogo de
+  categorías conservado en ref acumulado aunque se filtre, DataTable sin
+  ID con Existencia/Stock mínimo a la derecha + plural conservador de
+  unidad (`formatQuantityUnit`, singular solo en 1), Estado con override
+  "Stock bajo"/"Disponible", acciones Historial (todos) + Editar/
+  "Registrar movimiento" (ADMIN, unifica Entrada+Salida); los 3 modales
+  legados intactos (F2-10b/10c); `formatQuantity`/InterventionMaterials
+  (Dev 2) intactos).

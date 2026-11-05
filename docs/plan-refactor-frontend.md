@@ -355,7 +355,12 @@ final, según alcance).
 - **F2-10** `refactor:` Pantallas nuevas de Dev 2 (inventario) y Dev 3
   (dashboard) cuando lleguen: el dueño las migra. El dashboard se diseña con
   el kit: cifras en serif, tokens `--chart-*`, enlaces a listados filtrados
-  por hash con query params. Ambas se registran en `config/routing.js`.
+  por hash con query params. Ambas se registran en `config/routing.js`. —
+  **F2-10a HECHA (pendiente de verificar):** Insumos (`MaintenancePage`,
+  sobre `feature/refactor-insumos-listado`, con `3a3d0de` de Dev 2 ya
+  integrado): shell y listado al kit; modales y lógica quedan LEGADOS para
+  F2-10b (insumo) y F2-10c (movimiento/historial); detalle en "Sesión
+  F2-10a" más abajo.
 - **F2-11** `style/chore:` pasada responsive + a11y, limpieza de CSS legado
   (lista en §8) y `docs/convenciones-frontend.md`.
 
@@ -1868,6 +1873,177 @@ validations/ y backend SIN tocar. Cero npm/node.
   figuraban en el inventario de §8 y quedan confirmados para la limpieza.
 - Verificación pendiente del dueño: checklist F2-9 en STATUS.md.
 
+## Sesión F2-10a: Insumos — shell y listado al kit (2026-11-05)
+
+Rama `feature/refactor-insumos-listado`, NACIDA de
+`feature/refactor-insumos` con `3a3d0de` de Dev 2 ("mejorar formulario de
+consumo y cantidades") YA integrado (verificado: `git merge-base
+--is-ancestor 3a3d0de HEAD` y `b603335` merge en HEAD). Alcance RESPETADO:
+SOLO `features/maintenance/MaintenancePage.jsx` + docs. NO tocados:
+`InterventionMaterials.jsx`, `components/ui`, ui.css, index.css,
+users-ui.css, api.js, routes.js, routing.js, App.jsx, validations/,
+backend, dashboard.
+
+**PASO 0 (verificado con solo lectura):** árbol limpio; select de tipo del
+modal de movimiento tiene SOLO Entrada/Salida (sin Dirección; los tipos
+libran MOVEMENT_LABELS de 6 pero el select legado ofrece 2 — queda igual);
+`formatQuantity` está DUPLICADA como función privada en
+MaintenancePage.jsx:39 e InterventionMaterials.jsx:23 (idénticas,
+`Intl.NumberFormat("es-PY", { maximumFractionDigits: 3, useGrouping:
+false })`); "Insumos encontrados"/"Con stock bajo" se calculaban de la
+LISTA CARGADA (con filtros: `items.length` y
+`items.filter(bajo_stock).length`); las opciones del select de categoría
+salían del listado filtrado (`[...new Set(items.map(categoria))]` — se
+reducían al filtrar); la pantalla recibe `{ user }` y decide por
+`user.rol === "ADMIN"` (header con "Nuevo insumo" y fila con Movimientos+
+Editar+Entrada+Salida vs solo Movimientos). Unidades del seed
+(seed_demo.sql:193-202): **metro, unidad, cartucho, litro**; input de
+cantidad del modal de movimiento: `required type="number" min="0.001"
+step="0.001"` (MaintenancePage legado, línea 366).
+
+**Lo hecho (decisiones 1–9 del prompt, aplicadas sin cambios de kit):**
+
+1. **PageHeader "Insumos"** SIN eyebrow: meta = descripción actual +
+   `· N insumos · M con stock bajo` (misma semántica que las tarjetas:
+   cuenta de la lista cargada con filtros activos; se muestra solo
+   cuando `!loading && items.length > 0`). Las 2 tarjetas `.mg-stat`
+   ELIMINADAS (sin componente KPI).
+2. **FilterBar** (sin botón "Filtrar"): SearchInput "Buscar insumo"
+   (aplica con **Enter** — el kit/hooks NO tienen debounce, no se
+   inventó), Select de Categoría y Checkbox "Stock bajo" que consultan
+   AL CAMBIAR (servidor: `buscar`/`categoria`/`bajo_stock`, vacíos
+   omitidos; la clave de deps deriva de los tres), botón "Actualizar"
+   (Button quiet, `disabled={loading}`) → `reload()` que conserva datos
+   previos (sin titilar). Sembrado `?bajo_stock=true` desde
+   `useHashRoute` (reacciona al hash estando en pantalla, NUNCA escribe
+   de vuelta; el usuario puede desmarcar libremente).
+3. **Catálogo de categorías conservado:** ref acumulado
+   (`catalogoRef.current`) que se alimenta de CADA carga exitosa y
+   actualiza el estado solo cuando crece → el select NO se reduce al
+   elegir una categoría. Sin endpoint nuevo (legado lo sacaba de la
+   lista filtrada).
+4. **DataTable** con caption "Listado de insumos", `rowKey`
+   `id_insumo`, SIN columna ID. Columnas: Insumo (nombre + descripción
+   en segunda línea), Categoría, Existencia (`align: "right"`,
+   `formatQuantityUnit(stock, unidad_medida)`), Stock mínimo (right,
+   ídem), Estado (StatusBadge override de MÓDULO `ESTADO_INSUMO`:
+   "Stock bajo" tone warning + glifo triangle; "Disponible" tone success
+   + glifo check) y Acciones (width `calc(var(--space-12) * 5)` = 3
+   botones, criterio F2-8a).
+5. **Acciones por rol** en `.ui-actions-inline` (RowActions, 3 ≤ límite,
+   sin menú): TECNICO = "Historial"; ADMIN = "Historial", "Editar",
+   "Registrar movimiento" — este ÚLTIMO reemplaza Entrada/Salida y abre
+   el modal de movimiento LEGADO con `openMovement(item, "ENTRADA")` por
+   defecto (los tipos disponibles siguen siendo Entrada/Salida). aria-label SIEMPRE con el nombre del insumo ("Historial de movimientos del
+   insumo X", "Editar insumo X", "Registrar movimiento del insumo X").
+6. **Los 3 modales quedan LEGADOS e intactos** (insumo, movimiento,
+   historial; `mg-form-body`/`mg-modal-actions` siguen — F2-10b y F2-10c
+   los migran). Único cambio puntual: el `notice` de página pasó a
+   Toast ("Insumo creado./Insumo actualizado./Movimiento registrado y
+   stock actualizado.") en el punto de llamada de saveItem/saveMovement
+   (trivial); el error sigue siendo el estado `error` único del legado
+   y se muestra DENTRO de cada modal (no hubo que tocar su lógica
+   interna). Errores del listado → ErrorState del DataTable con
+   Reintentar (`reload`); los refresh `await loadItems()` de esos
+   saveX pasaron a `await reload()` (sin titilar).
+7. **formatQuantity:** SIN mover ni cambiar export/firma (sigue privada
+   local; InterventionMaterials de Dev 2 INTACTO — el pluralizador no lo
+   toca).
+8. **Plural del listado — helper de MÓDULO en el propio archivo** (NO en
+   utils/, formatQuantity intacta): `formatQuantityUnit(value, unit)` →
+   `formatQuantity(value)` + unidad; singular solo con
+   `Number(value) === 1`. Plural conservador de unidad: solo si la
+   unidad es UNA palabra, minúsculas, sin tildes y ≥4 letras
+   (`/^[a-z]{4,}$/`); termina en vocal → +"s"; en l/r/n/d → +"es";
+   cualquier otra (abreviaturas kg/m/lt/m2, varias palabras, con tilde)
+   queda IGUAL. Usado en Existencia y Stock mínimo. Tabla del seed:
+
+   | unidad (seed) | 1 | 10 | regla aplicada |
+   |---|---|---|---|
+   | metro | 1 metro | 10 metros | vocal → +s ✓ |
+   | unidad | 1 unidad | 10 unidades | consonante d → +es ✓ |
+   | litro | 1 litro | 10 litros | vocal → +s ✓ |
+   | cartucho | 1 cartucho | 10 cartuchos | vocal → +s ✓ |
+
+   Las 4 salen bien por regla; no se añadió ninguna excepción. (Con
+   0/0,5/1,5/200 → plural: "0,5 metros", "1,5 unidades".)
+9. **Excepción puntual del modal de movimiento:** SOLO el atributo
+   `step` del input de cantidad pasó de `step="0.001"` a `step="any"`
+   (las flechas suben de 1 en 1 y se siguen aceptando decimales; el
+   backend valida 3 decimales). `min="0.001"`, `required`, onChange y el
+   payload `{ cantidad, motivo }` SIN cambios; la versión definitiva
+   (noValidate + `movimientoCrear`) va en F2-10c. Antes:
+   `<input required type="number" min="0.001" step="0.001" .../>`;
+   después: `<input required type="number" min="0.001" step="any" .../>`.
+
+**Estados:** carga → Skeleton (estado inicial loading, sin flash de
+"Reintentar" — patrón B9); error de carga → ErrorState con Reintentar;
+vacío DISTINTO: con búsqueda/filtros → "No hay insumos que coincidan."
+(con descripción, sin acción) vs vacío real → "No hay insumos" con el
+trigger "Nuevo insumo" para ADMIN (instancia ÚNICA: se oculta del
+PageHeader cuando es vacío real). Español neutro (tuteo); cero
+window.confirm/alert; cero cambios de kit.
+
+**Paridad NO alcanzada (menor, reportada):** la descripción de la
+columna Insumo era `.mg-description` (tinte atenuado); el kit no tiene
+clase de texto secundario para celdas → quedó texto normal con
+`<span style={{ display: "block" }}>` (sin hex, sin clase nueva); queda
+como pulido §8-bis si el dueño quiere un estilo "subline" en el kit.
+
+**Riesgos/verificaciones pendientes del dueño:** (a) tabla → tarjetas
+apiladas a 375 sin scroll horizontal (data-label del DataTable); (b) el
+checkbox "Stock bajo" es standalone (sin Field en la FilterBar): la
+etiqueta queda a la derecha del control y la alineación por base se
+decide cuando haya una segunda pantalla con checkbox — reportado a
+§8-bis; (c) la meta del PageHeader no se muestra mientras carga ni con listado
+vacío (criterio F2-5a); (d) `reload()` tras crear insumo respeta los
+filtros activos del hash.
+
+`git diff --stat` esperado: MaintenancePage.jsx + docs.
+Commit sugerido: `refactor(maintenance): Insumos shell y listado al kit
+(F2-10a)`.
+
+**Ajuste 1 (2026-11-05, captura del dueño a 1280; SIN commit, alcance
+MaintenancePage.jsx + docs):**
+
+1. **Meta del PageHeader** = SOLO "N insumos · M con stock bajo" (antes
+   tenía la descripción larga y la `meta` es UNA línea mono según la
+   referencia del kit). La descripción larga ya NO vive en el encabezado
+   (se eliminó DESCRIPCION_PAGINA); la información NO se pierde: el
+   EmptyState SIN DATOS lleva la nota "Los consumos se registran desde
+   las intervenciones de cada incidencia." (NOTA_CONSUMOS, SOLO ahí).
+2. **Columna Acciones:** width `calc(var(--space-12) * 7)` (336px) y un
+   bloque de estilo LOCAL en el propio .jsx (`ESTILOS_PANTALLA`, sin CSS
+   de kit): `.acciones-insumos { flex-wrap: wrap }` (por defecto: envuelve
+   en la pila móvil sin desbordar) y en ≥640px `.ui-btn { white-space:
+   nowrap }` — los botones dejan de partir "Registrar movimiento" en 2
+   líneas. ADEMÁS `padding-inline: var(--space-2)` en esos botones
+   (solo ≥640px): con el `--space-4` del kit los 3 botones nowrap medían
+   ~344px y NO cabían en el colgroup de 336px (la fila volvería a ~61px);
+   con --space-2 quedan ~283px y la fila vuelve a `--row-h`. Los botones
+   siguen siendo `Button variant="quiet" size="sm"` vía RowActions (sin
+   danger: nada destructivo acá).
+3. **Checkbox "Stock bajo" en FilterBar:** la causa visual era que el
+   checkbox standalone no reserva la fila de etiqueta del Field (el kit
+   `.ui-filterbar` ya alinea por base flex-end — NO se tocó). Se envolvió
+   en `Field label="Stock bajo"` + un contenedor flex de altura
+   `var(--control-h)` centrado (inline en el .jsx): etiqueta arriba como
+   Buscar/Categoría y el control al centro de la altura del control del
+   kit. Sin aria-label del checkbox (el Field ya nombra; lección F2-5c).
+4. **Separación Stock mínimo/Estado:** widths explícitos de colgroup con
+   tokens: Existencia y Stock mínimo `calc(var(--space-12) * 3)` (144px,
+   ambas siguen `align: "right"` con tabular-nums) y Estado
+   `calc(var(--space-12) * 3)` (izquierda). Con el colgroup la tabla deja
+   el auto-layout que pegaba Estado al borde del valor de Stock mínimo.
+   Los paddings de celda son del kit: sin tocar.
+
+**Advertencia reportada (decisión del dueño):** la columna Insumo apila
+nombre + descripción (`<span display:block>`, decisión ronda 0 con
+paridad del `.mg-description` legado): las filas de insumos CON
+descripción siguen midiendo ~2 líneas (> `--row-h`) aunque Acciones ya
+no crece. Si el dueño exige 44px estrictos para TODAS las filas, hay que
+truncar u omitir la descripción — pulido §8-bis si lo pide.
+
 ## 8. Pendientes y hallazgos abiertos
 **Producto de Dev 1:**
 - [x] Verificación final de CP6b: guía `#/ui` — completada por el dueño y
@@ -2094,6 +2270,28 @@ agenda cuando el dueño lo ordene.
   fila original exigiría exponer los RowActions de CrudPageUi al padre
   (más que un prop aditivo) — si el dueño lo quiere, pedirlo como
   mejora de kit — alcance: kit/UI (futuro).
+
+   *(Nota F2-10a: `3a3d0de` ya está INTEGRADO — la rama
+  `feature/refactor-insumos-listado` lo contiene —; el bloqueo de arriba
+  queda resuelto para la próxima ronda de estilo de InterventionMaterials
+  (F2-10c/F2-11).)*
+
+- [MaintenancePage] — la descripción de la columna Insumo era
+  `.mg-description` (atenuada); el kit no tiene clase de texto
+  secundario para celdas → quedó texto normal con un `<span display:
+  block>` (sin hex ni clase nueva): si el dueño quiere una "subline" de
+  kit, agregarla a ui.css y usarla AQUÍ — alcance: kit.
+- [MaintenancePage] — el checkbox "Stock bajo" del FilterBar es
+  standalone (sin Field): su etiqueta va a la derecha; decidir patrón de
+  alineación cuando una segunda pantalla use checkbox en FilterBar —
+  alcance: kit/UI.
+- [MaintenancePage] — la búsqueda NO tiene debounce (el kit/hooks no lo
+  tienen y no se inventaron): "Buscar insumo" aplica con Enter; si el
+  dueño lo pide, debounce de FilterBar como kit — alcance: kit.
+- [MaintenancePage] — busca por nombre/descripción EXACTA del legado
+  (`buscar` del backend, sin precisar si cubre sintilde/caso): probar
+  "tubería"/"TUBERIA" en la verificación y reportar si el backend es
+  sensible a tildes/caso — alcance: backend (solo reporte).
 
 ## 8-ter. Plantilla de migración de pantalla
 
