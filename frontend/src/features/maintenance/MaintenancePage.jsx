@@ -1,42 +1,45 @@
-/* Insumos — F2-10b (shell y listado al kit en F2-10a; "Nuevo/Editar
- * insumo" a FormModal en F2-10b). La pantalla mantiene el contrato
- * `({ user })` de la ruta #/insumos (roles ADMIN/TECNICO, sin cambios en
- * routing). Paridad conservada: GET /maintenance/insumos con filtros de
- * SERVIDOR buscar/categoria/bajo_stock (vacíos omitidos), el "Nuevo
- * insumo" solo para ADMIN, los payloads POST/PATCH del insumo intactos
- * (ahora en features/maintenance/InsumoFormModal.jsx: mismos campos y
- * endpoints; creación y edición solo para ADMIN, como las acciones de
- * fila que los disparan). Los modales de MOVIMIENTO e HISTORIAL siguen
- * LEGADOS con sus payloads (los patch/post salen líneas abajo tal
- * cual; F2-10c los migra). Cambios respecto al legado (F2-10a):
- * PageHeader sin eyebrow con meta mono de UNA línea "N insumos · M con
- * stock bajo" (la descripción larga NO va en el encabezado — la nota de
- * consumos vive SOLO en el EmptyState sin datos), FilterBar sin botón
- * "Filtrar" (Buscar aplica con Enter; Categoría y Stock bajo consultan
- * al cambiar; vacíos omitidos), "Actualizar" = reload() que conserva
- * datos previos (sin parpadeo), sembrado ?bajo_stock=true desde el hash
- * (nunca se escribe de vuelta), DataTable SIN columna ID, Existencia y
- * Stock mínimo alineadas a la derecha con formatQuantity y el plural
- * conservador de la unidad (helper de módulo formatQuantityUnit — NO
- * toca formatQuantity), Estado con StatusBadge override de módulo,
- * "Movimientos" renombrado a "Historial" y Entrada/Salida unificados en
- * "Registrar movimiento" (abre el modal legado con tipo ENTRADA por
- * defecto), éxito de acciones por Toast, carga con useQuery + signal
- * sin flash de Reintentar, EmptyState distinto para búsqueda/filtros y
- * para vacío real, y el catálogo de categorías en un ref acumulado
- * (ahora también alimenta el datalist del InsumoFormModal sin endpoint
- * nuevo): el select NO se reduce al filtrar. Cambios de F2-10b: el
- * modal de insumo ya no usa el error/busy compartidos de la pantalla
- * (el FormModal gestiona el suyo propio): el estado error/busy aquí
- * queda SOLO para movimiento/historial.
- */
+/* Insumos — F2-10c (shell y listado al kit en F2-10a; "Nuevo/Editar
+ * insumo" a FormModal en F2-10b; "Registrar movimiento" e "Historial"
+ * al kit en F2-10c). La pantalla mantiene el contrato `({ user })` de la
+ * ruta #/insumos (roles ADMIN/TECNICO, sin cambios en routing). Paridad
+ * conservada: GET /maintenance/insumos con filtros de SERVIDOR
+ * buscar/categoria/bajo_stock (vacíos omitidos), el "Nuevo insumo" solo
+ * para ADMIN, los payloads POST/PATCH del insumo intactos (en
+ * InsumoFormModal.jsx) y los POST de movimiento en
+ * MovimientoFormModal.jsx (ruta /entradas|/salidas según el tipo, y
+ * GET /insumos/:id/movimientos?tipo= en InsumoHistorialModal.jsx).
+ * Cambios respecto al legado (F2-10a): PageHeader sin eyebrow con meta
+ * mono de UNA línea "N insumos · M con stock bajo" (la descripción larga
+ * NO va en el encabezado — la nota de consumos vive SOLO en el
+ * EmptyState sin datos), FilterBar sin botón "Filtrar" (Buscar aplica
+ * con Enter; Categoría y Stock bajo consultan al cambiar; vacíos
+ * omitidos), "Actualizar" = reload() que conserva datos previos (sin
+ * parpadeo), sembrado ?bajo_stock=true desde el hash (nunca se escribe
+ * de vuelta), DataTable SIN columna ID, Existencia y Stock mínimo
+ * alineadas a la derecha con formatQuantityUnit (helpers compartidos en
+ * ./quantity, misma lógica exacta), Estado con StatusBadge override de
+ * módulo, "Movimientos" renombrado a "Historial" y Entrada/Salida
+ * unificados en "Registrar movimiento" (abre MovimientoFormModal con
+ * ENTRADA por defecto). Cambios de F2-10b: "Nuevo/Editar insumo" en
+ * InsumoFormModal (el FormModal gestiona SU error/busy por dentro).
+ * Cambios de F2-10c: el estado compartido busy/error de la pantalla y
+ * los modales legados de MOVIMIENTO/HISTORIAL (mg-form-*) fueron
+ * RETIRADOS — el nuevo MovimientoFormModal valida con `movimientoCrear`
+ * y muestra los 400 del backend DENTRO del modal; InsumoHistorialModal
+ * es un Modal de LECTURA con useQuery + Timeline (Skeleton/ErrorState
+ * locales, Sin busy global) y su Toast de éxito es "Movimiento
+ * registrado." (decisión F2-10c; el legado decía "Movimiento registrado
+ * y stock actualizado."). Helper local formatQuantity/formatDate
+ * REMOVIDOS (ahora ./quantity y el historial usa formatDateTime). */
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useHashRoute } from "../../hooks/useHashRoute";
 import { useQuery } from "../../hooks/useQuery";
-import Modal from "../../components/ui/Modal";
 import InsumoFormModal from "./InsumoFormModal";
+import InsumoHistorialModal from "./InsumoHistorialModal";
+import MovimientoFormModal from "./MovimientoFormModal";
+import { formatQuantityUnit } from "./quantity";
 import {
   Button,
   Checkbox,
@@ -48,53 +51,13 @@ import {
   SearchInput,
   Select,
   StatusBadge,
-  useToast,
 } from "../../components/ui";
-
-const EMPTY_MOVEMENT = { cantidad: "", motivo: "" };
-
-const MOVEMENT_PATHS = {
-  ENTRADA: "entradas",
-  SALIDA: "salidas",
-};
-
-const MOVEMENT_LABELS = {
-  INICIAL: "Existencias iniciales",
-  ENTRADA: "Entrada",
-  SALIDA: "Salida",
-  AJUSTE_ENTRADA: "Ajuste de entrada",
-  AJUSTE_SALIDA: "Ajuste de salida",
-  DEVOLUCION: "Devolución",
-};
 
 /* Override del Estado de módulo (convención §8-bis: nunca color solo). */
 const ESTADO_INSUMO = {
   bajo: { estado: "Stock bajo", tone: "warning", glyph: "triangle" },
   disponible: { estado: "Disponible", tone: "success", glyph: "check" },
 };
-
-/* Plural conservador de la unidad: SOLO si es una palabra, minúsculas,
- * sin tildes y de ≥4 letras (además de mayúsculas/espacios/dígitos, la
- * de 0–3 letras —kg, m, lt, m2— queda tal cual por el patrón). Termina
- * en vocal → +"s"; en l/r/n/d → +"es"; cualquier otra abreviatura no se
- * toca. Singular solo con Number(valor) === 1 (pluralizador del valor,
- * no de la unidad). Firma y export de formatQuantity INTACTOS. */
-const UNIDAD_PLURAL = /^[a-z]{4,}$/;
-
-function unidadPlural(unidad) {
-  const texto = String(unidad ?? "");
-  if (!UNIDAD_PLURAL.test(texto)) return texto;
-  const ultima = texto.charAt(texto.length - 1);
-  if ("aeiou".includes(ultima)) return `${texto}s`;
-  if ("lrnd".includes(ultima)) return `${texto}es`;
-  return texto;
-}
-
-function formatQuantityUnit(value, unit) {
-  const cantidad = Number(value);
-  const unidad = cantidad === 1 ? unit : unidadPlural(unit);
-  return `${formatQuantity(value)} ${unidad}`;
-}
 
 /* Estilo LOCAL de la pantalla (ajuste 1 de F2-10a; sin CSS de kit nuevo):
  * - .acciones-insumos envuelve por defecto (pila móvil <640px: las tarjetas
@@ -115,21 +78,8 @@ const ESTILOS_PANTALLA = `
 const NOTA_CONSUMOS =
   "Los consumos se registran desde las intervenciones de cada incidencia.";
 
-function errorMessage(error) {
-  return error instanceof Error ? error.message : "No se pudo completar la operación.";
-}
-
-function formatDate(value) {
-  return value ? new Date(value).toLocaleString() : "—";
-}
-
-function formatQuantity(value) {
-  return new Intl.NumberFormat("es-PY", { maximumFractionDigits: 3, useGrouping: false }).format(Number(value));
-}
-
 export default function MaintenancePage({ user }) {
   const isAdmin = user.rol === "ADMIN";
-  const notify = useToast();
   const { params } = useHashRoute();
 
   const [busqueda, setBusqueda] = useState("");
@@ -180,18 +130,11 @@ export default function MaintenancePage({ user }) {
 
   const items = data ?? [];
 
-  /* Estados compartidos SOLO del modal de MOVIMIENTO e HISTORIAL (F2-10c
-   * los migra): sin cambios respecto al legado. El modal de insumo
-   * (InsumoFormModal) gestiona SU error y busy por dentro del FormModal
-   * y usa `selectedItem`/`modal` de esta pantalla para abrirse. */
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  /* Apertura de los tres modales del kit (F2-10b/10c): cada modal
+   * gestiona SU carga, error y busy por dentro; selectedItem + modal son
+   * el único estado compartido con la pantalla. */
   const [modal, setModal] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [movementForm, setMovementForm] = useState(EMPTY_MOVEMENT);
-  const [movementType, setMovementType] = useState("ENTRADA");
-  const [history, setHistory] = useState([]);
-  const [historyType, setHistoryType] = useState("");
 
   function openCreate() {
     setSelectedItem(null);
@@ -203,66 +146,15 @@ export default function MaintenancePage({ user }) {
     setModal("item");
   }
 
-  function openMovement(item, type) {
+  /* El tipo por defecto (ENTRADA) lo define MovimientoFormModal. */
+  function openMovement(item) {
     setSelectedItem(item);
-    setMovementType(type);
-    setMovementForm(EMPTY_MOVEMENT);
-    setError("");
     setModal("movement");
-  }
-
-  async function saveMovement(event) {
-    event.preventDefault();
-    if (!selectedItem || !MOVEMENT_PATHS[movementType]) return;
-
-    setBusy(true);
-    setError("");
-
-    const body = {
-      cantidad: movementForm.cantidad,
-      motivo: movementForm.motivo.trim(),
-    };
-
-    try {
-      await api(
-        `${routes.maintenance}/insumos/${selectedItem.id_insumo}/${MOVEMENT_PATHS[movementType]}`,
-        { method: "POST", body },
-      );
-      setModal(null);
-      notify("Movimiento registrado y stock actualizado.");
-      await reload();
-    } catch (requestError) {
-      setError(errorMessage(requestError));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function loadHistory(item, type = historyType) {
-    setBusy(true);
-    setError("");
-    const paramsMovimientos = new URLSearchParams();
-    if (type) paramsMovimientos.set("tipo", type);
-
-    try {
-      const suffix = paramsMovimientos.toString() ? `?${paramsMovimientos.toString()}` : "";
-      const result = await api(
-        `${routes.maintenance}/insumos/${item.id_insumo}/movimientos${suffix}`,
-      );
-      setHistory(result || []);
-    } catch (requestError) {
-      setError(errorMessage(requestError));
-    } finally {
-      setBusy(false);
-    }
   }
 
   function openHistory(item) {
     setSelectedItem(item);
-    setHistoryType("");
-    setHistory([]);
     setModal("history");
-    loadHistory(item, "");
   }
 
   const hayFiltros = Boolean(busquedaAplicada.trim() || categoria || bajoStock);
@@ -337,7 +229,7 @@ export default function MaintenancePage({ user }) {
                   {
                     label: "Registrar movimiento",
                     ariaLabel: `Registrar movimiento del insumo ${row.nombre}`,
-                    onSelect: () => openMovement(row, "ENTRADA"),
+                    onSelect: () => openMovement(row),
                   },
                 ]
               : []),
@@ -418,55 +310,15 @@ export default function MaintenancePage({ user }) {
       )}
 
       {modal === "movement" && selectedItem && (
-        <Modal title={`Movimiento · ${selectedItem.nombre}`} busy={busy} onClose={() => setModal(null)}>
-          <form onSubmit={saveMovement}>
-            <div className="mg-form-body">
-              {error && <p className="mg-alert mg-alert-error" role="alert">{error}</p>}
-              <div className="mg-form-grid">
-                <label className="mg-full-field">Tipo de movimiento
-                  <select value={movementType} onChange={(event) => setMovementType(event.target.value)}>
-                    <option value="ENTRADA">Entrada</option>
-                    <option value="SALIDA">Salida</option>
-                  </select>
-                </label>
-                <label>Cantidad *<input required type="number" min="0.001" step="any" value={movementForm.cantidad} onChange={(event) => setMovementForm({ ...movementForm, cantidad: event.target.value })} /></label>
-                <label className="mg-full-field">Motivo *<textarea required minLength="3" maxLength="500" rows="3" value={movementForm.motivo} onChange={(event) => setMovementForm({ ...movementForm, motivo: event.target.value })} /></label>
-              </div>
-            </div>
-            <div className="mg-modal-actions">
-              <button className="mg-primary" disabled={busy}>{busy ? "Procesando..." : "Registrar movimiento"}</button>
-              <button className="mg-secondary" type="button" disabled={busy} onClick={() => setModal(null)}>Cancelar</button>
-            </div>
-          </form>
-        </Modal>
+        <MovimientoFormModal
+          insumo={selectedItem}
+          onClose={() => setModal(null)}
+          onGuardado={reload}
+        />
       )}
 
       {modal === "history" && selectedItem && (
-        <Modal title={`Movimientos · ${selectedItem.nombre}`} busy={busy} onClose={() => setModal(null)}>
-          <div className="mg-form-body">
-            {error && <p className="mg-alert mg-alert-error" role="alert">{error}</p>}
-            <label>Filtrar por tipo
-              <select value={historyType} onChange={(event) => {
-                const value = event.target.value;
-                setHistoryType(value);
-                loadHistory(selectedItem, value);
-              }}>
-                <option value="">Todos</option>
-                {Object.entries(MOVEMENT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </label>
-            {busy && <p>Cargando movimientos...</p>}
-            {!busy && history.length === 0 && <p>No hay movimientos para mostrar.</p>}
-            <ul>
-              {history.map((movement) => (
-                <li key={movement.id_movimiento}>
-                  {formatDate(movement.fecha)} · {MOVEMENT_LABELS[movement.tipo] || movement.tipo} · {formatQuantity(movement.cantidad)} · Stock: {formatQuantity(movement.stock_resultante)} · {movement.motivo} · {movement.responsable_nombre} {movement.responsable_apellido}
-                  {movement.id_intervencion ? ` · Intervención #${movement.id_intervencion}` : ""}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Modal>
+        <InsumoHistorialModal insumo={selectedItem} onClose={() => setModal(null)} />
       )}
     </section>
   );

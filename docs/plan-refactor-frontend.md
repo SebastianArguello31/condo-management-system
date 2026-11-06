@@ -366,7 +366,17 @@ final, según alcance).
   "Nuevo/Editar insumo" a FormModal (`InsumoFormModal`, único componente
   con dos modos; schemas `insumoCrear`/`insumoEditar` espejo EXACTO del
   backend + regla `decimal(places, min)` ADITIVA en rules.js); detalle en
-  "Sesión F2-10b" más abajo.
+  "Sesión F2-10b" más abajo. **F2-10c HECHA (pendiente de verificar),**
+  en la rama `feature/refactor-insumos-movimientos` (NACIDA de
+  `feature/refactor-insumos-crear`, con F2-10b ya commiteada `2f889c0`):
+  "Registrar movimiento" a FormModal (`MovimientoFormModal` con schema
+  `movimientoCrear`, `decimal` + exclusividad del mínimo, existencia
+  actual de la fila visible y los 400 de stock negativo/insumo inactivo
+  DENTRO del modal con su texto exacto) e "Historial" a Modal de lectura
+  (`InsumoHistorialModal`: useQuery + Timeline, filtro de tipo en
+  servidor `?tipo=`, fechas con formatDateTime, vacíos explícitos, sin
+  busy global); helpers de cantidades a `quantity.js` (InterventionMaterials
+  intacto con su copia); detalle en "Sesión F2-10c" más abajo.
 - **F2-11** `style/chore:` pasada responsive + a11y, limpieza de CSS legado
   (lista en §8) y `docs/convenciones-frontend.md`.
 
@@ -2200,6 +2210,228 @@ alcance pantalla.)
 esperado: InsumoFormModal.jsx (N) + MaintenancePage.jsx +
 validations/rules.js + validations/schemas.js + docs. Commit sugerido:
 `refactor(maintenance): Nuevo/Editar insumo a FormModal (F2-10b)`.
+
+## Sesión F2-10c: "Registrar movimiento" e "Historial" al kit (2026-11-05)
+
+Rama `feature/refactor-insumos-movimientos`, NACIDA de
+`feature/refactor-insumos-crear` con F2-10b ya commiteada (`2f889c0`;
+verificado con `git log --oneline`, árbol limpio). Alcance RESPETADO:
+NUEVOS `features/maintenance/MovimientoFormModal.jsx`,
+`InsumoHistorialModal.jsx` y `quantity.js` + `MaintenancePage.jsx` +
+`validations/schemas.js` (+ parámetro ADITIVO en `validations/rules.js`).
+NO tocados: InterventionMaterials (propia copia de formatQuantity),
+InsumoFormModal, components/ui, ui.css, index.css, users-ui.css,
+api.js, routes.js, routing.js, App.jsx, backend, dashboard.
+`validations/index.js` SIN cambio (reexporta `*`).
+
+**PASO 0 (verificado en solo lectura):**
+
+- `backend/.../maintenance/schemas.py` — `MovimientoSchema`: cantidad
+  Decimal required as_string places=3 con Range(min=0, min_inclusive=
+  False) → DEBE ser mayor que 0; motivo Str required Length(3, 500). Es
+  el body de /entradas y /salidas (solo ADMIN) y la base de
+  /existencias-iniciales (INICIAL), /ajustes (AjusteSchema añade
+  `direccion`, SIN UI) y de Consumo/Devolucion (intervenciones;
+  InterventionMaterials). `GET /insumos/:id/movimientos` (ADMIN/
+  TECNICO) acepta desde/hasta/tipo/id_intervencion — la UI solo usa
+  `tipo` (igual que el legado).
+- **Los 400 EXACTOS** en `services/inventory.py` (`register_movement`):
+  insumo inactivo → "No se pueden registrar movimientos para un insumo
+  inactivo" (línea 51); salida que dejaría stock <0 → "El movimiento
+  dejaría el stock en negativo" (línea 58); (INICIAL ya registrado →
+  "Las existencias iniciales ya fueron registradas", sin UI).
+- Modal legado de movimiento: título "Movimiento · <nombre>", select
+  SOLO ENTRADA/SALIDA, cantidad `required min="0.001" step="any"`
+  (el step provisional de F2-10a), motivo `required 3–500`, payload
+  `{ cantidad: STRING del input, motivo: trim }`; éxito: cerrar + Toast
+  "Movimiento registrado y stock actualizado." + reload. Modal legado de
+  historial: título "Movimientos · <nombre>", "Filtrar por tipo" con
+  TODAS las opciones de MOVEMENT_LABELS (6: INICIAL, ENTRADA, SALIDA,
+  AJUSTE_ENTRADA, AJUSTE_SALIDA, DEVOLUCION; puede haber INICIAL/AJUSTE
+  de datos previos), GET `?tipo=`, lista cruda `<li>` con
+  toLocaleString · tipo (fallback al código) · formatQuantity(cantidad)
+  · Stock: · motivo · responsable · "Intervención #N" opcional; los dos
+  modales compartían el busy/error GLOBALES de la pantalla (el busy
+  bloqueaba TODOS los botones con disabled).
+- Kit (kit-ui-referencia.md): Modal (title→UN `<h2>`, footer node,
+  busy bloquea cierre, abre al MONTAR → render condicional); FormModal
+  (open/busy/error→Alert danger con foco/scroll/fieldErrors/onSubmit
+  noValidate YA preventDefault); Timeline (entries {id?, time, title,
+   meta?, detail?, tone?}, hora en mono, `<ol>`); Select: props nativas
+   + children `<option>`; Skeleton (lines) / ErrorState (onRetry→"Reintentar",
+   role alert). Patrón de lectura: `IncidentsDetailModal` (F2-5c) —
+  Skeleton/ErrorState SOLO sin datos (los reload conservan contenido),
+  footer solo "Cerrar", Timeline con formatDateTime.
+- `formatQuantity` DUPLICADA (privada en MaintenancePage.jsx:126 y en
+  InterventionMaterials.jsx:23, idénticas) y formatQuantityUnit +
+  unidadPlural locales en la página; moverlas a `quantity.js` es SEGURO
+  (archivo nuevo, misma lógica exacta, un import por consumidor;
+  InterventionMaterials queda INTACTO con su copia).
+
+**Lo hecho (decisiones 1–8 del dueño, sin cambios de kit):**
+
+1. **NUEVO `MovimientoFormModal.jsx`** — FormModal "Registrar
+   movimiento · <nombre del insumo>", showRequiredNote, submitLabel
+   "Registrar movimiento", botón SIEMPRE activo salvo busy (spinner),
+   cierre bloqueado en busy. SOLO LECTURA arriba del stack: "Existencia
+   actual: N unidades" con formatQuantityUnit de la FILA (sin GET
+   extra), para que la salida no se pida si no hay stock; el caso
+   NO se calcula en cliente: el 400 exacto (de arriba) llega a la
+   Alert DENTRO del modal con foco/scroll.
+2. **Campos (paridad del legado):** Tipo (Select con constante de
+   MÓDULO `MOVIMIENTO_TIPOS` SOLO Entrada/Salida; ENTRADA por defecto
+   como el legado; los tipos INICIAL/AJUSTE_*/DEVOLUCION siguen FUERA
+   del UI), Cantidad (type="number" inputMode="decimal" min="0"
+   step="any" — flechas de 1 en 1, decimales aceptados; el step="any"
+   provisional de F2-10a queda DEFINITIVO al retirarse el modal
+   legado; la precisión la validan el espejo y el backend) y Motivo
+   (Textarea rows 3, maxLength 500; el mínimo 3 lo valida el espejo).
+   Todo Field con name y autoComplete="off" en `.ui-form-stack`.
+3. **Validación:** schema NUEVO `movimientoCrear` en
+   `validations/schemas.js` — cantidad [requerido(), decimal(3, 0,
+   true)], motivo [requerido(), longitud(3, 500)] — espejo EXACTO de
+   MovimientoSchema. **Regla ADITIVA en `validations/rules.js`:**
+   `decimal(places, min = 0, minExclusivo = false)` (Range
+   min_inclusive=False): el 0 exacto →    "Debe ser mayor que N." y el
+   negativo → "No puede ser menor que N." ("Máximo N decimales."
+   sigue); los llamadores sin exclusividad NO cambian. SIN campo
+   Dirección (no existe en el UI vigente) y sin regla nueva extra.
+4. **Endpoint por tipo + payload (decisión 4):** `MOVIMIENTO_RUTAS`
+   hereda el mapeo del legado: ENTRADA → /entradas, SALIDA → /salidas;
+   el useMutation lee form.tipo al ejecutar (cambiar el select cambia
+   el destino del próximo POST). Payload IDÉNTICO al del legado:
+   `{ cantidad: el valor del INPUT (string numérico — el Decimal del
+   backend lo carga igual que un número), motivo: trim }`. Catch:
+   err.message → Alert DENTRO (los 400 de stock negativo/insumo
+   inactivo llegan EXACTOS) + err.errors (arrays → string) por campo →
+   Field directo; foco al PRIMER `.ui-control-invalid` por contador
+   `intento`; el error por campo se limpia al editar ESE campo.
+5. **NUEVO `InsumoHistorialModal.jsx`** — Modal de LECTURA "Movimientos
+   · <nombre del insumo>" (UN solo `<h2>`: el título del Modal),
+   footer con SOLO "Cerrar" (Button quiet). Datos con useQuery + signal
+   (GET /insumos/:id/movimientos con SOLO `?tipo=` — param vacío
+   omitido, igual que el legado): loading sin datos → Skeleton;
+   error sin datos → ErrorState "No se pudo cargar el historial" +
+   Reintentar LOCAL (reload() conserva contenido previo, sin titilar);
+   SIN el busy global que bloqueaba botones en el legado. Filtro por
+   tipo: Select con TODAS las opciones del legado (MOVEMENT_LABELS
+   movida aquí, ÚNICA consumidora) + "Todos"; cambiar el filtro
+   reconsulta al SERVIDOR (el param va en deps; al cambiar de filtro la
+   data del tipo anterior se descarta y, mientras llega la nueva, se ve
+   el Skeleton porque todavía no hay datos del nuevo tipo).
+6. **Timeline del kit por movimiento** (patrón IncidentsDetailModal):
+   time = formatDateTime(fecha) (CON hora; NUNCA solo formatDate ni
+   ISO crudo — el legado mostraba toLocaleString con hora), title =
+   etiqueta de MOVEMENT_LABELS con FALLBACK al código sin mapear,
+   meta = "cantidad (formatQuantityUnit) · Stock resultante:
+   formatQuantity" y detail = motivo · responsable (nombre apellido)
+   · "Intervención #N" cuando el movimiento viene de una intervención;
+   marcador neutro (sin tone: el tipo no mapea a estado de kit).
+7. **Vacío EXPLÍCITO:** sin filtro → "Sin movimientos registrados.";
+   con filtro → "Sin movimientos de este tipo." (el legado solo decía
+   "No hay movimientos para mostrar.").
+8. **Helper NUEVO `features/maintenance/quantity.js`:** formatQuantity,
+   unidadPlural y formatQuantityUnit movidos aquí SIN cambiar
+   comportamiento (comentario de origen); MaintenancePage y los dos
+   modales importan de ahí (`./quantity`); InterventionMaterials
+   conserva SU copia (no la toca). MaintenancePage queda SIN
+   formatQuantity/formatDate locales NI toLocaleString crudo.
+9. **MaintenancePage sin legados:** se retiraron EMPTY_MOVEMENT,
+   MOVEMENT_PATHS, MOVEMENT_LABELS, saveMovement, loadHistory,
+   openMovement(type)/openHistory con precarga, los estados globales
+   busy/error (ya SIN consumidores: InsumoFormModal y los dos modales
+   nuevos gestionan el suyo por dentro) y los 2 `<Modal>` legados con
+   `mg-form-*`/mg-alert/mg-modal-actions; aperturas nuevas
+   openMovement(row)/openHistory(row) SOLO setean selectedItem+modal;
+   montaje `<MovimientoFormModal insumo={selectedItem} onClose=...
+   onGuardado={reload}/>` — éxito: el modal cierra + Toast "Movimiento
+   registrado." (decisión 7 del dueño; el legado decía "Movimiento
+   registrado y stock actualizado.") + reload() sin titilar — y
+   `<InsumoHistorialModal insumo={selectedItem} onClose={...}/>`. La
+   página ya NO importa Modal ni useToast. Permisos INTACTOS:
+   Historial ADMIN/TECNICO y "Registrar movimiento" SOLO ADMIN (los
+   triggers ya filtrados desde F2-10a; sin cambio).
+
+**Paridad (≤10 líneas):** conserva los endpoints (POST /entradas y
+/salidas ADMIN; GET /movimientos ADMIN/TECNICO), la FORMA del payload
+(`{ cantidad del input, motivo trim }`, SIN variaciones), los permisos
+por rol, el filtro de tipo EN SERVIDOR `?tipo=` del historial con TODAS
+sus opciones, las etiquetas de los 6 tipos y el formato de cantidades
+(formatQuantity/formatQuantityUnit EXACTOS, plural del seed incluido).
+Cambia: FormModal con validación en CLIENTE (`movimientoCrear` — el
+legado solo validaba con `required` nativo) y errores por campo/Alert
+DENTRO del modal; "Existencia actual" de la fila visible al registrar
+(decisión 1); historial en Timeline del kit (formatDateTime y vacíos
+explícitos, antes `<li>` crudo con toLocaleString); SIN busy global (ya
+no se bloquean más botones de la pantalla); éxito con Toast "Movimiento
+registrado." (texto más corto por decisión del dueño) + reload() sin
+titilar; foco al primer inválido en el form y Skeleton/ErrorState
+LOCALES en el historial (Reintentar sin cerrar el modal).
+
+**Pulido aplazado (§8-bis):** NINGUNO para cerrar el paso. Reporte F2-11
+(sin borrar nada): tras F2-10c, `mg-full-field` y `mg-modal-actions`
+quedan SIN consumidores JSX (solo su definición en users-ui.css, sin
+tocar todavía); el resto de `mg-` (mg-form-body/grid, mg-alert [
+-error], mg-primary, mg-secondary) sigue usado por CrudPage (modo
+legado que se retira en F2-11) y por InterventionMaterials (Dev 2) —
+la lista completa de CSS muerto está en §8.
+
+**Pendiente:** verificación del dueño con el checklist de STATUS.md
+("Pruebas pendientes" SOLO lo no ejecutado). `git diff --stat`
+esperado: MovimientoFormModal.jsx (N) + InsumoHistorialModal.jsx (N) +
+quantity.js (N) + MaintenancePage.jsx + validations/rules.js +
+validations/schemas.js + docs. Commit sugerido:
+`refactor(maintenance): Registrar movimiento e Historial al kit
+(F2-10c)`.
+
+**Ajuste ronda 1 (de 2) de F2-10c (2026-11-06, SIN commit, mismo working
+tree): indicador de obligatorio, hint de costo y filtro de tipo del
+historial por tipos presentes.** PASO 0 re-verificado de lectura: tipos
+generados HOY: existencias-iniciales → INICIAL (routes.py:68), entradas →
+ENTRADA (:79), salidas → SALIDA (:90), ajustes → AJUSTE + `direccion`
+(AjusteSchema OneOf ENTRADA/SALIDA) → **AJUSTE_ENTRADA/AJUSTE_SALIDA**
+(inventory.py:40-42), consumo desde intervención → **SALIDA**
+(services/interventions.py:63) y devolución → **DEVOLUCION**
+(interventions.py:104) — DEVOLUCION y AJUSTE_* SÍ siguen generándose
+(endpoints activos, no solo catálogo); CHECK de DB (migración 009) con
+los mismos 6. **Seed:** `database/seed.sql` y `seed_demo.sql` NO
+siembran insumos ni movimientos (cero matches). `git grep -n "_\*/" --
+frontend/src` → cero (la corrección del dueño quedó sola, sin otras).
+**Payload editar con Costo vacío (InsumoFormModal):** `armarPayload`
+envía `costo_unitario: 0` (`form.costo_unitario === "" ? 0 : Number`),
+NUNCA omite el campo (legado igual); SIN cambio (reporte). Cambios:
+
+1. **MovimientoFormModal:** Field "Tipo de movimiento" con `required`
+   (asterisco + "(obligatorio)" oculto, igual que Cantidad y Motivo) y
+   `<Select required>` aunque el valor no puede vaciarse (ENTRADA por
+   defecto). Sin cambios de payload/schema/endpoint.
+2. **InsumoFormModal:** Field "Costo unitario" sigue OPCIONAL (sin
+   asterisco) y con hint visible vía `help` del Field — "Opcional. Si
+   lo dejas vacío, se registra 0." — (Field NO tiene prop `hint`; su
+   prop visible de ayuda es `help`, kit SIN tocar). Sin cambios de
+   payload ni de schema.
+3. **InsumoHistorialModal:** el Select de filtro ofrece "Todos" + SOLO
+   los tipos PRESENTES en los movimientos de ESE insumo, derivados de
+   las cargas (la primera va sin filtrar; tiposRef acumulado que SOLO
+   crece + estado `tipos`, misma técnica del catálogo de categorías
+   F2-10a) — no se reduce al elegir un tipo -, etiquetas con
+   MOVEMENT_LABELS (fallback al código; orden estable de las etiquetas
+   mapeadas primero, tipos sin mapear al final). Si el insumo no tiene
+   movimientos, NO se muestra el filtro (solo el vacío explícito "Sin
+   movimientos registrados."). La consulta sigue en SERVIDOR con
+   ?tipo=; sin endpoint nuevo SIN tocar backend; etiquetas históricas
+   NO se eliminaron de MOVEMENT_LABELS.
+
+**Verificación de asteriscos campo→schema:** InsumoFormModal (insumoCrear) —
+Nombre "*" = requerido ✓ · Categoría "*" = requerido ✓ · Unidad de medida
+"*" = requerido ✓ · Stock mínimo "*" = requerido ✓ · Costo unitario SIN
+"*" = opcional (decimal(2)) ✓ · Descripción SIN "*" = opcional ✓; en
+insumoEditar TODOS son opcionales (schema parcial) pero los "*" reflejan
+el CREAR (coherente: son el mínimo para poder crear). MovimientoFormModal
+(movimientoCrear) — Tipo de movimiento "*" (nuevo) · Cantidad "*" =
+requerido ✓ · Motivo "*" = requerido ✓ (tipo no está en el schema
+porque determina el endpoint; requerido por decisión de UI). Historial —
+"Filtrar por tipo" SIN "*" (no es requerido) ✓.
 
 ## 8. Pendientes y hallazgos abiertos
 **Producto de Dev 1:**

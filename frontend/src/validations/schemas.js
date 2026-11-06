@@ -198,3 +198,15 @@ export const insumoEditar = {
   stock_minimo: [decimal(3)],
   costo_unitario: [decimal(2)],
 };
+
+/* Origen: backend/app/modules/maintenance/schemas.py — MovimientoSchema
+ * (es el body de POST /insumos/:id/entradas y /insumos/:id/salidas, y
+ * base de /existencias-iniciales, /ajustes (AjusteSchema añade
+ * `direccion`, que la UI NO expone) y de ConsumoSchema/DevolucionSchema
+ * de intervenciones): cantidad Decimal required places=3 con Range(
+ * min=0, min_inclusive=False) → MAYOR que 0; motivo Str required
+ * Length(3, 500). */
+export const movimientoCrear = {
+  cantidad: [requerido(), decimal(3, 0, true)],
+  motivo: [requerido(), longitud(3, 500)],
+};

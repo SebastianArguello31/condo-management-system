@@ -296,3 +296,21 @@ solo si su clave no coincide con el id.
   error de la acción DENTRO, éxito Toast + reload sin titilar, dedupe y
   cierre bloqueado en busy; payloads/endpoints idénticos al legado;
   modales de movimiento e historial siguen legados (F2-10c).
+- **Insumos (`MaintenancePage`)** — F2-10c: "Registrar movimiento" al
+  kit en `MovimientoFormModal` (FormModal con schema `movimientoCrear`
+  — cantidad MAYOR que 0, máx. 3 decimales; motivo 3–500 —, tipo Select
+  SOLO Entrada/Salida con `required`, "Existencia actual" de la fila en
+  solo lectura y los 400 del backend (stock negativo / insumo
+  inactivo) DENTRO del modal con su texto exacto) e "Historial" en
+  `InsumoHistorialModal` (Modal de LECTURA con useQuery + signal +
+  Timeline, Skeleton/ErrorState locales, filtro de tipo en SERVIDOR
+  `?tipo=` con SOLO los tipos presentes en los movimientos del insumo
+  (ref acumulado, como las categorías del listado; sin movimientos no
+  se muestra el filtro), fechas con formatDateTime y vacíos
+  explícitos); Costo unitario del insumo OPCIONAL con hint "Opcional.
+  Si lo dejas vacío, se registra 0."; Helpers de cantidades compartidos
+  en `features/maintenance/quantity.js`
+  (`formatQuantity`/`formatQuantityUnit`, misma lógica exacta); SIN busy
+  global de pantalla (cada modal gestiona el suyo) y sin `.mg-*` en la
+  página; `quantity.js` sirve a página y modales, InterventionMaterials
+  conserva su copia privada (intacto).

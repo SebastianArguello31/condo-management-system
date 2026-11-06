@@ -224,7 +224,11 @@ export default function InsumoFormModal({ insumo, categorias, onClose, onGuardad
             disabled={busy}
           />
         </Field>
-        <Field label="Costo unitario" error={camposErr?.costo_unitario}>
+        <Field
+          label="Costo unitario"
+          error={camposErr?.costo_unitario}
+          help="Opcional. Si lo dejas vacío, se registra 0."
+        >
           <Input
             type="number"
             name="costo_unitario"
