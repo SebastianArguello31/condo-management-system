@@ -56,6 +56,25 @@ export const entero = (min = 1) => (value) => {
   return null;
 };
 
+/* Decimal con `places` máximo de decimales y `min` (Range del backend).
+ * Origen: field.Decimal(validate.Range(min=…)) de marshmallow; primera
+ * regla de pase para insumos: stock_minimo (places=3) y costo_unitario
+ * (places=2) de backend/app/modules/maintenance/schemas.py. Vacío pasa
+ * (el `requerido()` decide); se acepta notación científica (el backend
+ * también: Decimal("1e3") == 1000). Mensajes alineados con el helper
+ * `monto` de schemas.js ("Ingresa un número válido."/"No puede ser
+ * menor que N."/"Máximo N decimales."). */
+export const decimal = (places, min = 0) => (value) => {
+  const texto = String(value ?? "").trim();
+  if (texto === "") return null;
+  const numero = Number(texto);
+  if (!Number.isFinite(numero)) return "Ingresa un número válido.";
+  if (numero < min) return `No puede ser menor que ${min}.`;
+  if (texto.includes(".") && texto.split(".")[1] && texto.split(".")[1].length > places)
+    return `Máximo ${places} decimales.`;
+  return null;
+};
+
 /* fields.Date → AAAA-MM-DD. */
 export const fecha = () => (value) => {
   if (typeof value !== "string" || value === "") return null;

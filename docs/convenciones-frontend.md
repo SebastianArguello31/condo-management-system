@@ -284,3 +284,15 @@ solo si su clave no coincide con el id.
   "Registrar movimiento" (ADMIN, unifica Entrada+Salida); los 3 modales
   legados intactos (F2-10b/10c); `formatQuantity`/InterventionMaterials
   (Dev 2) intactos).
+- **Insumos (`MaintenancePage`)** — F2-10b: "Nuevo/Editar insumo" a
+  FormModal en un único `InsumoFormModal` con dos modos (patrón
+  `EspacioFormModal`); Categoría sigue texto libre con `<datalist>` del
+  catálogo ya cargado (sin endpoint nuevo ni CSS nuevo); schemas
+  `insumoCrear`/`insumoEditar` espejo exacto de `InsumoCreateSchema`/
+  `InsumoUpdateSchema` (+ regla `decimal(places, min)` aditiva en
+  `validations/rules.js`); números con step="any" y valores iniciales
+  normalizados ("1500.00" → 1500); `activo` no expuesto ni enviado;
+  validación en cliente + `err.errors` → Field, foco al primer inválido,
+  error de la acción DENTRO, éxito Toast + reload sin titilar, dedupe y
+  cierre bloqueado en busy; payloads/endpoints idénticos al legado;
+  modales de movimiento e historial siguen legados (F2-10c).

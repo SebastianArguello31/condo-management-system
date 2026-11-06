@@ -360,7 +360,13 @@ final, según alcance).
   sobre `feature/refactor-insumos-listado`, con `3a3d0de` de Dev 2 ya
   integrado): shell y listado al kit; modales y lógica quedan LEGADOS para
   F2-10b (insumo) y F2-10c (movimiento/historial); detalle en "Sesión
-  F2-10a" más abajo.
+  F2-10a" más abajo. **F2-10b HECHA (pendiente de verificar),** en la rama
+  `feature/refactor-insumos-crear` (NACIDA de
+  `feature/refactor-insumos-listado`, con F2-10a ya commiteada `91387e3`):
+  "Nuevo/Editar insumo" a FormModal (`InsumoFormModal`, único componente
+  con dos modos; schemas `insumoCrear`/`insumoEditar` espejo EXACTO del
+  backend + regla `decimal(places, min)` ADITIVA en rules.js); detalle en
+  "Sesión F2-10b" más abajo.
 - **F2-11** `style/chore:` pasada responsive + a11y, limpieza de CSS legado
   (lista en §8) y `docs/convenciones-frontend.md`.
 
@@ -2044,6 +2050,157 @@ descripción siguen midiendo ~2 líneas (> `--row-h`) aunque Acciones ya
 no crece. Si el dueño exige 44px estrictos para TODAS las filas, hay que
 truncar u omitir la descripción — pulido §8-bis si lo pide.
 
+## Sesión F2-10b: "Nuevo/Editar insumo" a FormModal (2026-11-05)
+
+Rama `feature/refactor-insumos-crear`, NACIDA de
+`feature/refactor-insumos-listado` con F2-10a ya commiteada (`91387e3`;
+verificado con `git log --oneline` sobre la rama, árbol limpio).
+Alcance RESPETADO: NUEVO `features/maintenance/InsumoFormModal.jsx` +
+`MaintenancePage.jsx` (solo para montar el modal nuevo y quitar el
+estado/markup/handlers del modal legado de insumo) +
+`validations/schemas.js` (+ regla ADITIVA en `validations/rules.js`).
+NO tocados: InterventionMaterials, kit/ui.css, index.css, users-ui.css,
+api.js, routes.js, routing.js, App.jsx, backend, dashboard, y LOS MODALES
+de MOVIMIENTO e HISTORIAL (legados intactos en el mismo archivo,
+incluido el step="any" de F2-10a en la cantidad del movimiento).
+`validations/index.js` SIN cambio (reexporta schemas con `*`, los
+schemas nuevos ya salen; exacto al caso espacioCrear de F2-7a).
+
+**PASO 0 (verificado en solo lectura):**
+
+- `backend/app/modules/maintenance/schemas.py` — `InsumoCreateSchema`:
+  nombre required 2–150, descripcion opcional ≤2000, categoria required
+  2–80, unidad_medida required 1–40, stock_minimo required Decimal
+  places=3 Range(≥0), costo_unitario opcional Decimal places=2 Range(≥0)
+  con load_default="0". `InsumoUpdateSchema`: TODOS opcionales (mismos
+  límites) y **`activo` Boolean SÍ aceptado en PATCH** (el legado nunca
+  lo enviaba; decisión 5 del dueño: la UI no lo expone).
+- Modal legado de insumo (pre-F2-10b): 6 campos; **Categoría era TEXTO
+  LIBRE** (input maxLength 80; no hay endpoint de catálogo — el select
+  de categoría es solo FILTRO del listado); POST y PATCH envían TODOS
+  los campos: `{...itemForm, nombre: trim, descripcion: trim || null,
+  categoria: trim, unidad_medida: trim}` (spread conserva
+  stock_minimo/costo_unitario como los STRINGS del input, prefilled
+  "0"); al editar precargaba `String(item.x ?? 0)` → el modal mostraba
+  "1.000"/"1500.00" porque el backend trae Decimals como strings
+  (as_string=True).
+- `validations/` (pre-F2-10b): `rules.js` tiene requerido, longitud,
+  maximo, correo, contrasena, entero, fecha, hora, listaDeEnteros —
+  FALTABA una primitiva de decimal con places (lo disponible era el
+  helper module-local `monto` de schemas.js, SOLO para políticas).
+  `validate()` trima (como el pre_load del backend; excepto password)
+  y toma el PRIMER mensaje por campo; `index.js` `export * from
+  "./schemas"` → schemas nuevos NO necesitan tocarlo.
+- Patrón vigente: `EspacioFormModal` (EspaciosPage.jsx:72) es el
+  REFERENTE directo de UN modal con dos modos (crear/editar);
+  `ResidentCreateModal` (F2-6b) e `IncidentsCreateModal` (F2-5b)
+  comparten la estructura: FormModal + useMutation (dedupe) + Toast
+  propio + err.errors (arrays → string) → error DIRECTO al Field
+  (lección F2-5b: los Field son JSX inline fuera del
+  FormErrorsContext) + foco al primer `.ui-control-invalid` por
+  contador `intento`. Los tres manejan err.errors y el foco igual.
+
+**Lo hecho (decisiones 1–7 del dueño, aplicadas sin cambios de kit):**
+
+1. **NUEVO `InsumoFormModal.jsx`** — UN único componente con dos modos
+   (`insumo = null → crear; insumo → editar`), patrón EspacioFormModal
+   (F2-6b/F2-7b/F2-5b). FormModal "Nuevo insumo"/"Editar insumo"
+   (description "Insumo: <nombre>" solo al editar), showRequiredNote,
+   submitLabel "Guardar" (SIEMPRE activo; solo el busy lo deshabilita
+   con spinner), cierre bloqueado mientras envía, error de la acción
+   DENTRO del modal (Alert danger del FormModal con foco/scroll).
+   Campos en `.ui-form-stack` del cuerpo, TODOS vía Field con name y
+   autoComplete="off": Nombre (maxLength 150), Categoría (maxLength
+   80), Unidad de medida (maxLength 40), Stock mínimo, Costo unitario
+   (opcional) y Descripción (Textarea rows 3, maxLength 2000 + ayuda
+   "Opcional, hasta 2000 caracteres.").
+2. **Categoría sigue TEXTO LIBRE** (paridad del legado; "no cambiar a
+   select ni inventar endpoints"): mismo input, con `<datalist>` que
+   recibe el catálogo de categorías YA cargado por el listado (ref
+   acumulado de F2-10a, pasado por prop `categorias`) y solo renderiza
+   opciones si `categorias.length > 0`; se usa la prop `list` que el
+   Input del kit ya reenvía tal cual (spread de props: sin tocar el
+   kit). Con catálogo cargado, Field help "Texto libre; puedes elegir
+   una categoría existente del catálogo.".
+3. **Números:** inputs type="number" con inputMode="decimal", min="0"
+   y step="any" (decisión 3 del dueño: las flechas suben de 1 en 1 y
+   se aceptan decimales; la precisión de decimales la valida el
+   backend con su 400 — el espejo en cliente también la checa). Los
+   valores iniciales al editar se NORMALIZAN para mostrar sin ceros
+   sobrantes con función local `valorInicialNumero` ("1.000" → "1",
+   "1500.00" → "1500", "0.00" → "0"; sin NaN — y defaults "0" del
+   legado al CREAR para paridad exacta). El payload envía **stock_minimo
+   / costo_unitario como NÚMERO** (Number(...); costo vacío → 0, el
+   mismo load_default del backend — el legado enviaba el string del
+   input y "" caería como 400 "Not a valid number"; decisión
+   confirmada: "el payload sigue enviando número válido"); los demás
+   campos en paridad EXACTA (trim, descripcion vacía → null, y SIEMPRE
+   los 6 campos en POST y PATCH como el legado).
+4. **Schemas NUEVOS en `validations/schemas.js` con espejo EXACTO del
+   backend:** `insumoCrear` — nombre [requerido, longitud(2,150)],
+   descripcion [maximo(2000)], categoria [requerido,
+   longitud(2,80)], unidad_medida [requerido, longitud(1,40)],
+   stock_minimo [requerido, decimal(3)], costo_unitario [decimal(2)]
+   (opcional); `insumoEditar` — MISMO set SIN `requerido()`
+    (InsumoUpdateSchema todo opcional; sin `activo` porque la UI no lo
+    toca). **Regla ADITIVA y retrocompatible en
+   `validations/rules.js`: `decimal(places, min = 0)`** (faltaba la
+   primitiva; origen citado en el archivo) — vacío pasa (el `requerido`
+   decide), no-finite ("abc") → "Ingresa un número válido.", "< min" →
+   "No puede ser menor que N.", > places decimales → "Máximo N
+   decimales." (mensajes heredados del patrón aprobado del helper
+   `monto` de F2-7b, que NO se toca). `validations/index.js` SIN
+   cambio (reexporta `*`).
+5. **`activo` NO se expone** (paridad; decisión 5): ni en el form ni
+   en el payload de POST ni de PATCH (el legado tampoco lo enviaba).
+6. **MaintenancePage:** "Nuevo insumo" y "Editar" montan
+   `<InsumoFormModal insumo={selectedItem} categorias={categorias}
+   onClose={() => setModal(null)} onGuardado={reload} />`. Se quitaron
+   EMPTY_ITEM, itemForm, saveItem y el `<Modal>` legado con `mg-form-*`;
+   el modal nuevo emite los Toast "Insumo creado."/"Insumo
+   actualizado." (paridad de textos con F2-10a) al cerrar y luego llama
+   `onGuardado()` = `reload()` del listado (sin titilar). El estado
+   compartido busy/error DEL PADRE queda SOLO para movimiento/
+   historial (el FormModal gestiona el suyo). Permiso conservado:
+   crear/editar SOLO ADMIN (los triggers "Nuevo insumo" de
+   PageHeader/EmptyState y la acción "Editar" ya se filtran por
+   isAdmin desde F2-10a; sin cambio).
+7. **Payload y endpoints IDÉNTICOS al legado (decisión 7):** POST
+   `/maintenance/insumos` y PATCH `/maintenance/insumos/:id` con los
+   MISMOS 6 campos; la única variación aceptada por el dueño es el
+   TIPO de los 2 numéricos (número, aceptado por el Decimal del
+   backend). Mutación con useMutation — doble clic = UN solo POST o
+   PATCH (dedupe). Catch: `setAccionError(err.message)` a la Alert del
+   FormModal (con foco/scroll) + `err.errors` (arrays → primer
+   mensaje por campo) a `camposErr` → Field directo + foco al primer
+   `.ui-control-invalid` via contador `intento`. El error por campo
+   se limpia al editar ESE campo; sin window.confirm en ningún flujo.
+   Español neutro (tuteo) en todo el copy.
+
+**Paridad (≤10 líneas):** conserva los endpoints (POST/PATCH
+`/maintenance/insumos[/:id]`), la FORMA del payload (6 campos, trim,
+descripcion → null), los permisos (crear/editar SOLO ADMIN), la
+categoría como texto libre (solo suma datalist con el catálogo ya
+cargado, sin endpoint nuevo) y los modales de MOVIMIENTO e HISTORIAL
+100% intactos. Cambia: el modal va en FormModal del kit con validación
+en CLIENTE en español (schemas espejo), errores por campo/Alert
+DENTRO del modal (el legado no validaba nada en cliente y el error
+usaba mg-alert), éxito SIEMPRE por Toast + reload() sin titilar,
+flechas de step="any" (de 1 en 1) en stock y costo, y valores
+iniciales normalizados ("1500.00" → 1500).
+
+**Pulido aplazado (§8-bis):** NINGUNO para cerrar el paso. (El borde
+de validación conserva: descripción solo con maxLength + ayuda, sin
+contador en vivo — mismo tratamiento que Observaciones de reservas en
+F2-8b, cuyo contador está en §8-bis; si el dueño lo pide para ambos,
+alcance pantalla.)
+
+**Pendiente:** verificación del dueño con el checklist de STATUS.md
+("Pruebas pendientes" SOLO lo no ejecutado). `git diff --stat`
+esperado: InsumoFormModal.jsx (N) + MaintenancePage.jsx +
+validations/rules.js + validations/schemas.js + docs. Commit sugerido:
+`refactor(maintenance): Nuevo/Editar insumo a FormModal (F2-10b)`.
+
 ## 8. Pendientes y hallazgos abiertos
 **Producto de Dev 1:**
 - [x] Verificación final de CP6b: guía `#/ui` — completada por el dueño y
@@ -2288,6 +2445,10 @@ agenda cuando el dueño lo ordene.
 - [MaintenancePage] — la búsqueda NO tiene debounce (el kit/hooks no lo
   tienen y no se inventaron): "Buscar insumo" aplica con Enter; si el
   dueño lo pide, debounce de FilterBar como kit — alcance: kit.
+- [MaintenancePage/F2-10b] — contador EN VIVO de caracteres para la
+  Descripción del insumo (hoy maxLength 2000 + ayuda estática, igual
+  que Observaciones en F2-8b; si el dueño lo pide, para ambos) —
+  alcance: pantalla.
 - [MaintenancePage] — busca por nombre/descripción EXACTA del legado
   (`buscar` del backend, sin precisar si cubre sintilde/caso): probar
   "tubería"/"TUBERIA" en la verificación y reportar si el backend es

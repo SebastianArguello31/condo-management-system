@@ -1,29 +1,34 @@
-/* Insumos — F2-10a (shell y listado al kit). La pantalla mantiene el
- * contrato `({ user })` de la ruta #/insumos (roles ADMIN/TECNICO, sin
- * cambios en routing). Paridad conservada: GET /maintenance/insumos con
- * filtros de SERVIDOR buscar/categoria/bajo_stock (vacíos omitidos), el
- * "Nuevo insumo" solo para ADMIN, los TRES modales legados (insumo,
- * movimiento e historial) intactos con sus payloads (los patch/post
- * salen líneas abajo tal cual; F2-10b/F2-10c los migran). Cambia:
+/* Insumos — F2-10b (shell y listado al kit en F2-10a; "Nuevo/Editar
+ * insumo" a FormModal en F2-10b). La pantalla mantiene el contrato
+ * `({ user })` de la ruta #/insumos (roles ADMIN/TECNICO, sin cambios en
+ * routing). Paridad conservada: GET /maintenance/insumos con filtros de
+ * SERVIDOR buscar/categoria/bajo_stock (vacíos omitidos), el "Nuevo
+ * insumo" solo para ADMIN, los payloads POST/PATCH del insumo intactos
+ * (ahora en features/maintenance/InsumoFormModal.jsx: mismos campos y
+ * endpoints; creación y edición solo para ADMIN, como las acciones de
+ * fila que los disparan). Los modales de MOVIMIENTO e HISTORIAL siguen
+ * LEGADOS con sus payloads (los patch/post salen líneas abajo tal
+ * cual; F2-10c los migra). Cambios respecto al legado (F2-10a):
  * PageHeader sin eyebrow con meta mono de UNA línea "N insumos · M con
- * stock bajo" (misma semántica que las tarjetas: cuenta de la lista
- * cargada; la descripción larga NO va en el encabezado — la nota de
- * consumos vive SOLO en el EmptyState sin datos), las 2 tarjetas .mg-stat
- * ELIMINADAS, FilterBar sin botón "Filtrar" (Buscar aplica con Enter;
- * Categoría y Stock bajo consultan al cambiar; vacíos omitidos), "Actualizar" = reload() que conserva datos previos (sin
- * parpadeo), sembrado ?bajo_stock=true desde el hash (nunca se escribe
- * de vuelta), DataTable SIN columna ID (rowKey id_insumo), Existencia y
+ * stock bajo" (la descripción larga NO va en el encabezado — la nota de
+ * consumos vive SOLO en el EmptyState sin datos), FilterBar sin botón
+ * "Filtrar" (Buscar aplica con Enter; Categoría y Stock bajo consultan
+ * al cambiar; vacíos omitidos), "Actualizar" = reload() que conserva
+ * datos previos (sin parpadeo), sembrado ?bajo_stock=true desde el hash
+ * (nunca se escribe de vuelta), DataTable SIN columna ID, Existencia y
  * Stock mínimo alineadas a la derecha con formatQuantity y el plural
  * conservador de la unidad (helper de módulo formatQuantityUnit — NO
  * toca formatQuantity), Estado con StatusBadge override de módulo,
  * "Movimientos" renombrado a "Historial" y Entrada/Salida unificados en
  * "Registrar movimiento" (abre el modal legado con tipo ENTRADA por
- * defecto; los tipos siguen siendo Entrada/Salida), éxito de acciones
- * por Toast (el error sigue siendo el estado `error` único del legado,
- * que los 3 modales muestran DENTRO), carga con useQuery + signal sin
- * flash de Reintentar, EmptyState distinto para búsqueda/filtros y para
- * vacío real, y el catálogo de categorías se conserva en un ref
- * acumulado de cada carga exitosa: el select NO se reduce al filtrar.
+ * defecto), éxito de acciones por Toast, carga con useQuery + signal
+ * sin flash de Reintentar, EmptyState distinto para búsqueda/filtros y
+ * para vacío real, y el catálogo de categorías en un ref acumulado
+ * (ahora también alimenta el datalist del InsumoFormModal sin endpoint
+ * nuevo): el select NO se reduce al filtrar. Cambios de F2-10b: el
+ * modal de insumo ya no usa el error/busy compartidos de la pantalla
+ * (el FormModal gestiona el suyo propio): el estado error/busy aquí
+ * queda SOLO para movimiento/historial.
  */
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../services/api";
@@ -31,6 +36,7 @@ import { routes } from "../../services/routes";
 import { useHashRoute } from "../../hooks/useHashRoute";
 import { useQuery } from "../../hooks/useQuery";
 import Modal from "../../components/ui/Modal";
+import InsumoFormModal from "./InsumoFormModal";
 import {
   Button,
   Checkbox,
@@ -44,15 +50,6 @@ import {
   StatusBadge,
   useToast,
 } from "../../components/ui";
-
-const EMPTY_ITEM = {
-  nombre: "",
-  descripcion: "",
-  categoria: "",
-  unidad_medida: "",
-  stock_minimo: "0",
-  costo_unitario: "0",
-};
 
 const EMPTY_MOVEMENT = { cantidad: "", motivo: "" };
 
@@ -183,13 +180,14 @@ export default function MaintenancePage({ user }) {
 
   const items = data ?? [];
 
-  /* Estados de los TRES modales legados (insumo, movimiento, historial):
-   * sin cambios respecto al legado. */ 
+  /* Estados compartidos SOLO del modal de MOVIMIENTO e HISTORIAL (F2-10c
+   * los migra): sin cambios respecto al legado. El modal de insumo
+   * (InsumoFormModal) gestiona SU error y busy por dentro del FormModal
+   * y usa `selectedItem`/`modal` de esta pantalla para abrirse. */
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [modal, setModal] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [itemForm, setItemForm] = useState(EMPTY_ITEM);
   const [movementForm, setMovementForm] = useState(EMPTY_MOVEMENT);
   const [movementType, setMovementType] = useState("ENTRADA");
   const [history, setHistory] = useState([]);
@@ -197,53 +195,12 @@ export default function MaintenancePage({ user }) {
 
   function openCreate() {
     setSelectedItem(null);
-    setItemForm(EMPTY_ITEM);
-    setError("");
     setModal("item");
   }
 
   function openEdit(item) {
     setSelectedItem(item);
-    setItemForm({
-      nombre: item.nombre ?? "",
-      descripcion: item.descripcion ?? "",
-      categoria: item.categoria ?? "",
-      unidad_medida: item.unidad_medida ?? "",
-      stock_minimo: String(item.stock_minimo ?? 0),
-      costo_unitario: String(item.costo_unitario ?? 0),
-    });
-    setError("");
     setModal("item");
-  }
-
-  async function saveItem(event) {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-
-    const body = {
-      ...itemForm,
-      nombre: itemForm.nombre.trim(),
-      descripcion: itemForm.descripcion.trim() || null,
-      categoria: itemForm.categoria.trim(),
-      unidad_medida: itemForm.unidad_medida.trim(),
-    };
-
-    try {
-      await api(
-        selectedItem
-          ? `${routes.maintenance}/insumos/${selectedItem.id_insumo}`
-          : `${routes.maintenance}/insumos`,
-        { method: selectedItem ? "PATCH" : "POST", body },
-      );
-      setModal(null);
-      notify(selectedItem ? "Insumo actualizado." : "Insumo creado.");
-      await reload();
-    } catch (requestError) {
-      setError(errorMessage(requestError));
-    } finally {
-      setBusy(false);
-    }
   }
 
   function openMovement(item, type) {
@@ -452,25 +409,12 @@ export default function MaintenancePage({ user }) {
       />
 
       {modal === "item" && (
-        <Modal title={selectedItem ? "Editar insumo" : "Nuevo insumo"} busy={busy} onClose={() => setModal(null)}>
-          <form onSubmit={saveItem}>
-            <div className="mg-form-body">
-              {error && <p className="mg-alert mg-alert-error" role="alert">{error}</p>}
-              <div className="mg-form-grid">
-                <label>Nombre *<input required maxLength="150" value={itemForm.nombre} onChange={(event) => setItemForm({ ...itemForm, nombre: event.target.value })} /></label>
-                <label>Categoría *<input required maxLength="80" value={itemForm.categoria} onChange={(event) => setItemForm({ ...itemForm, categoria: event.target.value })} /></label>
-                <label>Unidad de medida *<input required maxLength="40" value={itemForm.unidad_medida} onChange={(event) => setItemForm({ ...itemForm, unidad_medida: event.target.value })} /></label>
-                <label>Stock mínimo *<input required type="number" min="0" step="0.001" value={itemForm.stock_minimo} onChange={(event) => setItemForm({ ...itemForm, stock_minimo: event.target.value })} /></label>
-                <label>Costo unitario<input type="number" min="0" step="0.01" value={itemForm.costo_unitario} onChange={(event) => setItemForm({ ...itemForm, costo_unitario: event.target.value })} /></label>
-                <label className="mg-full-field">Descripción<textarea maxLength="2000" rows="3" value={itemForm.descripcion} onChange={(event) => setItemForm({ ...itemForm, descripcion: event.target.value })} /></label>
-              </div>
-            </div>
-            <div className="mg-modal-actions">
-              <button className="mg-primary" disabled={busy}>{busy ? "Guardando..." : "Guardar"}</button>
-              <button className="mg-secondary" type="button" disabled={busy} onClick={() => setModal(null)}>Cancelar</button>
-            </div>
-          </form>
-        </Modal>
+        <InsumoFormModal
+          insumo={selectedItem}
+          categorias={categorias}
+          onClose={() => setModal(null)}
+          onGuardado={reload}
+        />
       )}
 
       {modal === "movement" && selectedItem && (
