@@ -1,0 +1,96 @@
+/* ==========================================================================
+   Bitácora técnica — Design tokens.
+   Única fuente de valores visuales del frontend. Los estilos nuevos deben
+   consumir estas variables; está prohibido el hex hardcodeado fuera de aquí.
+   Verificación de contraste: scripts/check-contrast.mjs (frontend/).
+   ========================================================================== */
+
+:root {
+  /* -- Superficie -------------------------------------------------------- */
+  --bg: #f5f3ee;                 /* fondo de aplicación (cálido, papel) */
+  --surface: #fcfbf8;            /* paneles, tablas, modales */
+  --line: #e2ded5;               /* separadores y bordes decorativos (sin requisito 3:1) */
+  --line-control: #8a8778;       /* borde de controles de formulario ≥ 3:1 sobre bg/surface */
+
+  /* -- Tinta ------------------------------------------------------------- */
+  --ink: #17201c;                /* texto principal */
+  --ink-2: #4a5550;              /* texto secundario */
+  --ink-3: #5f6964;              /* metadatos, placeholders, footer (≥4.6:1 sobre bg/surface) */
+  --on-brand: #ffffff;           /* texto y glifos sobre brand/accent */
+
+  /* -- Marca y acento ----------------------------------------------------- */
+  --brand: #14513f;
+  --brand-hover: #1c6350;
+  --brand-pressed: #103c2e;
+  --accent: #a3471f;             /* acciones destructivas suaves, enlaces destacados */
+  --accent-hover: #8a3b17;
+  --accent-pressed: #6f2f10;
+
+  /* -- Foco --------------------------------------------------------------- */
+  --focus-ring: #14513f;         /* outline 2px, ≥3:1 sobre bg/surface */
+
+  /* -- Estados (par fg/bg; cada par ≥4.5:1 y fg ≥4.5:1 sobre bg y surface) - */
+  --status-neutral-fg: #4a5550;
+  --status-neutral-bg: #eae7df;
+  --status-info-fg: #344e63;     /* azul pizarra */
+  --status-info-bg: #e3e9ee;
+  --status-warning-fg: #6a4c14;  /* ocre */
+  --status-warning-bg: #f3ebdb;
+  --status-success-fg: #1a5b38;  /* verde */
+  --status-success-bg: #dff0e4;
+  --status-danger-fg: #8a2b15;   /* rojo ladrillo */
+  --status-danger-bg: #f5e3dc;
+  --status-muted-fg: #4a5550;
+  --status-muted-bg: #efece4;
+
+  /* -- Paleta categórica para gráficos (Okabe-Ito adaptado a fondo claro;   */
+  /*    cada color ≥3:1 sobre --bg y --surface; distinción por tono+luz) --- */
+  --chart-1: #31699e;            /* azul */
+  --chart-2: #a3471f;            /* ladrillo */
+  --chart-3: #14513f;            /* verde profundo */
+  --chart-4: #8a6a00;            /* ocre oscuro */
+  --chart-5: #5b4e9c;            /* violeta */
+  --chart-6: #15706b;            /* verdemar */
+
+  /* -- Espaciado (escala 4px) ---------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 36px;
+  --space-10: 40px;
+  --space-11: 44px;
+  --space-12: 48px;
+
+  /* -- Radios (máximo permitido 8px) --------------------------------------- */
+  --radius-sm: 4px;              /* controles */
+  --radius-md: 6px;              /* paneles */
+  --radius-lg: 8px;              /* reservado; Nunca mayor */
+
+  /* -- Tipografía ----------------------------------------------------------- */
+  --font-ui: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+  --font-display: "Source Serif 4", Georgia, serif;   /* solo títulos de página y cifras */
+
+  --fs-12: 12px;  --lh-12: 1.3334;   /* metadatos, cabecera de tabla, etiquetas */
+  --fs-13: 13px;  --lh-13: 1.5;      /* base de UI */
+  --fs-14: 14px;  --lh-14: 1.5;      /* cuerpo */
+  --fs-16: 16px;  --lh-16: 1.5;      /* cuerpo enfatizado */
+  --fs-20: 20px;  --lh-20: 1.4;      /* título de sección */
+  --fs-28: 28px;  --lh-28: 1.29;     /* título de página */
+  --fs-36: 36px;  --lh-36: 1.22;     /* cifras grandes */
+
+  /* -- Componentes ------------------------------------------------------------ */
+  --row-h: 44px;                 /* fila de tabla densa */
+  --control-h: 40px;             /* altura de inputs y botones */
+  --z-drawer: 40;
+  --z-modal: 50;
+
+  /* -- Movimiento (solo color/opacidad; respetar prefers-reduced-motion) ----- */
+  --motion-fast: 120ms;
+  --motion: 160ms;
+}

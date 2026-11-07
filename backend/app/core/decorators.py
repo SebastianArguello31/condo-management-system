@@ -1,10 +1,9 @@
-from functools import wraps
-
 import jwt
+from functools import wraps
 from flask import g, request
 from werkzeug.exceptions import Forbidden, Unauthorized
 
-from app.core.db_helpers import query
+from app.modules.users.repositories.accounts import get_user
 from app.core.security import decode_access_token
 
 def token_required(function):
@@ -25,17 +24,10 @@ def token_required(function):
         except jwt.ExpiredSignatureError:
             raise Unauthorized("La sesión expiró") from None
 
-        except (jwt.InvalidTokenError, ValueError, TypeError, KeyError):
+        except (jwt.InvalidTokenError, ValueError, TypeError, KeyError,):
             raise Unauthorized("Token inválido") from None
 
-        user = query("""
-            SELECT u.id_usuario, u.nombre, u.apellido,
-                   u.email, u.telefono, u.activo, u.id_rol,
-                   r.nombre AS rol
-            FROM usuarios u
-            JOIN roles r ON r.id_rol = u.id_rol
-            WHERE u.id_usuario = %s;
-        """, (user_id,))
+        user = get_user(user_id)
 
         if not user or not user["activo"]:
             raise Unauthorized("Usuario inexistente o desactivado")
@@ -47,14 +39,19 @@ def token_required(function):
     return wrapper
 
 def role_required(*allowed_roles):
-    def decorator(function):
+    def decorate(function):
         @wraps(function)
         def wrapper(*args, **kwargs):
-            if g.current_user["rol"] not in allowed_roles:
+            user = getattr(g, "current_user", None)
+
+            if user is None:
+                raise Unauthorized("Token requerido")
+
+            if user["rol"] not in allowed_roles:
                 raise Forbidden("No tienes permisos para esta acción")
 
             return function(*args, **kwargs)
 
         return wrapper
 
-    return decorator
+    return decorate

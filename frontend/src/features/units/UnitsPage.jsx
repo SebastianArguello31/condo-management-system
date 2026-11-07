@@ -1,8 +1,17 @@
+/* Unidades (F2-2: migrada al modo "ui" de CrudPage; "Tipo de unidad" es un
+ * select del catálogo GET /unit-types — cierra B10; el listado muestra el
+ * NOMBRE del tipo y del edificio, ambos provistos por el backend). */
+import { routes } from "../../services/routes";
 import CrudPage from "../../components/CrudPage";
 
-const fields = [
-  { name: "codigo", label: "Código", required: true, maxLength: 50 },
-  { name: "piso", label: "Piso", nullable: true, maxLength: 30 },
+const LOOKUPS = [
+  { name: "buildings", endpoint: routes.buildings },
+  { name: "unitTypes", endpoint: routes.unitTypes },
+];
+
+const FIELDS = [
+  { name: "codigo", label: "Código", required: true },
+  { name: "piso", label: "Piso" },
   {
     name: "id_edificio",
     label: "Edificio",
@@ -16,33 +25,32 @@ const fields = [
     label: "Tipo de unidad",
     type: "select",
     required: true,
-    lookup: "types",
+    lookup: "unitTypes",
     optionId: "id_tipo_unidad",
   },
 ];
 
-const columns = [
-  { name: "id_unidad", label: "ID" },
+const COLUMNS = [
   { name: "codigo", label: "Código" },
   { name: "piso", label: "Piso" },
   { name: "edificio", label: "Edificio" },
   { name: "tipo_unidad", label: "Tipo" },
 ];
 
-const lookups = [
-  { name: "buildings", endpoint: "/buildings" },
-  { name: "types", endpoint: "/unit-types" },
-];
-
 export default function UnitsPage() {
   return (
     <CrudPage
+      variant="ui"
       title="Unidades"
-      endpoint="/units"
+      description="Administra las unidades, edificios y tipos del condominio."
+      endpoint={routes.units}
       idField="id_unidad"
-      fields={fields}
-      columns={columns}
-      lookups={lookups}
+      fields={FIELDS}
+      columns={COLUMNS}
+      lookups={LOOKUPS}
+      createLabel="Nueva unidad"
+      editLabel="Editar unidad"
+      getRecordLabel={(row) => `unidad ${row.codigo}`}
     />
   );
 }

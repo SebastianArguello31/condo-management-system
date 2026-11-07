@@ -1,4 +1,5 @@
 from marshmallow import fields, pre_load, validate
+
 from app.core.passwords import validate_password
 from app.core.validation import BaseSchema, positive_id, required_text
 
@@ -12,13 +13,17 @@ class AccountSchema(BaseSchema):
 
     @pre_load
     def normalize_email(self, data, **kwargs):
-        if isinstance(data, dict) and isinstance(data.get("email"), str):
-            data = {**data, "email": data["email"].strip().lower()}
+        if not isinstance(data, dict):
+            return data
+
+        email = data.get("email")
+        if isinstance(email, str):
+            data = {**data, "email": email.strip().lower()}
+
         return data
 
 class AccessUpdateSchema(BaseSchema):
     activo = fields.Boolean(required=True, truthy={True}, falsy={False})
 
 class UserCreateSchema(AccountSchema):
-    """Compatibilidad con el script local create_admin.py, sin alta HTTP genérica."""
     id_rol = positive_id()

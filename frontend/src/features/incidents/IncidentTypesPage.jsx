@@ -1,4 +1,6 @@
+import { routes } from "../../services/routes";
 import CrudPage from "../../components/CrudPage";
+import { StatusBadge } from "../../components/ui";
 
 const fields = [
   { name: "nombre", label: "Nombre", required: true, maxLength: 100 },
@@ -13,19 +15,29 @@ const fields = [
 ];
 
 const columns = [
-  { name: "nombre", label: "Nombre" },
-  { name: "descripcion", label: "Descripción" },
-  { name: "activo", label: "Activo" },
+  { key: "nombre", header: "Nombre" },
+  { key: "descripcion", header: "Descripción", render: (row) => row.descripcion || "Sin descripción" },
+  {
+    key: "activo",
+    header: "Estado",
+    render: (row) => row.activo
+      ? <StatusBadge estado="ACTIVO" tone="success" glyph="check" />
+      : <StatusBadge estado="INACTIVO" tone="muted" />,
+  },
 ];
 
 export default function IncidentTypesPage() {
   return (
     <CrudPage
+      variant="ui"
       title="Tipos de incidencia"
-      endpoint="/incidents/types"
+      description="Administra las categorías disponibles para clasificar incidencias."
+      endpoint={routes.incidentTypes}
       idField="id_tipo_incidencia"
       fields={fields}
       columns={columns}
+      createLabel="Nuevo tipo de incidencia"
+      editLabel="Editar tipo de incidencia"
       getRecordLabel={(row) => `tipo de incidencia ${row.nombre}`}
     />
   );
