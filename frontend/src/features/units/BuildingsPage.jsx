@@ -1,3 +1,4 @@
+import { routes } from "../../services/routes";
 import CrudPage from "../../components/CrudPage";
 
 const fields = [
@@ -19,25 +20,29 @@ const fields = [
 ];
 
 const columns = [
-  { name: "id_edificio", label: "ID" },
   { name: "nombre", label: "Nombre" },
   { name: "direccion", label: "Dirección" },
   { name: "tipo_edificio", label: "Tipo" },
 ];
 
 const lookups = [
-  { name: "types", endpoint: "/building-types" },
+  { name: "types", endpoint: `${routes.buildingTypes}` },
 ];
 
 export default function BuildingsPage() {
   return (
     <CrudPage
+      variant="ui"
+      description="Administra los edificios, direcciones y tipos del condominio."
       title="Edificios"
-      endpoint="/buildings"
+      endpoint={`${routes.buildings}`}
       idField="id_edificio"
       fields={fields}
       columns={columns}
       lookups={lookups}
+      createLabel="Nuevo edificio"
+      editLabel="Editar edificio"
+      getRecordLabel={(row) => `edificio ${row.nombre}`}
     />
   );
 }

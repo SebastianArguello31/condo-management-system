@@ -1,890 +1,252 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+/* Incidencias — F2-5a (shell + listado + filtros al kit), F2-5b (creación
+ * en IncidentsCreateModal; cierra B8) y F2-5c (detalle en
+ * IncidentsDetailModal). Listado: un solo useQuery con signal (misma
+ * Promise.all y mismos endpoints por rol) con loading → Skeleton, error
+ * → ErrorState con Reintentar y reload() que conserva datos previos
+ * (sin titilar); PageHeader por rol con meta "N incidencias · M
+ * abiertas" ("abierta" = estado que NO es de cierre: RESUELTA/CERRADA/
+ * RECHAZADA/CANCELADA), FilterBar (SearchInput por título/tipo + Select
+ * de estado desde el catálogo /statuses, sembrado desde params.estado
+ * del hash —sin escribir de vuelta— y "Limpiar filtros") y DataTable SIN
+ * columna #ID (id solo rowKey) con estados de StatusBadge (presets
+ * reales), prioridad con override de MÓDULO (sin presets nuevos en el
+ * kit), "Reportada" con formatDate y acciones RowActions ("Detalle"
+ * quiet sm, aria-label con el título).
+ * DETALLE (F2-5c): "Detalle" guarda la fila en `selected` y monta
+ * `IncidentsDetailModal` con los catálogos YA cargados (prioridades/
+ * statuses/insumos), rol, idUsuario y onChanged={reload}; el padre RETIRÓ
+ * el estado y los fetch del detalle legado (detail/nextStatus/
+ * statusComment/history/assignments/interventions/interventionResult,
+ * openDetail/updatePriority/changeStatus/addIntervention, el Modal
+ * legado y la Alert de página, ya sin consumidores: cada acción reporta
+ * DENTRO del modal o por Toast). B7 (detalle) queda POR VERIFICAR con
+ * captura del dueño. La asignación de técnico (ADMIN, columna Técnico)
+ * queda inline igual: POST /assignments con Number, Toast de éxito/
+ * error, busy local. Cero window.confirm.
+ */
+import { useEffect, useState } from "react";
+import { api } from "../../services/api";
+import { routes } from "../../services/routes";
+import { useHashRoute } from "../../hooks/useHashRoute";
+import { useQuery } from "../../hooks/useQuery";
+import { formatDate } from "../../utils/format";
+import {
+  Button,
+  DataTable,
+  Field,
+  FilterBar,
+  PageHeader,
+  RowActions,
+  SearchInput,
+  Select,
+  StatusBadge,
+  useToast,
+} from "../../components/ui";
+import { PRIORIDAD_TONO } from "./priorities";
+import IncidentsCreateModal from "./IncidentsCreateModal";
+import IncidentsDetailModal from "./IncidentsDetailModal";
 
-import { api, downloadAttachment } from "../../services/api";
+/* Fallback del metadata QUE SOLO PIDE el residente (técnico/ADMIN no lo
+ * consulta). */
+const EMPTY_METADATA = { tipos: [], unidades: [] };
 
-const EMPTY_FORM = {
-  titulo: "",
-  descripcion: "",
-  id_unidad: "",
-  id_tipo_incidencia: "",
-};
-
-
+/* "Abiertas" = cualquier estado que NO marca cierre (criterio: RESUELTA,
+ * CERRADA, RECHAZADA y CANCELADA NO cuentan como abiertas). */
+const ESTADOS_CERRADOS = ["RESUELTA", "CERRADA", "RECHAZADA", "CANCELADA"];
 
 export default function IncidentsPage({ user }) {
-  const isAdmin = user.rol === "ADMIN";
   const isResident = user.rol === "RESIDENTE";
   const isTechnician = user.rol === "TECNICO";
+  const isAdmin = user.rol === "ADMIN";
+  const rol = user.rol;
+  const titulo = isAdmin
+    ? "Gestión de incidencias"
+    : isTechnician
+      ? "Incidencias asignadas"
+      : "Mis incidencias";
 
-  const [form, setForm] = useState({ ...EMPTY_FORM });
-  const [files, setFiles] = useState([]);
-  const [metadata, setMetadata] = useState({
-    tipos: [],
-    unidades: [],
-  });
-  const [technicians, setTechnicians] = useState([]);
-  const [priorities, setPriorities] = useState([]);
-  const [statuses, setStatuses] = useState([]);
+  const { params } = useHashRoute();
+  const notify = useToast();
 
-  const [rows, setRows] = useState([]);
+  /* Misma consulta que el load() anterior: un solo Promise.all con los
+   * mismos endpoints por rol. loading inicial true (Skeleton, sin
+   * "Reintentar" al abrir); reload() conserva datos previos. */
+  const { data, loading, error: errorCarga, reload } = useQuery(async (signal) => {
+    const [incidents, priorityRows, statusRows, incidentMetadata, technicianRows, inventoryRows] = await Promise.all([
+      api(routes.incidents, { signal }),
+      api(`${routes.incidents}/priorities`, { signal }),
+      api(`${routes.incidents}/statuses`, { signal }),
+      isResident ? api(`${routes.incidents}/metadata`, { signal }) : Promise.resolve(null),
+      isAdmin ? api(`${routes.incidents}/technicians`, { signal }) : Promise.resolve([]),
+      isResident ? Promise.resolve([]) : api(`${routes.maintenance}/insumos`, { signal }),
+    ]);
+    return [incidents ?? [], priorityRows ?? [], statusRows ?? [], incidentMetadata, technicianRows ?? [], inventoryRows ?? []];
+  }, [user?.id_usuario, rol]);
+
+  /* Defaults POR POSICIÓN: data es undefined en el primer render (no
+   * repetir el bug de pantalla en blanco de Mis reservas). metadata queda
+   * null para técnico/ADMIN; los modales reciben los catálogos vía props
+   * (solo el residente consulta /metadata; técnico/ADMIN traen insumos). */
+  const [incidents = [], priorities = [], statuses = [], metadatos = null, technicians = [], inventoryItems = []] = data || [];
+  const metadata = metadatos ?? EMPTY_METADATA;
+
+  const [showCreate, setShowCreate] = useState(false);
   const [selected, setSelected] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+  const [estadoFiltro, setEstadoFiltro] = useState("");
 
-  // Filtros
-  const [filterSearch, setFilterSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterPriority, setFilterPriority] = useState("");
-  const [filterOnlyMine, setFilterOnlyMine] = useState(false);
-
-  // Estados de formularios de acción dentro del detalle
-  const [assignTechId, setAssignTechId] = useState("");
-  const [assignNotes, setAssignNotes] = useState("");
-  const [actionPriorityId, setActionPriorityId] = useState("");
-  const [actionStatus, setActionStatus] = useState("");
-  const [actionComment, setActionComment] = useState("");
-  const [actionBusy, setActionBusy] = useState(false);
-
-  const fileInput = useRef(null);
-
-  const load = useCallback(async () => {
-    const promises = [api("/incidents")];
-
-    if (isResident) {
-      promises.push(api("/incidents/metadata"));
-    } else {
-      promises.push(Promise.resolve({ tipos: [], unidades: [] }));
-    }
-
-    if (isAdmin || isTechnician) {
-      promises.push(api("/incidents/technicians").catch(() => []));
-      promises.push(api("/incidents/priorities").catch(() => []));
-      promises.push(api("/incidents/statuses").catch(() => []));
-    } else {
-      promises.push(Promise.resolve([]), Promise.resolve([]), Promise.resolve([]));
-    }
-
-    const [incidents, options, techs, prios, stats] = await Promise.all(promises);
-
-    setRows(incidents || []);
-    setMetadata(options || { tipos: [], unidades: [] });
-    setTechnicians(techs || []);
-    setPriorities(prios || []);
-    setStatuses(stats || []);
-  }, [isResident, isAdmin, isTechnician]);
-
+  /* Filtro de estado SEMBRADO desde el hash: se aplica cuando cambia
+   * params.estado estando en la pantalla (enlaces del dashboard); valor
+   * desconocido o falta de catálogo → sin filtro. NUNCA se escribe de
+   * vuelta a la URL. */
+  const nombresEstado = statuses.map((status) => status.nombre);
+  const estadoDesdeUrl = typeof params.estado === "string" && nombresEstado.includes(params.estado) ? params.estado : "";
   useEffect(() => {
-    let active = true;
+    setEstadoFiltro(estadoDesdeUrl);
+  }, [estadoDesdeUrl]);
 
-    load()
-      .catch((error) => {
-        if (active) setError(error.message);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [load]);
-
-  function updateField(event) {
-    const { name, value } = event.target;
-    setForm((previous) => ({ ...previous, [name]: value }));
-  }
-
-  async function refresh() {
-    setBusy(true);
-    setError("");
-
+  async function assign(row, event) {
+    const id = event.target.value; if (!id) return; setBusy(true);
     try {
-      await load();
-      if (selected) {
-        const updated = await api(`/incidents/${selected.id_incidencia}`);
-        setSelected(updated);
-        syncDetailForm(updated);
-      }
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setBusy(false);
-    }
+      await api(`${routes.incidents}/${row.id_incidencia}/assignments`, { method: "POST", body: { id_personal_asignado: Number(id) } });
+      notify("Técnico asignado."); await reload();
+    } catch (e) { notify(e.message || "No se pudo asignar el técnico.", { tone: "danger" }); } finally { setBusy(false); }
   }
 
-  function syncDetailForm(incident) {
-    if (!incident) return;
-    setAssignTechId(incident.id_personal_asignado ? String(incident.id_personal_asignado) : "");
-    setAssignNotes(incident.asignacion_notas || "");
-    setActionPriorityId(incident.id_prioridad ? String(incident.id_prioridad) : "");
-    setActionStatus(incident.estado || "");
-    setActionComment("");
-  }
-
-  async function openDetail(id) {
-    setBusy(true);
-    setError("");
-    setNotice("");
-
-    try {
-      const data = await api(`/incidents/${id}`);
-      setSelected(data);
-      syncDetailForm(data);
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submit(event) {
-    event.preventDefault();
-    setError("");
-    setNotice("");
-
-    if (files.length > 3) {
-      setError("Puedes adjuntar como máximo 3 archivos.");
-      return;
-    }
-
-    if (files.some((file) => file.size > 5 * 1024 * 1024)) {
-      setError("Cada archivo puede pesar como máximo 5 MB.");
-      return;
-    }
-
-    setBusy(true);
-
-    try {
-      const body = new FormData();
-
-      Object.entries(form).forEach(([key, value]) => {
-        body.append(key, value.trim());
-      });
-
-      files.forEach((file) => body.append("archivos", file));
-
-      const result = await api("/incidents", {
-        method: "POST",
-        body,
-      });
-
-      setNotice(`Solicitud #${result.id_incidencia} enviada correctamente.`);
-      setForm({ ...EMPTY_FORM });
-      setFiles([]);
-
-      if (fileInput.current) fileInput.current.value = "";
-
-      try {
-        await load();
-      } catch (error) {
-        setError(`La solicitud se guardó, pero no se pudo actualizar la lista: ${error.message}`);
-      }
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleAssignTechnician(event) {
-    event.preventDefault();
-    if (!assignTechId) {
-      setError("Debes seleccionar un técnico para asignar.");
-      return;
-    }
-
-    setActionBusy(true);
-    setError("");
-    setNotice("");
-
-    try {
-      const result = await api(`/incidents/${selected.id_incidencia}/assign`, {
-        method: "POST",
-        body: {
-          id_personal_asignado: Number(assignTechId),
-          notas: assignNotes.trim() || null,
-        },
-      });
-
-      setNotice(result.mensaje || "Técnico asignado exitosamente.");
-      const updated = await api(`/incidents/${selected.id_incidencia}`);
-      setSelected(updated);
-      syncDetailForm(updated);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setActionBusy(false);
-    }
-  }
-
-  async function handleUpdatePriority(event) {
-    event.preventDefault();
-    if (!actionPriorityId) {
-      setError("Debes seleccionar una prioridad.");
-      return;
-    }
-
-    setActionBusy(true);
-    setError("");
-    setNotice("");
-
-    try {
-      const result = await api(`/incidents/${selected.id_incidencia}/priority`, {
-        method: "PATCH",
-        body: {
-          id_prioridad: Number(actionPriorityId),
-        },
-      });
-
-      setNotice(result.mensaje || "Prioridad actualizada correctamente.");
-      const updated = await api(`/incidents/${selected.id_incidencia}`);
-      setSelected(updated);
-      syncDetailForm(updated);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setActionBusy(false);
-    }
-  }
-
-  async function handleUpdateStatus(event) {
-    event.preventDefault();
-    if (!actionStatus) {
-      setError("Debes seleccionar un estado.");
-      return;
-    }
-
-    setActionBusy(true);
-    setError("");
-    setNotice("");
-
-    try {
-      const result = await api(`/incidents/${selected.id_incidencia}/status`, {
-        method: "PATCH",
-        body: {
-          estado: actionStatus,
-          comentario: actionComment.trim() || null,
-        },
-      });
-
-      setNotice(result.mensaje || "Estado actualizado correctamente.");
-      const updated = await api(`/incidents/${selected.id_incidencia}`);
-      setSelected(updated);
-      syncDetailForm(updated);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setActionBusy(false);
-    }
-  }
-
-  async function handleCancelResident() {
-    if (!window.confirm("¿Seguro que deseas cancelar esta solicitud?")) return;
-
-    setActionBusy(true);
-    setError("");
-    setNotice("");
-
-    try {
-      const result = await api(`/incidents/${selected.id_incidencia}/status`, {
-        method: "PATCH",
-        body: {
-          estado: "CANCELADA",
-          comentario: "Cancelada por el residente.",
-        },
-      });
-
-      setNotice(result.mensaje || "Solicitud cancelada.");
-      const updated = await api(`/incidents/${selected.id_incidencia}`);
-      setSelected(updated);
-      syncDetailForm(updated);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setActionBusy(false);
-    }
-  }
-
-  async function download(file) {
-    setBusy(true);
-    setError("");
-
-    try {
-      await downloadAttachment(file.id_adjuntos_incidencia, file.nombre_original);
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // Filtrado de incidencias
-  const filteredRows = useMemo(() => {
-    return rows.filter((row) => {
-      if (filterStatus && row.estado !== filterStatus) return false;
-      if (filterPriority && row.prioridad !== filterPriority) return false;
-      if (filterOnlyMine && isTechnician) {
-        if (row.id_personal_asignado !== user.id_usuario) return false;
-      }
-      if (filterSearch) {
-        const query = filterSearch.toLowerCase();
-        const titleMatch = (row.titulo || "").toLowerCase().includes(query);
-        const descMatch = (row.descripcion || "").toLowerCase().includes(query);
-        const codeMatch = String(row.id_incidencia).includes(query);
-        const unitMatch = (row.unidad || "").toLowerCase().includes(query);
-        const residentMatch = `${row.residente_nombre || ""} ${row.residente_apellido || ""}`
-          .toLowerCase()
-          .includes(query);
-        if (!titleMatch && !descMatch && !codeMatch && !unitMatch && !residentMatch) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [rows, filterStatus, filterPriority, filterSearch, filterOnlyMine, isTechnician, user.id_usuario]);
-
-  if (loading) return <p>Cargando solicitudes...</p>;
-
-  const canSubmit = metadata.unidades.length > 0 && metadata.tipos.length > 0;
-
-  // Estados permitidos según el rol
-  const allowedStatuses = isTechnician
-    ? ["EN_PROCESO", "EN_ESPERA", "RESUELTA"]
-    : statuses.length > 0
-      ? statuses.map((s) => s.nombre)
-      : [
-        "RECIBIDA",
-        "EN_REVISION",
-        "ASIGNADA",
-        "EN_PROCESO",
-        "EN_ESPERA",
-        "RESUELTA",
-        "CERRADA",
-        "RECHAZADA",
-        "CANCELADA",
-      ];
-
-  return (
-    <section>
-      <h1>
-        {isResident
-          ? "Mis solicitudes"
-          : isTechnician
-            ? "Incidencias asignadas y tareas"
-            : "Gestión de Incidencias"}
-      </h1>
-
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-
-      {notice && (
-        <p className="success" role="status">
-          {notice}
-        </p>
-      )}
-
-      {isResident && (
-        <form className="card" onSubmit={submit}>
-          <h2>Reportar una incidencia</h2>
-
-          {metadata.unidades.length === 0 && (
-            <p>
-              No tienes una unidad asociada. Solicita al administrador que vincule tu cuenta con una
-              unidad.
-            </p>
-          )}
-
-          {metadata.tipos.length === 0 && <p>No hay tipos de incidencia disponibles.</p>}
-
-          <fieldset disabled={busy || !canSubmit}>
-            <div className="form-grid">
-              <label>
-                Unidad
-                <select name="id_unidad" required value={form.id_unidad} onChange={updateField}>
-                  <option value="">Seleccionar...</option>
-                  {metadata.unidades.map((unit) => (
-                    <option key={unit.id_unidad} value={unit.id_unidad}>
-                      {unit.edificio} · {unit.codigo}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Tipo de problema
-                <select
-                  name="id_tipo_incidencia"
-                  required
-                  value={form.id_tipo_incidencia}
-                  onChange={updateField}
-                >
-                  <option value="">Seleccionar...</option>
-                  {metadata.tipos.map((type) => (
-                    <option key={type.id_tipo_incidencia} value={type.id_tipo_incidencia}>
-                      {type.nombre}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <label className="incident-field">
-              Título
-              <input
-                name="titulo"
-                required
-                minLength={5}
-                maxLength={150}
-                placeholder="Ej.: Pérdida de agua debajo del lavamanos"
-                value={form.titulo}
-                onChange={updateField}
-              />
-            </label>
-
-            <label className="incident-field">
-              Descripción
-              <textarea
-                name="descripcion"
-                required
-                minLength={10}
-                maxLength={5000}
-                rows={5}
-                placeholder="Describe qué ocurre, dónde y desde cuándo."
-                value={form.descripcion}
-                onChange={updateField}
-              />
-            </label>
-
-            <label className="incident-field">
-              Adjuntos opcionales
-              <input
-                ref={fileInput}
-                type="file"
-                multiple
-                accept=".jpg,.jpeg,.png,.pdf"
-                onChange={(event) => setFiles(Array.from(event.target.files || []))}
-              />
-              <small>Hasta 3 archivos JPG, PNG o PDF de 5 MB cada uno.</small>
-            </label>
-
-            {files.length > 0 && (
-              <ul>
-                {files.map((file, index) => (
-                  <li key={`${file.name}-${index}`}>{file.name}</li>
-                ))}
-              </ul>
-            )}
-
-            <button type="submit">{busy ? "Procesando..." : "Enviar solicitud"}</button>
-          </fieldset>
-        </form>
-      )}
-
-      {/* Lista de solicitudes y filtros */}
-      <div className="card">
-        <div className="incident-toolbar">
-          <h2>{isResident ? "Historial de solicitudes" : "Bandeja de incidencias"}</h2>
-          <button type="button" className="secondary" disabled={busy} onClick={refresh}>
-            Actualizar
-          </button>
-        </div>
-
-        {/* Barra de Filtros */}
-        {!isResident && (
-          <div className="filter-bar">
-            <input
-              type="search"
-              placeholder="Buscar por título, unidad..."
-              value={filterSearch}
-              onChange={(e) => setFilterSearch(e.target.value)}
-            />
-
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-              <option value="">Todos los estados</option>
-              {allowedStatuses.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-
-            {priorities.length > 0 && (
-              <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
-                <option value="">Todas las prioridades</option>
-                {priorities.map((p) => (
-                  <option key={p.id_prioridad} value={p.nombre}>
-                    {p.nombre}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {isTechnician && (
-              <label style={{ flexDirection: "row", alignItems: "center", gap: 6, margin: 0 }}>
-                <input
-                  type="checkbox"
-                  checked={filterOnlyMine}
-                  onChange={(e) => setFilterOnlyMine(e.target.checked)}
-                />
-                Solo asignadas a mí
-              </label>
-            )}
-          </div>
-        )}
-
-        {filteredRows.length === 0 && <p>No se encontraron solicitudes.</p>}
-
-        {filteredRows.map((incident) => (
-          <article className="incident-item" key={incident.id_incidencia}>
-            <div>
-              <h3>
-                #{incident.id_incidencia} · {incident.titulo}
-              </h3>
-
-              <p>
-                {incident.edificio || "Sin edificio"} · Unidad {incident.unidad || "—"} ·{" "}
-                {incident.tipo_incidencia}
-              </p>
-
-              {!isResident && (
-                <p>
-                  <strong>Residente:</strong>{" "}
-                  {incident.residente_nombre
-                    ? `${incident.residente_nombre} ${incident.residente_apellido}`
-                    : "Sin autor registrado"}
-                </p>
-              )}
-
-              {incident.tecnico_asignado_nombre && (
-                <p>
-                  <strong>Técnico:</strong> {incident.tecnico_asignado_nombre}
-                </p>
-              )}
-
-              <p>
-                <span className={`status-badge status-${incident.estado}`}>{incident.estado}</span>
-                {" "}· Prioridad: <strong>{incident.prioridad || "Sin asignar"}</strong>
-                {incident.fecha_limite && (
-                  <span> · Límite: {new Date(incident.fecha_limite).toLocaleDateString()}</span>
-                )}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => openDetail(incident.id_incidencia)}
-            >
-              Ver detalle
-            </button>
-          </article>
-        ))}
-      </div>
-
-      {/* Detalle y Gestión de la Incidencia Seleccionada */}
-      {selected && (
-        <div className="card">
-          <div className="incident-toolbar">
-            <h2>Detalle de Incidencia #{selected.id_incidencia}</h2>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => setSelected(null)}
-            >
-              Cerrar detalle
-            </button>
-          </div>
-
-          <h3>{selected.titulo}</h3>
-
-          <p className="incident-description">{selected.descripcion}</p>
-
-          <p>
-            <strong>Ubicación:</strong> {selected.edificio || "—"} · Unidad {selected.unidad || "—"}
-          </p>
-
-          <p>
-            <strong>Estado actual:</strong>{" "}
-            <span className={`status-badge status-${selected.estado}`}>{selected.estado}</span>
-            {"  "}
-            <strong>Prioridad:</strong> {selected.prioridad || "Sin prioridad asignada"}
-          </p>
-
-          {selected.fecha_reporte && (
-            <p>
-              <strong>Reportado el:</strong> {new Date(selected.fecha_reporte).toLocaleString()}
-            </p>
-          )}
-
-          {selected.fecha_limite && (
-            <p>
-              <strong>Fecha límite de resolución:</strong>{" "}
-              {new Date(selected.fecha_limite).toLocaleString()}
-            </p>
-          )}
-
-          {selected.fecha_resolucion && (
-            <p>
-              <strong>Fecha de resolución:</strong>{" "}
-              {new Date(selected.fecha_resolucion).toLocaleString()}
-            </p>
-          )}
-
-          {!isResident && (
-            <p>
-              <strong>Contacto Residente:</strong> {selected.residente_email || "Sin email registrado"}
-              {selected.residente_telefono ? ` · Tel: ${selected.residente_telefono}` : ""}
-            </p>
-          )}
-
-          <p>
-            <strong>Técnico Responsable:</strong>{" "}
-            {selected.tecnico_asignado_nombre ? (
-              <span>
-                {selected.tecnico_asignado_nombre}
-                {selected.tecnico_asignado_email ? ` (${selected.tecnico_asignado_email})` : ""}
-                {selected.asignacion_notas ? ` — Nota: "${selected.asignacion_notas}"` : ""}
-              </span>
-            ) : (
-              <em>Sin técnico asignado aún</em>
-            )}
-          </p>
-
-          {/* ACCIONES OPERATIVAS: Asignación, Prioridad y Estado */}
-          {(isAdmin || isTechnician) && (
-            <div className="detail-grid">
-              {/* ASIGNACIÓN DE TÉCNICO (Solo Admin) */}
-              {isAdmin && (
-                <div className="detail-section">
-                  <h4>Asignar Técnico</h4>
-                  <form onSubmit={handleAssignTechnician}>
-                    <label>
-                      Personal Técnico
-                      <select
-                        value={assignTechId}
-                        onChange={(e) => setAssignTechId(e.target.value)}
-                        required
-                        disabled={actionBusy}
-                      >
-                        <option value="">Seleccionar técnico...</option>
-                        {technicians.map((t) => (
-                          <option key={t.id_usuario} value={t.id_usuario}>
-                            {t.nombre} {t.apellido}
-                            {t.especialidades && t.especialidades.length > 0
-                              ? ` (${t.especialidades.join(", ")})`
-                              : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label style={{ marginTop: 10 }}>
-                      Notas para el técnico (opcional)
-                      <textarea
-                        rows={2}
-                        placeholder="Ej.: Llevar herramientas para tuberías"
-                        value={assignNotes}
-                        onChange={(e) => setAssignNotes(e.target.value)}
-                        disabled={actionBusy}
-                      />
-                    </label>
-
-                    <button
-                      type="submit"
-                      style={{ marginTop: 12, width: "100%" }}
-                      disabled={actionBusy || !assignTechId}
-                    >
-                      {actionBusy ? "Guardando..." : selected.id_personal_asignado ? "Reasignar Técnico" : "Asignar Técnico"}
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {/* CAMBIAR PRIORIDAD (Solo Admin) */}
-              {isAdmin && (
-                <div className="detail-section">
-                  <h4>Gestionar Prioridad</h4>
-                  <form onSubmit={handleUpdatePriority}>
-                    <label>
-                      Prioridad
-                      <select
-                        value={actionPriorityId}
-                        onChange={(e) => setActionPriorityId(e.target.value)}
-                        required
-                        disabled={actionBusy}
-                      >
-                        <option value="">Seleccionar prioridad...</option>
-                        {priorities.map((p) => (
-                          <option key={p.id_prioridad} value={p.id_prioridad}>
-                            {p.nombre} ({p.horas_resolucion}h límite)
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <button
-                      type="submit"
-                      style={{ marginTop: 12, width: "100%" }}
-                      disabled={actionBusy || !actionPriorityId}
-                    >
-                      {actionBusy ? "Guardando..." : "Actualizar Prioridad"}
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {/* CAMBIAR ESTADO (Admin y Técnico) */}
-              <div className="detail-section">
-                <h4>Actualizar Estado</h4>
-                <form onSubmit={handleUpdateStatus}>
-                  <label>
-                    Nuevo Estado
-                    <select
-                      value={actionStatus}
-                      onChange={(e) => setActionStatus(e.target.value)}
-                      required
-                      disabled={actionBusy}
-                    >
-                      <option value="">Seleccionar estado...</option>
-                      {allowedStatuses.map((st) => (
-                        <option key={st} value={st}>
-                          {st}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label style={{ marginTop: 10 }}>
-                    Comentario de cambio (opcional)
-                    <textarea
-                      rows={2}
-                      placeholder="Motivo del cambio de estado o avance realizado..."
-                      value={actionComment}
-                      onChange={(e) => setActionComment(e.target.value)}
-                      disabled={actionBusy}
-                    />
-                  </label>
-
-                  <button
-                    type="submit"
-                    style={{ marginTop: 12, width: "100%" }}
-                    disabled={actionBusy || !actionStatus}
-                  >
-                    {actionBusy ? "Guardando..." : "Cambiar Estado"}
-                  </button>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* Cancelar por parte del residente */}
-          {isResident && ["RECIBIDA", "EN_REVISION"].includes(selected.estado) && (
-            <div style={{ marginTop: 18 }}>
-              <button
-                type="button"
-                className="danger"
-                disabled={actionBusy}
-                onClick={handleCancelResident}
-              >
-                Cancelar mi solicitud
-              </button>
-            </div>
-          )}
-
-          {/* TRAZABILIDAD / LÍNEA DE TIEMPO DE ESTADOS */}
-          {selected.historial && selected.historial.length > 0 && (
-            <div style={{ marginTop: 24 }}>
-              <h3>Línea de tiempo y trazabilidad</h3>
-              <ul className="timeline">
-                {selected.historial.map((item, idx) => (
-                  <li className="timeline-item" key={item.id_historial_incidencia || idx}>
-                    <div className="timeline-header">
-                      <strong>
-                        {item.estado_anterior ? `${item.estado_anterior} ➔ ` : ""}
-                        <span className={`status-badge status-${item.estado_nuevo}`}>
-                          {item.estado_nuevo}
-                        </span>
-                      </strong>
-                      <span>{item.fecha ? new Date(item.fecha).toLocaleString() : ""}</span>
-                    </div>
-                    <div className="timeline-body">
-                      {item.usuario_nombre && (
-                        <div>
-                          <small>Por: {item.usuario_nombre}</small>
-                        </div>
-                      )}
-                      {item.comentario && <p style={{ margin: "4px 0 0" }}>"{item.comentario}"</p>}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* HISTORIAL DE ASIGNACIONES */}
-          {selected.asignaciones && selected.asignaciones.length > 0 && (
-            <div style={{ marginTop: 24 }}>
-              <h3>Historial de Asignaciones</h3>
-              <div className="table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Técnico</th>
-                      <th>Fecha asignación</th>
-                      <th>Notas</th>
-                      <th>Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selected.asignaciones.map((asig, idx) => (
-                      <tr key={asig.id_asignacion || idx}>
-                        <td>{asig.tecnico_nombre}</td>
-                        <td>{asig.fecha_asignacion ? new Date(asig.fecha_asignacion).toLocaleString() : "—"}</td>
-                        <td>{asig.notas || "—"}</td>
-                        <td>
-                          {asig.activa ? (
-                            <strong style={{ color: "#15803d" }}>Activa</strong>
-                          ) : (
-                            <span style={{ color: "#64748b" }}>Anterior</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ARCHIVOS ADJUNTOS */}
-          <div style={{ marginTop: 24 }}>
-            <h3>Archivos adjuntos</h3>
-            {!selected.adjuntos || selected.adjuntos.length === 0 ? (
-              <p>Esta solicitud no tiene adjuntos.</p>
-            ) : (
-              <ul>
-                {selected.adjuntos.map((file) => (
-                  <li className="incident-attachment" key={file.id_adjuntos_incidencia}>
-                    <span>{file.nombre_original}</span>
-                    <button type="button" disabled={busy} onClick={() => download(file)}>
-                      Descargar
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      )}
-    </section>
+  const limpiarFiltros = () => {
+    setBusqueda("");
+    setEstadoFiltro("");
+  };
+
+  const triggerNuevo = isResident ? (
+    <Button disabled={busy || loading} onClick={() => setShowCreate(true)}>
+      Nueva incidencia
+    </Button>
+  ) : null;
+
+  const hayIncidencias = incidents.length > 0;
+  const abiertas = incidents.filter((row) => !ESTADOS_CERRADOS.includes(row.estado)).length;
+  const meta = !loading && hayIncidencias
+    ? `${incidents.length} ${incidents.length === 1 ? "incidencia" : "incidencias"} · ${abiertas} ${abiertas === 1 ? "abierta" : "abiertas"}`
+    : undefined;
+
+  const filtradas = incidents.filter((row) =>
+    (estadoFiltro === "" || row.estado === estadoFiltro) &&
+    (busqueda.trim() === "" ||
+      [row.titulo, row.tipo_incidencia].some((valor) =>
+        String(valor ?? "").toLocaleLowerCase().includes(busqueda.trim().toLocaleLowerCase())
+      ))
   );
+
+  const columns = [
+    { key: "titulo", header: "Título" },
+    { key: "tipo", header: "Tipo", render: (row) => row.tipo_incidencia || "Sin tipo" },
+    {
+      key: "prioridad",
+      header: "Prioridad",
+      render: (row) => (
+        <StatusBadge estado={row.prioridad} {...(PRIORIDAD_TONO[String(row.prioridad ?? "").trim().toLowerCase()] ?? {})} />
+      ),
+    },
+    { key: "estado", header: "Estado", render: (row) => <StatusBadge estado={row.estado} /> },
+    { key: "reportada", header: "Reportada", cellClassName: "ui-mono", render: (row) => formatDate(row.fecha_reporte) },
+    ...(isAdmin
+      ? [{
+          key: "tecnico",
+          header: "Técnico",
+          render: (row) => (
+            <Select
+              aria-label={`Asignar técnico a ${row.titulo}`}
+              value={row.id_personal_asignado || ""}
+              disabled={busy}
+              onChange={(event) => assign(row, event)}
+            >
+              <option value="">Seleccionar...</option>
+              {technicians.map((t) => (
+                <option key={t.id_usuario} value={t.id_usuario}>{t.nombre} {t.apellido}</option>
+              ))}
+            </Select>
+          ),
+        }]
+      : []),
+    {
+      key: "acciones",
+      header: "Acciones",
+      width: "calc(var(--space-12) * 4)",
+      render: (row) => (
+        <RowActions
+          actions={[
+            {
+              label: "Detalle",
+              ariaLabel: `Ver detalle de la incidencia "${row.titulo}"`,
+              onSelect: () => setSelected(row),
+            },
+          ]}
+        />
+      ),
+    },
+  ];
+
+  return <section>
+    <PageHeader
+      title={titulo}
+      meta={meta}
+      actions={!loading && !hayIncidencias ? null : triggerNuevo}
+    />
+    <FilterBar onReset={limpiarFiltros}>
+      <SearchInput
+        label={`Buscar en ${titulo.toLowerCase()}`}
+        value={busqueda}
+        onChange={setBusqueda}
+        onClear={() => setBusqueda("")}
+        placeholder="Buscar por título o tipo..."
+      />
+      <Field label="Estado">
+        <Select name="estado" value={estadoFiltro} onChange={(event) => setEstadoFiltro(event.target.value)}>
+          <option value="">Todos los estados</option>
+          {statuses.map((s) => (
+            <option key={s.id_estado} value={s.nombre}>{s.nombre.replaceAll("_", " ")}</option>
+          ))}
+        </Select>
+      </Field>
+    </FilterBar>
+    <DataTable
+      columns={columns}
+      rows={filtradas}
+      rowKey={(row) => row.id_incidencia}
+      caption={`Listado de ${titulo.toLowerCase()}`}
+      loading={loading}
+      error={errorCarga}
+      onRetry={reload}
+      emptyTitle={hayIncidencias ? "No hay incidencias que coincidan." : "No hay incidencias"}
+      emptyDescription={hayIncidencias
+        ? "Ajusta la búsqueda o limpia los filtros para ver resultados."
+        : (isResident ? "Reporta la primera incidencia de tu unidad." : undefined)}
+      emptyAction={!loading && hayIncidencias
+        ? <Button variant="quiet" onClick={limpiarFiltros}>Limpiar filtros</Button>
+        : (isResident ? triggerNuevo : undefined)}
+    />
+    {showCreate && (
+      <IncidentsCreateModal
+        open
+        onClose={() => setShowCreate(false)}
+        onCreated={reload}
+        unidades={metadata.unidades}
+        tipos={metadata.tipos}
+      />
+    )}
+    {selected && (
+      <IncidentsDetailModal
+        incidencia={selected}
+        rol={rol}
+        idUsuario={user.id_usuario}
+        prioridades={priorities}
+        statuses={statuses}
+        insumos={inventoryItems}
+        onClose={() => setSelected(null)}
+        onChanged={reload}
+      />
+    )}
+  </section>;
 }

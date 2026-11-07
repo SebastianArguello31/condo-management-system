@@ -1,77 +1,68 @@
-from werkzeug.exceptions import BadRequest, Forbidden
-from app.core.db_helpers import query, transaction
-from .accounts import create_account, lock_accounts, require_account, require_admin, update_account
+from werkzeug.exceptions import NotFound
 
-EMPLOYEE_SELECT = """
-    SELECT u.id_usuario, u.nombre, u.apellido, u.email, u.telefono,
-           u.activo, u.created_at, u.id_rol, r.nombre AS rol,
-           ARRAY(SELECT ue.id_especialidad FROM usuario_especialidades ue
-                 WHERE ue.id_usuario = u.id_usuario ORDER BY ue.id_especialidad) AS especialidad_ids,
-           COALESCE((SELECT json_agg(json_build_object(
-               'id_especialidad', e.id_especialidad, 'nombre', e.nombre,
-               'descripcion', e.descripcion, 'activo', e.activo) ORDER BY e.nombre)
-             FROM usuario_especialidades ue JOIN especialidades e USING (id_especialidad)
-             WHERE ue.id_usuario = u.id_usuario), '[]'::json) AS especialidades
-    FROM usuarios u JOIN roles r ON r.id_rol = u.id_rol
-"""
+from app.core.db_helpers import transaction
+from app.modules.users.repositories import accounts as accounts_repo
+from app.modules.users.repositories import employees as employees_repo
+
+from .accounts import lock_management, create_account, require_account, save_account, prepare_account_data
+from .specialties import replace_specialties
+
+def get_employee_detail(user_id, *, cursor=None):
+    rows = employees_repo.find_employees(user_id, cursor=cursor)
+
+    if not rows:
+        raise NotFound("Empleado no encontrado")
+
+    return rows[0]
 
 def list_employees():
-    return query(EMPLOYEE_SELECT + " WHERE r.nombre = 'TECNICO' ORDER BY u.apellido, u.nombre", many=True)
-
-def employee_details(cursor, user_id):
-    cursor.execute(EMPLOYEE_SELECT + " WHERE u.id_usuario = %s", (user_id,))
-    return cursor.fetchone()
-
-def replace_specialties(cursor, user_id, specialty_ids):
-    ids = sorted(set(specialty_ids))
-    if not ids:
-        raise BadRequest("Selecciona al menos una especialidad laboral")
-    cursor.execute("SELECT id_especialidad FROM usuario_especialidades WHERE id_usuario = %s", (user_id,))
-    previous = {row["id_especialidad"] for row in cursor.fetchall()}
-    cursor.execute("SELECT id_especialidad, activo FROM especialidades WHERE id_especialidad = ANY(%s) FOR SHARE", (ids,))
-    specialties = cursor.fetchall()
-    if len(specialties) != len(ids):
-        raise BadRequest("Una especialidad seleccionada ya no existe")
-    if any(not row["activo"] and row["id_especialidad"] not in previous for row in specialties):
-        raise BadRequest("No puedes asignar una especialidad inactiva")
-    cursor.execute("DELETE FROM usuario_especialidades WHERE id_usuario = %s", (user_id,))
-    cursor.executemany("INSERT INTO usuario_especialidades (id_usuario, id_especialidad) VALUES (%s, %s)", [(user_id, specialty_id) for specialty_id in ids])
+    return employees_repo.find_employees()
 
 def create_employee(data, actor_id):
     account_data = dict(data)
-    specialty_ids = account_data.pop("especialidad_ids")
+    specialties = account_data.pop("especialidad_ids")
+    prepared_data = prepare_account_data(account_data)
+
     with transaction() as cursor:
-        lock_accounts(cursor)
-        require_admin(cursor, actor_id)
-        account = create_account(cursor, role_name="TECNICO", **account_data)
-        replace_specialties(cursor, account["id_usuario"], specialty_ids)
-        return employee_details(cursor, account["id_usuario"])
+        lock_management(cursor, actor_id)
+
+        account = create_account(cursor, prepared_data, "TECNICO")
+
+        replace_specialties(cursor, account["id_usuario"], specialties)
+
+        return get_employee_detail(account["id_usuario"], cursor=cursor)
 
 def update_employee(user_id, data, actor_id):
     changes = dict(data)
-    specialty_ids = changes.pop("especialidad_ids", None)
+    specialties = changes.pop("especialidad_ids", None)
+
+    prepared_data = prepare_account_data(changes) if changes else {}
+
     with transaction() as cursor:
-        lock_accounts(cursor)
-        require_admin(cursor, actor_id)
-        require_account(cursor, user_id, "TECNICO")
-        if changes:
-            update_account(cursor, user_id, changes)
-        if specialty_ids is not None:
-            replace_specialties(cursor, user_id, specialty_ids)
-        return employee_details(cursor, user_id)
+        lock_management(cursor, actor_id, user_id, "TECNICO")
+
+        if prepared_data:
+            save_account(cursor, user_id, prepared_data)
+
+        if specialties is not None:
+            replace_specialties(cursor, user_id, specialties)
+
+        return get_employee_detail(user_id, cursor=cursor)
 
 def get_employee_profile(user_id):
     with transaction() as cursor:
-        account = require_account(cursor, user_id, "TECNICO")
-        if not account["activo"]:
-            raise Forbidden("Tu cuenta está desactivada")
-        return employee_details(cursor, user_id)
+        require_account(accounts_repo.get_user(user_id, cursor=cursor), "TECNICO", active=True)
+
+        return get_employee_detail(user_id, cursor=cursor)
 
 def update_employee_profile(user_id, data):
+    prepared_data = prepare_account_data(data, {"nombre", "apellido", "email", "telefono"})
+
     with transaction() as cursor:
-        lock_accounts(cursor)
-        account = require_account(cursor, user_id, "TECNICO")
-        if not account["activo"]:
-            raise Forbidden("Tu cuenta está desactivada")
-        update_account(cursor, user_id, data, allowed_fields={"nombre", "apellido", "email", "telefono"})
-        return employee_details(cursor, user_id)
+        accounts = accounts_repo.lock_users([user_id], cursor=cursor)
+
+        require_account(accounts.get(user_id), "TECNICO", active=True)
+
+        save_account(cursor, user_id, prepared_data)
+
+        return get_employee_detail(user_id, cursor=cursor)
