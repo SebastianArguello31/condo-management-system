@@ -4,16 +4,50 @@ from app.core.decorators import role_required, token_required
 from app.core.validation import read_json
 from app.modules.maintenance.schemas import (
     AjusteSchema,
+    CategoriaInsumoCreateSchema,
+    CategoriaInsumoUpdateSchema,
     ConsumoSchema,
     DevolucionSchema,
     InsumoCreateSchema,
     InsumoUpdateSchema,
     MovimientoSchema,
 )
-from app.modules.maintenance.services import inventory, interventions
+from app.modules.maintenance.services import categories, inventory, interventions
 
 
 maintenance_bp = Blueprint("maintenance", __name__, url_prefix="/maintenance")
+
+
+@maintenance_bp.get("/categories")
+@token_required
+@role_required("ADMIN", "TECNICO")
+def list_categories():
+    active = g.current_user["rol"] != "ADMIN"
+    return jsonify(categories.list_categories(active=active if active else None))
+
+
+@maintenance_bp.post("/categories")
+@token_required
+@role_required("ADMIN")
+def create_category():
+    data = read_json(CategoriaInsumoCreateSchema())
+    return jsonify(categories.create_category(data)), 201
+
+
+@maintenance_bp.patch("/categories/<int:category_id>")
+@token_required
+@role_required("ADMIN")
+def update_category(category_id):
+    data = read_json(CategoriaInsumoUpdateSchema(), partial=True)
+    return jsonify(categories.update_category(category_id, data))
+
+
+@maintenance_bp.delete("/categories/<int:category_id>")
+@token_required
+@role_required("ADMIN")
+def delete_category(category_id):
+    categories.delete_category(category_id)
+    return "", 204
 
 
 @maintenance_bp.get("/insumos/bajo-stock")

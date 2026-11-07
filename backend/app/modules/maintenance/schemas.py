@@ -3,6 +3,18 @@ from marshmallow import fields, validate
 from app.core.validation import BaseSchema
 
 
+class CategoriaInsumoCreateSchema(BaseSchema):
+    nombre = fields.Str(required=True, validate=validate.Length(min=2, max=80))
+    descripcion = fields.Str(allow_none=True, validate=validate.Length(max=500))
+    activo = fields.Boolean(load_default=True)
+
+
+class CategoriaInsumoUpdateSchema(BaseSchema):
+    nombre = fields.Str(validate=validate.Length(min=2, max=80))
+    descripcion = fields.Str(allow_none=True, validate=validate.Length(max=500))
+    activo = fields.Boolean()
+
+
 class InsumoCreateSchema(BaseSchema):
     nombre = fields.Str(required=True, validate=validate.Length(min=2, max=150))
     descripcion = fields.Str(allow_none=True, validate=validate.Length(max=2000))
