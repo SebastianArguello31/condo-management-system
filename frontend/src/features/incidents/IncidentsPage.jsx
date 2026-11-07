@@ -45,6 +45,7 @@ import {
 import { PRIORIDAD_TONO } from "./priorities";
 import IncidentsCreateModal from "./IncidentsCreateModal";
 import IncidentsDetailModal from "./IncidentsDetailModal";
+import { useMutation } from "../../hooks/useMutation";
 
 /* Fallback del metadata QUE SOLO PIDE el residente (técnico/ADMIN no lo
  * consulta). */
@@ -55,11 +56,16 @@ const EMPTY_METADATA = { tipos: [], unidades: [] };
 const ESTADOS_CERRADOS = ["RESUELTA", "CERRADA", "RECHAZADA", "CANCELADA"];
 
 export default function IncidentsPage({ user }) {
-  const isResident = user.rol === "RESIDENTE";
-  const isTechnician = user.rol === "TECNICO";
-  const isAdmin = user.rol === "ADMIN";
   const rol = user.rol;
-  const titulo = isAdmin
+  const isResident = rol === "RESIDENTE";
+  const isTechnician = rol === "TECNICO";
+  const isAdmin = rol === "ADMIN";
+  const isManager = rol === "GESTOR";
+
+  const puedeAsignar = isAdmin || isManager;
+  const puedeConsultarInventario = isAdmin || isTechnician;
+
+  const titulo = puedeAsignar
     ? "Gestión de incidencias"
     : isTechnician
       ? "Incidencias asignadas"
@@ -77,8 +83,12 @@ export default function IncidentsPage({ user }) {
       api(`${routes.incidents}/priorities`, { signal }),
       api(`${routes.incidents}/statuses`, { signal }),
       isResident ? api(`${routes.incidents}/metadata`, { signal }) : Promise.resolve(null),
-      isAdmin ? api(`${routes.incidents}/technicians`, { signal }) : Promise.resolve([]),
-      isResident ? Promise.resolve([]) : api(`${routes.maintenance}/insumos`, { signal }),
+      puedeAsignar
+        ? api(`${routes.incidents}/technicians`, { signal })
+        : Promise.resolve([]),
+      puedeConsultarInventario
+        ? api(`${routes.maintenance}/insumos`, { signal })
+        : Promise.resolve([]),
     ]);
     return [incidents ?? [], priorityRows ?? [], statusRows ?? [], incidentMetadata, technicianRows ?? [], inventoryRows ?? []];
   }, [user?.id_usuario, rol]);
@@ -92,7 +102,16 @@ export default function IncidentsPage({ user }) {
 
   const [showCreate, setShowCreate] = useState(false);
   const [selected, setSelected] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const asignarTecnico = useMutation((incidentId, technicianId) =>
+    api(`${routes.incidents}/${incidentId}/assignments`, {
+      method: "POST",
+      body: {
+        id_personal_asignado: technicianId,
+      },
+    })
+  );
+
+  const busy = asignarTecnico.busy;
   const [busqueda, setBusqueda] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("");
 
@@ -107,11 +126,27 @@ export default function IncidentsPage({ user }) {
   }, [estadoDesdeUrl]);
 
   async function assign(row, event) {
-    const id = event.target.value; if (!id) return; setBusy(true);
+    const technicianId = Number(event.target.value);
+
+    if (
+      !puedeAsignar ||
+      busy ||
+      !Number.isInteger(technicianId) ||
+      technicianId <= 0 ||
+      technicianId === Number(row.id_personal_asignado)
+    ) {
+      return;
+    }
+
     try {
-      await api(`${routes.incidents}/${row.id_incidencia}/assignments`, { method: "POST", body: { id_personal_asignado: Number(id) } });
-      notify("Técnico asignado."); await reload();
-    } catch (e) { notify(e.message || "No se pudo asignar el técnico.", { tone: "danger" }); } finally { setBusy(false); }
+      await asignarTecnico.run(row.id_incidencia, technicianId);
+      notify("Técnico asignado.");
+      await reload();
+    } catch (error) {
+      notify(error.message || "No se pudo asignar el técnico.", {
+        tone: "danger",
+      });
+    }
   }
 
   const limpiarFiltros = () => {
@@ -151,24 +186,40 @@ export default function IncidentsPage({ user }) {
     },
     { key: "estado", header: "Estado", render: (row) => <StatusBadge estado={row.estado} /> },
     { key: "reportada", header: "Reportada", cellClassName: "ui-mono", render: (row) => formatDate(row.fecha_reporte) },
-    ...(isAdmin
-      ? [{
-          key: "tecnico",
-          header: "Técnico",
-          render: (row) => (
-            <Select
-              aria-label={`Asignar técnico a ${row.titulo}`}
-              value={row.id_personal_asignado || ""}
-              disabled={busy}
-              onChange={(event) => assign(row, event)}
-            >
-              <option value="">Seleccionar...</option>
-              {technicians.map((t) => (
-                <option key={t.id_usuario} value={t.id_usuario}>{t.nombre} {t.apellido}</option>
-              ))}
-            </Select>
-          ),
-        }]
+    ...(puedeAsignar
+      ? [
+          {
+            key: "tecnico",
+            header: "Técnico",
+            render: (row) => (
+              <Select
+                name={`tecnico_${row.id_incidencia}`}
+                autoComplete="off"
+                aria-label={`Asignar técnico a ${row.titulo}`}
+                value={row.id_personal_asignado || ""}
+                disabled={
+                  busy ||
+                  loading ||
+                  !row.estado ||
+                  ESTADOS_CERRADOS.includes(row.estado)
+                }
+                onChange={(event) => assign(row, event)}
+              >
+                <option value="">Seleccionar...</option>
+                {technicians.map((technician) => (
+                  <option
+                    key={technician.id_usuario}
+                    value={technician.id_usuario}
+                  >
+                    {[technician.nombre, technician.apellido]
+                      .filter(Boolean)
+                      .join(" ")}
+                  </option>
+                ))}
+              </Select>
+            ),
+          },
+        ]
       : []),
     {
       key: "acciones",
