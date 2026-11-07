@@ -3,6 +3,7 @@ from decimal import Decimal
 from werkzeug.exceptions import BadRequest, NotFound
 
 from app.core.db_helpers import transaction
+from app.modules.maintenance.repositories import categories as categories_repo
 from app.modules.maintenance.repositories import inventory as repo
 
 
@@ -19,6 +20,12 @@ def list_items(filters):
 
 def create_item(data):
     with transaction() as cursor:
+        category = categories_repo.get_category_by_name(
+            data["categoria"], cursor=cursor, for_share=True
+        )
+        if category is None or not category["activo"]:
+            raise BadRequest("Selecciona una categoría de insumo activa")
+        data = {**data, "categoria": category["nombre"]}
         created = repo.insert_item(data, cursor=cursor)
         return repo.get_item(created["id_insumo"], cursor=cursor)
 
@@ -29,6 +36,13 @@ def update_item(item_id, data):
     with transaction() as cursor:
         if repo.get_item(item_id, cursor=cursor, for_update=True) is None:
             raise NotFound("Insumo no encontrado")
+        if "categoria" in data:
+            category = categories_repo.get_category_by_name(
+                data["categoria"], cursor=cursor, for_share=True
+            )
+            if category is None or not category["activo"]:
+                raise BadRequest("Selecciona una categoría de insumo activa")
+            data = {**data, "categoria": category["nombre"]}
         repo.update_item(item_id, data, cursor=cursor)
         return repo.get_item(item_id, cursor=cursor)
 

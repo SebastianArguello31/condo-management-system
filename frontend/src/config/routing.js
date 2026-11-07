@@ -29,6 +29,7 @@ import MisReservasPage from "../features/reservas/MisReservasPage";
 import GestionReservasPage from "../features/reservas/GestionReservasPage";
 import DashboardPage from "../features/dashboard/DashboardPage";
 import MaintenancePage from "../features/maintenance/MaintenancePage";
+import InsumoCategoriesPage from "../features/maintenance/InsumoCategoriesPage";
 
 const ADMIN = "ADMIN";
 const RESIDENTE = "RESIDENTE";
@@ -163,6 +164,13 @@ const ITEMS = {
     component: MaintenancePage,
     roles: [ADMIN, TECNICO],
   },
+  categoriasInsumo: {
+    path: "/categorias-insumo",
+    label: "Categorías de insumos",
+    icon: "maintenance",
+    component: InsumoCategoriesPage,
+    roles: [ADMIN],
+  },
 };
 
 /* Pantalla por defecto por rol (decisión actualizada en la integración con
@@ -188,6 +196,7 @@ const GRUPOS = {
         "tiposIncidencia",
         "insumos",
         "tiposEdificio",
+        "categoriasInsumo",
         "edificios",
         "tiposUnidad",
         "unidades",
