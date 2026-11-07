@@ -7,6 +7,7 @@
 import {
   contrasena,
   correo,
+  decimal,
   entero,
   fecha,
   hora,
@@ -172,4 +173,40 @@ export function politicaCrear(capacidad = null) {
 export const especialidadCrear = {
   nombre: [requerido(), longitud(1, 100)],
   descripcion: [maximo(500)],
+};
+
+/* Origen: backend/app/modules/maintenance/schemas.py — InsumoCreateSchema:
+ * stock_minimo Decimal places=3 + Range(min=0); costo_unitario OPCIONAL
+ * (load_default="0") Decimal places=2 + Range(min=0). Sin `activo`. */
+export const insumoCrear = {
+  nombre: [requerido(), longitud(2, 150)],
+  descripcion: [maximo(2000)],
+  categoria: [requerido(), longitud(2, 80)],
+  unidad_medida: [requerido(), longitud(1, 40)],
+  stock_minimo: [requerido(), decimal(3)],
+  costo_unitario: [decimal(2)],
+};
+
+/* Origen: ídem — InsumoUpdateSchema (TODOS los campos opcionales; el
+ * backend además acepta `activo` en el PATCH, pero la UI NO lo expone
+ * (decisión F2-10b) y no se toca desde este form, así que no lleva regla). */
+export const insumoEditar = {
+  nombre: [longitud(2, 150)],
+  descripcion: [maximo(2000)],
+  categoria: [longitud(2, 80)],
+  unidad_medida: [longitud(1, 40)],
+  stock_minimo: [decimal(3)],
+  costo_unitario: [decimal(2)],
+};
+
+/* Origen: backend/app/modules/maintenance/schemas.py — MovimientoSchema
+ * (es el body de POST /insumos/:id/entradas y /insumos/:id/salidas, y
+ * base de /existencias-iniciales, /ajustes (AjusteSchema añade
+ * `direccion`, que la UI NO expone) y de ConsumoSchema/DevolucionSchema
+ * de intervenciones): cantidad Decimal required places=3 con Range(
+ * min=0, min_inclusive=False) → MAYOR que 0; motivo Str required
+ * Length(3, 500). */
+export const movimientoCrear = {
+  cantidad: [requerido(), decimal(3, 0, true)],
+  motivo: [requerido(), longitud(3, 500)],
 };

@@ -1,1 +1,154 @@
-.login-page{min-height:100vh;display:grid;place-items:center;padding:24px;background:#f5f7f7;color:#182b31}.login-card{width:min(100%,410px);padding:36px;border:1px solid #e3e9e8;border-radius:16px;background:#fff;box-shadow:0 12px 35px #203e2912}.login-brand{display:grid;place-items:center;width:44px;height:44px;margin-bottom:18px;border-radius:12px;background:#186553;color:#fff}.login-kicker{margin:0 0 8px;color:#40846f;font-size:12px;font-weight:700;letter-spacing:1.7px}.login-card h1{margin:0;font-size:28px;line-height:1.15}.login-description{margin:10px 0 28px;color:#74838a;font-size:14px}.login-card form{display:grid;gap:9px}.login-card label{display:flex;align-items:center;gap:6px;margin-top:8px;color:#4e6267;font-size:13px;font-weight:600}.login-card input{box-sizing:border-box;width:100%;padding:12px 13px;border:1px solid #dce5e2;border-radius:8px;color:#182b31;font:inherit;outline:none}.login-card input:focus{border-color:#84baa1;box-shadow:0 0 0 3px #84baa133}.login-card button{margin-top:18px;padding:13px 16px;border:0;border-radius:8px;background:#186553;color:#fff;cursor:pointer;font:inherit;font-weight:600}.login-card button:hover:not(:disabled){background:#104b3d}.login-card button:disabled{cursor:wait;opacity:.7}.login-error{margin:0 0 4px;padding:10px 12px;border-radius:8px;background:#fff1ee;color:#a33e3e;font-size:13px}@media(max-width:480px){.login-card{padding:28px 22px}}
+/*==========================================================================
+ Login (F2-9): rediseño sobre tokens (única fuente: styles/tokens.css).
+ Sin hex ni px sueltos (excepción del plan: líneas de 1px/2px), radios ≤
+ 8px, sin sombras decorativas ni gradientes; transiciones solo
+ color/opacidad (ya definidas en ui.css). Único breakpoint: 640px.
+ Nota para F2-11: las clases .login-container/.login-form de index.css
+ están muertas (cero consumidores; solo lectura de grep) — aquí no se
+ tocan y quedan anotadas en el plan para la limpieza final.
+ ==========================================================================*/
+
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.login-panel {
+  width: min(100%, calc(var(--space-12) * 9));
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+/* Marca tipográfica izquierda: glifo sin contenedor (stroke currentColor)
+ * junto al kicker; sin bloque de color (convención §3). */
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--brand);
+}
+
+.login-kicker {
+  color: var(--ink-3);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  font-weight: 600;
+}
+
+.login-title {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-28);
+  line-height: var(--lh-28);
+  color: var(--ink);
+}
+
+.login-description {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--ink-2);
+}
+
+/* Etiquetas del kit con glifo + texto + asterisco EN UNA SOLA FILA,
+ * alineados a la izquierda. Ronda 1 del dueño: la ronda inicial solo
+ * declaraba display/align-items/gap — al volver a un CONTENEDOR flex
+ * (inline-flex) el único `flex-direction` que afectaba al label era el
+ * legacy `column` de index.css:104-108 (K1 de ui.css solo lo neutralizaba
+ * vía display: block, que NO declara flex-direction), y el align-items
+ * propio lo centraba → etiqueta apilada y centrada (captura). Ahora se
+ * declaran TODAS las propiedades de fila (0,2,0 gana a .ui-field-label y
+ * al `label` legacy por propiedad). Seguro: el asterisco queda en la
+ * misma fila (margin token compensa el gap flex para separarlo
+ * --space-1 del texto, como pidió el equipo); .ui-visually-hidden es
+ * position: absolute (ui.css:10) → no es ítem flex y no agrega hueco. */
+.login-panel .ui-field-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+}
+
+/* Asterisco inline a continuación del texto con --space-1 neto: el gap
+ * flex del label es --space-2, así que el compensado negativo deja el
+ * margen exacto pedido (tokens-only). Color/glifo según ui.css
+ * (.ui-field-required → --accent, span inline). */
+.login-panel .ui-field-required {
+  margin-inline-start: calc(var(--space-1) - var(--space-2));
+}
+
+/* Móvil primero: panel compacto; a >640px el padding respira más
+ * (único breakpoint permitido que aplica aquí). La separación
+ * encabezado→formulario se define al final (ronda 2: --space-6). */
+@media (min-width: 640px) {
+  .login-panel {
+    padding: var(--space-8);
+  }
+}
+
+/* ==========================================================================
+ Ronda 2 (pulido holgado, captura del dueño a 1280): el Login es pantalla
+ de entrada SIN shell, así que va más holgado que el kit, y TODO queda
+ acotado a .login-panel (sin tocar kit/ui.css/tokens).
+ ========================================================================== */
+
+/* Etiquetas de 14px (más legible que el estándar 12px del kit); la fila
+ * glifo→texto→asterisco de la ronda 1 NO cambia (mismo gap de --space-2 y
+ * asterisco pegado con --space-1 neto; el glifo 16px mantiene aria-hidden
+ * nativo y hereda --ink-2). */
+.login-panel .ui-field-label {
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+}
+
+/* Controles y botón del Login a 48px (min-height gana por clamping sobre
+ * la height --control-h del kit). El input del kit es input.ui-control
+ * (Input.jsx): su texto queda centrado verticalmente porque el input de
+ * una línea lo pinta centrado en el content box con padding-block: 0.
+ * Foco 2px (--focus-ring), borde --line-control y contrastes intactos. */
+.login-panel input.ui-control {
+  height: var(--space-12);
+  padding-block: 0;
+}
+
+.login-panel .ui-btn {
+  min-height: var(--space-12);
+}
+
+/* Ritmo vertical acotado al panel: --space-5 entre campos; el gap interno
+ * del Field (etiqueta→input, --space-1) queda como el kit. */
+.login-panel .ui-form-stack {
+  gap: var(--space-5);
+}
+
+/* Separación encabezado→formulario: un paso más que la ronda inicial. */
+.login-panel form {
+  margin-top: var(--space-6);
+}
+
+.auth-recovery-content {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+.login-panel .auth-recovery-content form {
+  margin-top: 0;
+}
+
+.auth-password-help {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-12);
+  line-height: var(--lh-14);
+}

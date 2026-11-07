@@ -19,13 +19,17 @@ import ResidentsPage from "../features/users/ResidentsPage";
 import ResidentHome from "../features/users/ResidentHome";
 import EmployeeProfile from "../features/users/EmployeeProfile";
 import BuildingsPage from "../features/units/BuildingsPage";
+import BuildingTypesPage from "../features/units/BuildingTypesPage";
 import UnitsPage from "../features/units/UnitsPage";
+import UnitTypesPage from "../features/units/UnitTypesPage";
 import IncidentsPage from "../features/incidents/IncidentsPage";
+import IncidentTypesPage from "../features/incidents/IncidentTypesPage";
 import EspaciosPage from "../features/espacios-comunes/EspaciosPage";
 import MisReservasPage from "../features/reservas/MisReservasPage";
 import GestionReservasPage from "../features/reservas/GestionReservasPage";
 import DashboardPage from "../features/dashboard/DashboardPage";
 import MaintenancePage from "../features/maintenance/MaintenancePage";
+import InsumoCategoriesPage from "../features/maintenance/InsumoCategoriesPage";
 
 const ADMIN = "ADMIN";
 const RESIDENTE = "RESIDENTE";
@@ -45,6 +49,13 @@ const ITEMS = {
     icon: "incidents",
     component: IncidentsPage,
     roles: [ADMIN, RESIDENTE, TECNICO],
+  },
+  tiposIncidencia: {
+    path: "/tipos-incidencia",
+    label: "Tipos de incidencia",
+    icon: "incidents",
+    component: IncidentTypesPage,
+    roles: [ADMIN],
   },
   miPerfil: {
     path: "/mi-perfil",
@@ -109,6 +120,20 @@ const ITEMS = {
     component: BuildingsPage,
     roles: [ADMIN],
   },
+  tiposEdificio: {
+    path: "/tipos-edificio",
+    label: "Tipos de edificio",
+    icon: "buildings",
+    component: BuildingTypesPage,
+    roles: [ADMIN],
+  },
+  tiposUnidad: {
+    path: "/tipos-unidad",
+    label: "Tipos de unidad",
+    icon: "units",
+    component: UnitTypesPage,
+    roles: [ADMIN],
+  },
   unidades: {
     path: "/unidades",
     label: "Unidades",
@@ -139,6 +164,13 @@ const ITEMS = {
     component: MaintenancePage,
     roles: [ADMIN, TECNICO],
   },
+  categoriasInsumo: {
+    path: "/categorias-insumo",
+    label: "Categorías de insumos",
+    icon: "maintenance",
+    component: InsumoCategoriesPage,
+    roles: [ADMIN],
+  },
 };
 
 /* Pantalla por defecto por rol (decisión actualizada en la integración con
@@ -158,7 +190,19 @@ const GRUPOS = {
     },
     {
       label: "Comunidad",
-      items: ["dashboard", "incidencias", "insumos", "edificios", "unidades", "espacios", "gestionReservas"],
+      items: [
+        "dashboard",
+        "incidencias",
+        "tiposIncidencia",
+        "insumos",
+        "tiposEdificio",
+        "categoriasInsumo",
+        "edificios",
+        "tiposUnidad",
+        "unidades",
+        "espacios",
+        "gestionReservas",
+      ],
     },
   ],
   [RESIDENTE]: [

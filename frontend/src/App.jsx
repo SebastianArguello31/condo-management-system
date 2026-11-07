@@ -26,6 +26,7 @@ import AppShell from "./components/AppShell";
 import ErrorBoundary from "./components/ui/ErrorBoundary";
 import { ConfirmDialog, ToastProvider } from "./components/ui";
 import "./styles/users-ui.css";
+import PasswordRecovery from "./features/auth/PasswordRecovery";
 
 /* F2-1a: ToastProvider + ConfirmProvider montados UNA vez en App, arriba de
  * todo (incluye Login): cualquier pantalla puede usar useToast/useConfirm, y
@@ -45,7 +46,12 @@ export default function App() {
 
 function AppRoutes() {
   const [user, setUser] = useState(null);
-  const { path, navigate } = useHashRoute();
+  const [loginNotice, setLoginNotice] = useState("");
+  const { path, params, navigate } = useHashRoute();
+
+  const isRecoveryRoute =
+    path === "/recuperar-password" ||
+    path === "/restablecer-password";
 
   const logout = useCallback(() => {
     setAccessToken(null);
@@ -59,6 +65,7 @@ function AppRoutes() {
   }, [logout]);
 
   function login(result) {
+    setLoginNotice("");
     setAccessToken(result.access_token);
     setUser(result.user);
   }
@@ -110,10 +117,38 @@ function AppRoutes() {
   const shown = active ?? (window.location.hash.startsWith("#/") ? null : lastActiveRef.current);
 
   useEffect(() => {
-    if (user && fallback && !shown) navigate(fallback.path, null, { replace: true });
-  }, [user, fallback, shown, navigate]);
+    if (!isRecoveryRoute && user && fallback && !shown) {
+      navigate(fallback.path, null, { replace: true });
+    }
+  }, [isRecoveryRoute, user, fallback, shown, navigate]);
 
-  if (!user) return <Login onLogin={login} />;
+  if (isRecoveryRoute) {
+    const token =
+      typeof params.token === "string" ? params.token : "";
+
+    return (
+      <PasswordRecovery
+        key={`${path}:${token}`}
+        mode={path === "/restablecer-password" ? "reset" : "request"}
+        token={token}
+        onBack={returnToLogin}
+        onRequestLink={() =>
+          navigate("/recuperar-password", null, { replace: true })
+        }
+        onCompleted={completePasswordReset}
+      />
+    );
+  }
+
+  if (!user) {
+    return (
+      <Login
+        onLogin={login}
+        onForgotPassword={openRecovery}
+        notice={loginNotice}
+      />
+    );
+  }
 
   if (!fallback) {
     return <AppShell user={user} groups={[]} activePath={null} onNavigate={() => {}} onLogout={logout}>
@@ -124,6 +159,29 @@ function AppRoutes() {
   if (!shown) return null;
 
   const Page = shown.component;
+
+  function openRecovery() {
+    setLoginNotice("");
+    navigate("/recuperar-password");
+  }
+
+  function returnToLogin() {
+    setAccessToken(null);
+    setUser(null);
+    setLoginNotice("");
+    lastActiveRef.current = null;
+    navigate("/", null, { replace: true });
+  }
+
+  function completePasswordReset() {
+    setAccessToken(null);
+    setUser(null);
+    lastActiveRef.current = null;
+    setLoginNotice(
+      "Tu contraseña fue actualizada. Inicia sesión con la nueva contraseña."
+    );
+    navigate("/", null, { replace: true });
+  }
 
   return <AppShell user={user} groups={groups} activePath={shown.path} onNavigate={(target) => navigate(target)} onLogout={logout}>
     <Suspense fallback={<p>Cargando…</p>}>

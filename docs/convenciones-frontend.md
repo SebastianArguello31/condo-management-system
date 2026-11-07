@@ -262,3 +262,55 @@ solo si su clave no coincide con el id.
   payload y contrato { spaces, events, onCreated } idénticos al legado;
   éxito con Toast + cierre + onCreated (reload de Mis reservas); sin CSS
   nuevo.
+- **Login (`Login`)** — F2-9: rediseñado al kit (Field/Input/Button
+  primary/Alert danger con foco) con panel tokens-only (`.login-panel`,
+  sin hex, radio --radius-md, sin sombra ni bloque de marca de color),
+  etiquetas alineadas a la izquierda con glifo inline vía ReactNode de
+  `Field` (regla acotada a `.login-panel` en login.css), validación en
+  cliente con schema `login` (noValidate) + `err.errors` por campo,
+  contrato `{ onLogin }` y payload intactos; el guard de 401 de api.js
+  excluye el login (no toca api.js); sin CSS para controles (ui.css); CSS
+   muerto `.login-container`/`.login-form` de index.css reportado a
+   F2-11.
+- **Insumos (`MaintenancePage`)** — F2-10a: shell y listado al kit
+  (PageHeader con meta "desc · N insumos · M con stock bajo" de la lista
+  cargada, filtros de SERVIDOR buscar/categoria/bajo_stock con vacíos
+  omitidos — Buscar aplica con Enter, categoría/stock bajo al cambiar —,
+  sembrado `?bajo_stock=true` sin escribir de vuelta, catálogo de
+  categorías conservado en ref acumulado aunque se filtre, DataTable sin
+  ID con Existencia/Stock mínimo a la derecha + plural conservador de
+  unidad (`formatQuantityUnit`, singular solo en 1), Estado con override
+  "Stock bajo"/"Disponible", acciones Historial (todos) + Editar/
+  "Registrar movimiento" (ADMIN, unifica Entrada+Salida); los 3 modales
+  legados intactos (F2-10b/10c); `formatQuantity`/InterventionMaterials
+  (Dev 2) intactos).
+- **Insumos (`MaintenancePage`)** — F2-10b: "Nuevo/Editar insumo" a
+  FormModal en un único `InsumoFormModal` con dos modos (patrón
+  `EspacioFormModal`); Categoría sigue texto libre con `<datalist>` del
+  catálogo ya cargado (sin endpoint nuevo ni CSS nuevo); schemas
+  `insumoCrear`/`insumoEditar` espejo exacto de `InsumoCreateSchema`/
+  `InsumoUpdateSchema` (+ regla `decimal(places, min)` aditiva en
+  `validations/rules.js`); números con step="any" y valores iniciales
+  normalizados ("1500.00" → 1500); `activo` no expuesto ni enviado;
+  validación en cliente + `err.errors` → Field, foco al primer inválido,
+  error de la acción DENTRO, éxito Toast + reload sin titilar, dedupe y
+  cierre bloqueado en busy; payloads/endpoints idénticos al legado;
+  modales de movimiento e historial siguen legados (F2-10c).
+- **Insumos (`MaintenancePage`)** — F2-10c: "Registrar movimiento" al
+  kit en `MovimientoFormModal` (FormModal con schema `movimientoCrear`
+  — cantidad MAYOR que 0, máx. 3 decimales; motivo 3–500 —, tipo Select
+  SOLO Entrada/Salida con `required`, "Existencia actual" de la fila en
+  solo lectura y los 400 del backend (stock negativo / insumo
+  inactivo) DENTRO del modal con su texto exacto) e "Historial" en
+  `InsumoHistorialModal` (Modal de LECTURA con useQuery + signal +
+  Timeline, Skeleton/ErrorState locales, filtro de tipo en SERVIDOR
+  `?tipo=` con SOLO los tipos presentes en los movimientos del insumo
+  (ref acumulado, como las categorías del listado; sin movimientos no
+  se muestra el filtro), fechas con formatDateTime y vacíos
+  explícitos); Costo unitario del insumo OPCIONAL con hint "Opcional.
+  Si lo dejas vacío, se registra 0."; Helpers de cantidades compartidos
+  en `features/maintenance/quantity.js`
+  (`formatQuantity`/`formatQuantityUnit`, misma lógica exacta); SIN busy
+  global de pantalla (cada modal gestiona el suyo) y sin `.mg-*` en la
+  página; `quantity.js` sirve a página y modales, InterventionMaterials
+  conserva su copia privada (intacto).

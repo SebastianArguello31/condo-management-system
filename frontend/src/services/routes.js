@@ -12,8 +12,10 @@ export const routes = Object.freeze({
   units: "/units",
   unitTypes: "/unit-types",
   incidents: "/incidents",
+  incidentTypes: "/incidents/types",
   reservations: "/reservations",
   commonSpaces: "/common-spaces",
   maintenance: "/maintenance",
+  maintenanceCategories: "/maintenance/categories",
   analytics: "/analytics",
 });

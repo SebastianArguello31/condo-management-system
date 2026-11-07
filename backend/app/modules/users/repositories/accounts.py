@@ -10,6 +10,7 @@ USER_SELECT = """
         u.email,
         u.telefono,
         u.activo,
+        u.session_version,
         u.created_at,
         u.id_rol,
         r.nombre AS rol
@@ -42,6 +43,7 @@ def get_login_user(email):
             u.email,
             u.telefono,
             u.password_hash,
+            u.session_version,
             u.activo,
             u.id_rol,
             r.nombre AS rol

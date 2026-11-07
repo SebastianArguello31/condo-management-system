@@ -1,4 +1,5 @@
-from werkzeug.exceptions import BadRequest, Forbidden, NotFound
+from psycopg2.errors import ForeignKeyViolation
+from werkzeug.exceptions import BadRequest, Conflict, Forbidden, NotFound
 
 from app.core.db_helpers import transaction
 from app.modules.incidents import attachments
@@ -11,6 +12,35 @@ from app.modules.incidents.rules import can_register_intervention
 
 def list_priorities():
     return catalogs.list_priorities()
+
+def list_incident_types():
+    return catalogs.list_all_types()
+
+def create_incident_type(data):
+    return catalogs.insert_type(data)
+
+def update_incident_type(type_id, data):
+    if not data or not set(data).issubset({"nombre", "descripcion", "activo"}):
+        raise BadRequest("Campos de actualización inválidos")
+
+    row = catalogs.update_type(type_id, data)
+
+    if row is None:
+        raise NotFound("Tipo de incidencia no encontrado")
+
+    return row
+
+def delete_incident_type(type_id):
+    try:
+        deleted = catalogs.delete_type(type_id)
+    except ForeignKeyViolation:
+        raise Conflict(
+            "El tipo de incidencia tiene incidencias relacionadas. "
+            "Desactívalo para impedir que se use en nuevos reportes."
+        ) from None
+
+    if deleted is None:
+        raise NotFound("Tipo de incidencia no encontrado")
 
 def list_statuses():
     return catalogs.list_statuses()
