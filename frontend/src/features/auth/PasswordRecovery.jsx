@@ -219,8 +219,7 @@ export default function PasswordRecovery({
                   </Field>
 
                   <p id="password-help" className="auth-password-help">
-                    Usa al menos 8 caracteres. El máximo es 72 bytes;
-                    algunos caracteres ocupan más de un byte.
+                    Usa al menos 8 caracteres. 
                   </p>
 
                   <Field
