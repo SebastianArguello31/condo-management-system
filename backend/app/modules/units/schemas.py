@@ -13,6 +13,17 @@ class BuildingTypeUpdateSchema(BaseSchema):
     nombre = fields.Str(validate=validate.Length(min=1, max=100))
     descripcion = fields.Str(validate=validate.Length(max=500))
 
+class UnitTypeCreateSchema(BaseSchema):
+    nombre = required_text(100)
+    descripcion = fields.Str(
+        load_default="",
+        validate=validate.Length(max=500),
+    )
+
+class UnitTypeUpdateSchema(BaseSchema):
+    nombre = fields.Str(validate=validate.Length(min=1, max=100))
+    descripcion = fields.Str(validate=validate.Length(max=500))
+
 class BuildingCreateSchema(BaseSchema):
     nombre = required_text()
     direccion = fields.Str(allow_none=True, validate=validate.Length(max=300))

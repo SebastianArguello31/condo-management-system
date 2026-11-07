@@ -26,12 +26,49 @@ def get_unit(unit_id):
 def list_types():
     return query(
         """
-        SELECT id_tipo_unidad, nombre
+        SELECT id_tipo_unidad, nombre, descripcion
         FROM tipo_unidad
         ORDER BY id_tipo_unidad;
         """,
         many=True,
     )
+
+def get_type(type_id):
+    return query(
+        """
+        SELECT id_tipo_unidad, nombre, descripcion
+        FROM tipo_unidad
+        WHERE id_tipo_unidad = %s;
+        """,
+        (type_id,),
+    )
+
+def insert_type(data):
+    return query(
+        """
+        INSERT INTO tipo_unidad (nombre, descripcion)
+        VALUES (%s, %s)
+        RETURNING id_tipo_unidad, nombre, descripcion;
+        """,
+        (data["nombre"], data.get("descripcion", "")),
+    )
+
+def update_type(type_id, data):
+    updated = update_record(
+        "tipo_unidad",
+        "id_tipo_unidad",
+        type_id,
+        data,
+        {"nombre", "descripcion"},
+    )
+
+    if updated is None:
+        return None
+
+    return get_type(type_id)
+
+def delete_type(type_id):
+    return delete_record("tipo_unidad", "id_tipo_unidad", type_id)
 
 def insert_unit(data):
     return query(

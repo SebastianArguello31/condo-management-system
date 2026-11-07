@@ -60,6 +60,28 @@ def delete_building(building_id):
 def list_unit_types():
     return units_repo.list_types()
 
+def create_unit_type(data):
+    return units_repo.insert_type(data)
+
+def update_unit_type(type_id, data):
+    unit_type = units_repo.update_type(type_id, data)
+
+    if unit_type is None:
+        raise NotFound("Tipo de unidad no encontrado")
+
+    return unit_type
+
+def delete_unit_type(type_id):
+    try:
+        deleted = units_repo.delete_type(type_id)
+    except ForeignKeyViolation:
+        raise Conflict(
+            "El tipo de unidad tiene unidades asociadas y no se puede eliminar."
+        ) from None
+
+    if deleted is None:
+        raise NotFound("Tipo de unidad no encontrado")
+
 def list_units():
     return units_repo.list_units()
 

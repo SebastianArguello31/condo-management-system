@@ -8,6 +8,8 @@ from app.modules.units.schemas import (
     BuildingTypeCreateSchema,
     BuildingTypeUpdateSchema,
     UnitCreateSchema,
+    UnitTypeCreateSchema,
+    UnitTypeUpdateSchema,
 )
 
 units_bp = Blueprint("units", __name__)
@@ -44,6 +46,27 @@ def delete_building_type(type_id):
 @role_required("ADMIN")
 def list_unit_types():
     return jsonify(services.list_unit_types())
+
+@units_bp.post("/unit-types")
+@token_required
+@role_required("ADMIN")
+def create_unit_type():
+    data = read_json(UnitTypeCreateSchema())
+    return jsonify(services.create_unit_type(data)), 201
+
+@units_bp.patch("/unit-types/<int:type_id>")
+@token_required
+@role_required("ADMIN")
+def update_unit_type(type_id):
+    data = read_json(UnitTypeUpdateSchema(), partial=True)
+    return jsonify(services.update_unit_type(type_id, data))
+
+@units_bp.delete("/unit-types/<int:type_id>")
+@token_required
+@role_required("ADMIN")
+def delete_unit_type(type_id):
+    services.delete_unit_type(type_id)
+    return "", 204
 
 @units_bp.get("/buildings")
 @token_required
