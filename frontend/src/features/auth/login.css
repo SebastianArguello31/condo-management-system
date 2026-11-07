@@ -135,3 +135,20 @@
 .login-panel form {
   margin-top: var(--space-6);
 }
+
+.auth-recovery-content {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+.login-panel .auth-recovery-content form {
+  margin-top: 0;
+}
+
+.auth-password-help {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-12);
+  line-height: var(--lh-14);
+}
