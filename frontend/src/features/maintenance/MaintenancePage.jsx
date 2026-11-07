@@ -3,7 +3,8 @@
  * al kit en F2-10c). La pantalla mantiene el contrato `({ user })` de la
  * ruta #/insumos (roles ADMIN/TECNICO, sin cambios en routing). Paridad
  * conservada: GET /maintenance/insumos con filtros de SERVIDOR
- * buscar/categoria/bajo_stock (vacíos omitidos), el "Nuevo insumo" solo
+ * buscar/categoria/bajo_stock (vacíos omitidos), catálogo de categorías
+ * consultado desde /maintenance/categories, el "Nuevo insumo" solo
  * para ADMIN, los payloads POST/PATCH del insumo intactos (en
  * InsumoFormModal.jsx) y los POST de movimiento en
  * MovimientoFormModal.jsx (ruta /entradas|/salidas según el tipo, y
@@ -31,7 +32,7 @@
  * registrado." (decisión F2-10c; el legado decía "Movimiento registrado
  * y stock actualizado."). Helper local formatQuantity/formatDate
  * REMOVIDOS (ahora ./quantity y el historial usa formatDateTime). */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useHashRoute } from "../../hooks/useHashRoute";
@@ -96,11 +97,14 @@ export default function MaintenancePage({ user }) {
     if (bajoStockDesdeUrl) setBajoStock(true);
   }, [bajoStockDesdeUrl]);
 
-  /* Catálogo de categorías: se alimenta de TODAS las cargas exitosas
-   * (sin endpoint nuevo) para que el select no se reduzca al elegir una
-   * categoría; se actualiza solo cuando crece de verdad. */
-  const catalogoRef = useRef(new Set());
-  const [categorias, setCategorias] = useState([]);
+  /* El catálogo se administra en su pantalla de configuración. El backend
+   * entrega las categorías activas al técnico y todas al administrador. */
+  const {
+    data: categorias = [],
+    loading: cargandoCategorias,
+    error: errorCategorias,
+    reload: reloadCategorias,
+  } = useQuery((signal) => api(routes.maintenanceCategories, { signal }), []);
 
   /* Misma consulta que el loadItems() anterior: GET /insumos con los
    * mismos params de servidor (buscar/categoria/bajo_stock, vacíos
@@ -116,19 +120,14 @@ export default function MaintenancePage({ user }) {
     const query = filtros.toString();
     const filas = (await api(`${routes.maintenance}/insumos${query ? `?${query}` : ""}`, { signal })) ?? [];
 
-    let catalogoCrece = false;
-    for (const fila of filas) {
-      if (fila.categoria && !catalogoRef.current.has(fila.categoria)) {
-        catalogoRef.current.add(fila.categoria);
-        catalogoCrece = true;
-      }
-    }
-    if (catalogoCrece) setCategorias([...catalogoRef.current].sort());
-
     return filas;
   }, [claveFiltros]);
 
   const items = data ?? [];
+  const categoriasFiltro = [...new Set([
+    ...categorias.map((item) => item.nombre),
+    ...items.map((item) => item.categoria),
+  ])].filter(Boolean).sort();
 
   /* Apertura de los tres modales del kit (F2-10b/10c): cada modal
    * gestiona SU carga, error y busy por dentro; selectedItem + modal son
@@ -262,7 +261,7 @@ export default function MaintenancePage({ user }) {
         <Field label="Categoría">
           <Select value={categoria} onChange={(event) => setCategoria(event.target.value)}>
             <option value="">Todas</option>
-            {categorias.map((value) => (
+            {categoriasFiltro.map((value) => (
               <option key={value} value={value}>
                 {value}
               </option>
@@ -293,8 +292,8 @@ export default function MaintenancePage({ user }) {
         rowKey={(row) => row.id_insumo}
         caption="Listado de insumos"
         loading={loading}
-        error={errorCarga}
-        onRetry={reload}
+        error={errorCarga || errorCategorias}
+        onRetry={() => { reload(); reloadCategorias(); }}
         emptyTitle={hayFiltros ? "No hay insumos que coincidan." : "No hay insumos"}
         emptyDescription={hayFiltros ? "Ajusta la búsqueda o los filtros para ver resultados." : NOTA_CONSUMOS}
         emptyAction={vacioReal ? triggerNuevo : undefined}
@@ -304,6 +303,7 @@ export default function MaintenancePage({ user }) {
         <InsumoFormModal
           insumo={selectedItem}
           categorias={categorias}
+          cargandoCategorias={cargandoCategorias}
           onClose={() => setModal(null)}
           onGuardado={reload}
         />
