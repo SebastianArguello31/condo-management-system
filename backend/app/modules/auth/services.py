@@ -13,8 +13,12 @@ def authenticate_user(email, password):
 
     public_user = dict(user)
     public_user.pop("password_hash")
+    public_user.pop("session_version")
 
     return {
-        "access_token": create_access_token(user["id_usuario"]),
+        "access_token": create_access_token(
+            user["id_usuario"],
+            user["session_version"],
+        ),
         "user": public_user,
     }

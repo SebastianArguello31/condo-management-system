@@ -64,7 +64,7 @@ def update_password(user_id, password_hash, *, cursor):
     query(
         """
             UPDATE usuarios
-            SET password_hash = %s
+            SET password_hash = %s, session_version = session_version + 1
             WHERE id_usuario = %s
         """,
         (password_hash, user_id),
