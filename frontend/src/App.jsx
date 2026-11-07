@@ -5,6 +5,7 @@ import UsersPage from "./features/users/UsersPage";
 import BuildingsPage from "./features/units/BuildingsPage";
 import UnitsPage from "./features/units/UnitsPage";
 import IncidentsPage from "./features/incidents/IncidentsPage";
+import IncidentTypesPage from "./features/incidents/IncidentTypesPage";
 import EmployeesPage from "./features/users/EmployeesPage";
 import AdminsPage from "./features/users/AdminsPage";
 import SpecialtiesPage from "./features/users/SpecialtiesPage";
@@ -18,7 +19,7 @@ import "./styles/users-ui.css";
 const pages = {
   users: UsersPage, employees: EmployeesPage, admins: AdminsPage,
   specialties: SpecialtiesPage, buildings: BuildingsPage, units: UnitsPage,
-  incidents: IncidentsPage, profile: EmployeeProfile,
+  incidents: IncidentsPage, incidentTypes: IncidentTypesPage, profile: EmployeeProfile,
   residents: ResidentsPage, residentHome: ResidentHome,
 };
 
