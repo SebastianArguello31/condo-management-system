@@ -2486,6 +2486,103 @@ fetch en el dry-run de verificación). Los cambios quedan SIN commit en el
 contiene lo mismo y el dueño crea la rama y commitea sobre ella (los
 cambios no commiteados se conservan al cambiar de rama).
 
+## Sesión F2-12b: modales de detalle y Modal del kit por convención (2026-11-07)
+
+Corte solicitado por el dueño. Rama indicada:
+`feature/refactor-modales-detalle` (git SOLO LECTURA aquí: NO se creó; el
+trabajo queda SIN commit en el working tree y se conserva al crearla).
+Alcance RESPETADO: SOLO `components/ui/ui.css`,
+`styles/users-ui.css` (declaraciones del Modal en conflicto),
+`utils/roles.js` (NUEVO), `features/users/AccountDetailModal.jsx` (solo el
+campo Rol) + docs. NO tocados: AppShell.jsx, shell.css, App.jsx,
+routing.js, api.js, backend, validations/, Dashboard/InterventionMaterials,
+los JSX del kit (Modal/DefinitionList/FormModal/ConfirmDialog).
+
+**PASO 0 (verificación, solo lectura):**
+
+- (a) En `users-ui.css` SOLO estas declaraciones chocan con `.ui-modal`
+  del kit: `.mg-modal` (:112) `border:1px solid #dce7e1`,
+  `border-radius:16px`, `background:white`,
+  `box-shadow:0 25px 90px #10271a33`, `color:var(--ui-text)` (#182b31) y
+  `.mg-modal::backdrop` (:113) `backdrop-filter:blur(3px)` + fondo
+  #162e2b66. Ancho/padding/max-height son IDÉNTICOS a los del kit
+  (min 660px/0/calc(100dvh−40px)); `.mg-modal-heading`/`.mg-icon-button`/
+  `.mg-modal-actions` no pisan propiedades del kit en lo esencial: el kit
+  las gana por especificidad (0,2,0) salvo el HOVER del botón de cierre
+  (empate (0,3,0), gana el legacy — pulido §8-bis).
+- (b) Consumidores por clase: `mg-modal` y `mg-modal-heading` SOLO en
+  `Modal.jsx` (:32/:43); `mg-icon-button` en `Modal.jsx:50` (cierre) y
+  `AppShell.jsx:91` (menú móvil) → NO se tocan; `mg-modal-actions` con
+  CERO consumidores JSX (ya lo reportaba STATUS.md — se borra en F2-11).
+  Modal lo montan (todos reciben CSS igual): CrudPage legacy (sin
+  montaje real: las 7 pantallas pasan `variant="ui"`), FormModal,
+  ConfirmDialog, IncidentsDetailModal, EspaciosPage (Detalle),
+  MisReservasPage (Detalle), AccountDetailModal, ResidentUnitsModal,
+  InsumoHistorialModal, CreateReservation (no usa Modal, solo dl),
+  DashboardPage drilldown (Dev 3), `#/ui`.
+- (c) Cascada confirmada: main.jsx importa App (19) ANTES de
+  index.css/tokens/base.css (20-22); App.jsx importa login.css/shell.css/
+  ui.css (vía barrel de components/ui, línea 27) y `users-ui.css` al
+  FINAL (28) → en empates (0,1,0) gana el legado (causa del radio 16px/
+  sombra/blur vistos en pantalla). `base.css` no rescate: `.mg-modal`
+  (0,1,0) gana por orden y `.app-shell :focus-visible` (0,2,0) por
+  especificidad (foco del shell = deuda F2-12a).
+- (d) `.ui-modal` ya cubría TODO lo eliminado del legado: radio
+  `--radius-md`, fondo `--surface`, borde `--line`, `box-shadow:none`,
+  `::backdrop[data-backdrop=true]` con ink 45% y SIN blur; lo único
+  rescatado al retirar el blur: los modales SIN `backdrop=true`
+  (drilldown del Dashboard) conservan su dim #162e2b66 (solo se quitó
+  el desenfoque), qué detallifique.
+- (e) Rol crudo SOLO en `AccountDetailModal.jsx:104` (`detail.rol`);
+  las COLUMNAS de tabla de Usuarios/Employees/Admins también lo pintan
+  crudo (`UsersPage.jsx:32` `{ name: "rol" }` ídem) → pulido §8-bis.
+
+**Cambios (4 ítems):**
+
+1. `ui.css` `.ui-dl-row`: `align-items: baseline` (dt 12px y dd 14px
+   comparten base — defecto 8) + columna de etiquetas con tope
+   `calc(var(--space-12) * 3)` (144px; antes `* 4` = 192px y el valor
+   arrancaban ~204px — defecto 9). "Anticipación mínima"/"Duración
+   máxima" caben (a 12px las palabras más largas miden <110px); <640px
+   sigue 1 columna sin cambio. Regla nueva acotada
+   `.ui-dl dd .ui-status { padding-block: 0 }` — ALTERNATIVA MÍNIMA
+   señalada por el dueño: sin ella el badge (21px de línea + 8px de
+   padding) dejaba la fila Estado ~3px más alta que las de texto; con
+   ella el dd mide lo mismo que una fila de texto y el baseline alinea
+   el glifo+texto del badge con la etiqueta. Afecta a TODOS los DL del
+   kit (Estado en Mis reservas/Espacios/Incidencias, políticas de
+   CreateReservation, demos de `#/ui`): consistente, retrocompatible
+   (CSS-only, sin props).
+2. `users-ui.css` `.mg-modal`/`.mg-modal::backdrop` (112-113): SOLO
+   fuera las declaraciones en conflicto (border #dce7e1, radius 16px,
+   background white, box-shadow, backdrop-filter blur) — defecto 11.
+   Gana `.ui-modal`: radio `--radius-md` (6px), fondo `--surface`,
+   borde `--line`, sin sombra, backdrop sin blur. Quedan ancho/padding/
+   max-height/color (idénticos o equivalentes) y el dim del ::backdrop
+   para modales sin `backdrop=true` (Dashboard no cambia su dim, solo
+   pierde el blur, radio y sombra). `.mg-modal-heading`/`
+   .mg-icon-button`/`.mg-modal-actions` INTACTOS (consumidores vivos).
+3. NUEVO `utils/roles.js`: `ROLE_LABELS = { ADMIN: "Administrador",
+   TECNICO: "Técnico", RESIDENTE: "Residente" }` + `roleLabel(rol)`
+   (fallback al código si no está en el mapa) — defecto 10.
+   `AccountDetailModal.jsx` lo usa en el campo Rol. AppShell (que tiene
+   su mapa duplicado en :14 con "Empleado") LO ADOPTA EN F2-12a.
+4. JSX del kit SIN tocar (Modal/DefinitionList/FormModal/ConfirmDialog).
+
+**Qué conserva (paridad):** estructura y datos de los modales, el footer
+"Cerrar", el foco al abrir/Esc-devuelve-foco (del `<dialog>` nativo), el
+cierre bloqueado en busy de FormModal, los payloads/endpoints de siempre.
+**Qué cambia (visual):** filas de dl alineadas por base, columna de
+etiquetas máx 144px, fila Estado de la altura de las de texto, rol
+legible ("Administrador/Técnico/Residente"), modal con radio 6px, sin
+sombra difusa y sin desenfoque de fondo.
+
+**Nota de rama:** git SOLO LECTURA — el dueño crea
+`feature/refactor-modales-detalle` desde el árbol actual (con F2-11a
+commiteada `0301846`); los cambios no commiteados se conservan al
+cambiar de rama. Commit sugerido: `style(ui): DefinitionList alineado
+por línea base, Modal por convención y rol legible (F2-12b)`.
+
 ## 8. Pendientes y hallazgos abiertos
 **Producto de Dev 1:**
 - [x] Verificación final de CP6b: guía `#/ui` — completada por el dueño y
@@ -2745,8 +2842,21 @@ agenda cuando el dueño lo ordene.
   alcance: pantalla.
 - [MaintenancePage] — busca por nombre/descripción EXACTA del legado
   (`buscar` del backend, sin precisar si cubre sintilde/caso): probar
-  "tubería"/"TUBERIA" en la verificación y reportar si el backend es
-  sensible a tildes/caso — alcance: backend (solo reporte).
+   "tubería"/"TUBERIA" en la verificación y reportar si el backend es
+   sensible a tildes/caso — alcance: backend (solo reporte).
+
+- [Usuarios/Empleados/Administradores (F2-12b)] — el ROL sigue crudo en
+  la COLUMNA de tabla (`UsersPage.jsx:32` `{ name: "rol" }`; ídem
+  Employees/Admins): `utils/roles.js` ya existe, agregar `render` con
+  `roleLabel` a las 3 columnas — alcance: pantalla.
+- [Kit/Modal (F2-12b)] — el HOVER del botón de cierre del modal usa los
+  verdes legacy (`users-ui.css:83` gana el empate (0,3,0) sobre
+  `.ui-modal .ui-modal-close:hover`): se corrige cuando el shell deje de
+  consumir `mg-icon-button` (F2-12a) o subiendo especificidad del hover
+  del kit — alcance: kit/futuro (F2-12a/F2-11).
+- [Kit (F2-12b)] — `.mg-modal-actions` (users-ui.css) sin CERO
+  consumidores JSX (re-verificado con grep; ya lo reportaba el cierre de
+  F2-10c) → borrar el bloque en la limpieza F2-11 — alcance: limpieza.
 
 ## 8-ter. Plantilla de migración de pantalla
 

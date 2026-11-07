@@ -143,6 +143,9 @@ solo si su clave no coincide con el id.
 - **Errores y éxito:** error de una acción de modal DENTRO del modal
   (FormModal: Alert danger con foco/scroll); éxito SIEMPRE por Toast del
   padre; confirmaciones con `useConfirm` — cero `window.confirm`.
+- **Rol legible (F2-12b):** el rol JAMÁS se muestra como código crudo
+  (ADMIN/TECNICO/RESIDENTE); usar `roleLabel(rol)` de `utils/roles.js`
+  (fuente única de las etiquetas "Administrador/Técnico/Residente").
 - **Formularios inline (perfil y similares):** `Section` + `Field`,
   error de la acción en `Alert` danger al nivel de la sección, éxito en
   `Toast` (sin `notice` de página).
@@ -314,4 +317,13 @@ solo si su clave no coincide con el id.
   (`formatQuantity`/`formatQuantityUnit`, misma lógica exacta); SIN busy
   global de pantalla (cada modal gestiona el suyo) y sin `.mg-*` en la
   página; `quantity.js` sirve a página y modales, InterventionMaterials
-  conserva su copia privada (intacto).
+   conserva su copia privada (intacto).
+- **Modales de detalle de cuentas (`AccountDetailModal`)** — F2-12b:
+  kit por convención sin tocar los JSX (DefinitionList con filas
+  alineadas por LÍNEA BASE y columna de etiquetas tope 144px; fila
+  Estado con StatusBadge a la misma altura que las de texto; Modal con
+  radio `--radius-md`, `--surface`, borde `--line`, SIN sombra y SIN
+  backdrop desenfocado — se retiraron solo las declaraciones que
+  chocaban del legado) y rol legible vía `utils/roles.js` (`roleLabel`);
+  el rol crudo de las COLUMNAS de tabla de las 3 pantallas queda como
+  pulido (§8-bis del plan).

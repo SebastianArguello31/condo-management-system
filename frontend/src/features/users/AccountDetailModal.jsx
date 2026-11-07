@@ -32,6 +32,7 @@ import { useQuery } from "../../hooks/useQuery";
 import { useMutation } from "../../hooks/useMutation";
 import { useConfirm } from "../../hooks/useConfirm";
 import { formatDate } from "../../utils/format";
+import { roleLabel } from "../../utils/roles";
 import {
   Button,
   DefinitionList,
@@ -101,7 +102,7 @@ export default function AccountDetailModal({ usuario, onClose }) {
             { term: "Nombre", detail: nombreCompleto(detail) },
             { term: "Email", detail: detail.email },
             { term: "Teléfono", detail: detail.telefono || "—" },
-            { term: "Rol", detail: detail.rol },
+            { term: "Rol", detail: roleLabel(detail.rol) },
             { term: "Creada", detail: formatDate(detail.created_at) || "—" },
           ]}
         />

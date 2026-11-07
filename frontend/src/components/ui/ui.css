@@ -597,9 +597,16 @@ textarea.ui-control {
   column-gap: var(--space-6);
 }
 
+/* F2-12b: filas alineadas por LÍNEA BASE (dt 12px vs dd 14px compartían
+ * solo el borde superior) y columna de etiquetas con tope 144px (antes
+ * 192px + gap 12px dejaba el valor arrancando ~204px). Con <640px el DL
+ * pasa a 1 columna y la alineación no aplica. El badge de Estado pierde
+ * su padding vertical SOLO dentro del DL para que su fila mida lo mismo
+ * que las de texto. */
 .ui-dl-row {
   display: grid;
-  grid-template-columns: minmax(auto, calc(var(--space-12) * 4)) 1fr;
+  grid-template-columns: minmax(auto, calc(var(--space-12) * 3)) 1fr;
+  align-items: baseline;
   gap: var(--space-3);
   padding-block: var(--space-2);
   border-bottom: 1px solid var(--line);
@@ -623,6 +630,10 @@ textarea.ui-control {
   color: var(--ink);
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.ui-dl dd .ui-status {
+  padding-block: 0;
 }
 
 @media (max-width: 640px) {

@@ -259,6 +259,14 @@ regla 1px; 1 columna <640px.
 ```
 Accesibilidad: `<dl>`/`<dt>`/`<dd>` nativos.
 
+F2-12b: las filas se alinean por LÍNEA BASE (etiqueta 12px y valor 14px
+comparten base; antes iban alineadas arriba) y la columna de etiquetas
+tiene tope `calc(var(--space-12) * 3)` (144px; antes 192px — el valor
+arrancaba ~204px). El `StatusBadge` dentro de un `dd` pierde su padding
+vertical SOLO dentro de la lista (`.ui-dl dd .ui-status`) para que la
+fila "Estado" mida lo mismo que las de texto. Con <640px el DL pasa a
+una columna (patrón actual) y el baseline no aplica.
+
 ### Timeline — `components/ui/Timeline.jsx`
 
 `entries` (REQUERIDA: `[{ id?, time, title, meta?, detail?, tone? }]`).
@@ -350,7 +358,12 @@ ni CSS propio (usa la clase existente). Usos: Mis reservas, CrudPageUi
 Accesibilidad: `<dialog>` nativo (foco atrapado y devuelto, Esc vía
 `onCancel`); `aria-labelledby`. NOTA: se abre al MONTAR (`showModal` en
 effect de mount) — controla la apertura con render condicional (`{abierto && …}`).
-Usa las clases legacy `mg-modal`/`mg-icon-button` (aisladas, "coco" ui-modal).
+F2-12b: el diálogo pinta TODO desde `.ui-modal` (radio `--radius-md`,
+fondo `--surface`, borde `--line`, sin sombra; `::backdrop` sin blur).
+El marcado conserva las clases legacy `mg-modal`/`mg-icon-button`, que
+ya no pisan los valores del kit; el dim del `::backdrop` legacy solo
+queda para los modales sin `backdrop=true` (p. ej. el drilldown del
+Dashboard, Dev 3).
 
 ### FormModal — `components/ui/FormModal.jsx` (`FormModal`, `useFormFieldError`)
 Patrón §2.18/§2.20 del plan hecho componente.
@@ -599,6 +612,18 @@ desplazar el día. Uso previsto: listados y detalles (F2-3 adopta, F2-4/F2-5 sig
 import { formatDate, formatDateTime } from "../utils/format";
 formatDate("2026-03-05");           // "05/03/2026"
 formatDateTime("2026-03-05T14:30"); // "05/03/2026 14:30"
+```
+
+### `utils/roles.js` (NUEVO, F2-12b)
+
+Etiquetas legibles de los roles reales del sistema (pantalla/shell comparten
+la misma fuente, nunca el código crudo): `ROLE_LABELS` y `roleLabel(rol)`
+(con FALLBACK al código si el rol no está en el mapa).
+
+```js
+import { roleLabel } from "../utils/roles";
+roleLabel("ADMIN");     // "Administrador"
+roleLabel("TECNICO");   // "Técnico"
 ```
 
 ### `validations/` (`validate.js`, `rules.js`, `schemas.js`)
