@@ -1,4 +1,48 @@
-from app.core.db_helpers import query
+from app.core.db_helpers import delete_record, query, update_record
+
+def list_all_types():
+    return query(
+        """
+        SELECT id_tipo_incidencia, nombre, descripcion, activo
+        FROM tipos_incidencia
+        ORDER BY nombre, id_tipo_incidencia;
+        """,
+        many=True,
+    )
+
+def insert_type(data):
+    return query(
+        """
+        INSERT INTO tipos_incidencia (nombre, descripcion, activo)
+        VALUES (%s, %s, %s)
+        RETURNING id_tipo_incidencia, nombre, descripcion, activo;
+        """,
+        (data["nombre"], data.get("descripcion"), data.get("activo", True)),
+    )
+
+def update_type(type_id, data):
+    updated = update_record(
+        "tipos_incidencia",
+        "id_tipo_incidencia",
+        type_id,
+        data,
+        {"nombre", "descripcion", "activo"},
+    )
+
+    if updated is None:
+        return None
+
+    return query(
+        """
+        SELECT id_tipo_incidencia, nombre, descripcion, activo
+        FROM tipos_incidencia
+        WHERE id_tipo_incidencia = %s;
+        """,
+        (type_id,),
+    )
+
+def delete_type(type_id):
+    return delete_record("tipos_incidencia", "id_tipo_incidencia", type_id)
 
 def list_priorities(*, cursor=None):
     return query(
