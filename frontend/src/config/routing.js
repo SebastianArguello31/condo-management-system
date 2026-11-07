@@ -37,7 +37,7 @@ const ITEMS = {
     label: "Indicadores",
     icon: "dashboard",
     component: DashboardPage,
-    roles: [ADMIN, TECNICO],
+    roles: [ADMIN],
   },
   incidencias: {
     path: "/incidencias",
@@ -141,13 +141,13 @@ const ITEMS = {
   },
 };
 
-/* Pantalla por defecto por rol (decisión actualizada en la integración con
- * develop: el ADMIN y el TECNICO aterrizan en el Dashboard; el residente
- * sigue en Incidencias). */
+/* Pantalla por defecto por rol: el ADMIN aterriza en el Dashboard; el
+ * RESIDENTE y el TECNICO en Incidencias (F2-11a: Indicadores solo para
+ * ADMIN; el TECNICO conserva Incidencias e Insumos). */
 const RUTA_INICIAL = {
   [ADMIN]: "dashboard",
   [RESIDENTE]: "incidencias",
-  [TECNICO]: "dashboard",
+  [TECNICO]: "incidencias",
 };
 
 const GRUPOS = {
@@ -167,7 +167,7 @@ const GRUPOS = {
   ],
   [TECNICO]: [
     { label: "Personas", items: ["perfil"] },
-    { label: "Comunidad", items: ["dashboard", "incidencias", "insumos"] },
+    { label: "Comunidad", items: ["incidencias", "insumos"] },
   ],
 };
 

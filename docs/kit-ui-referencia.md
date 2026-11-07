@@ -677,8 +677,8 @@ módulos). Pasos:
 5. Rojo SOLO DEV: `rutaSoloDev` (`#/ui`) es el único patrón lazy +
    `import.meta.env.DEV` — nunca fuera de esa rama.
 
-Aterrizaje por rol (`RUTA_INICIAL`): ADMIN y TECNICO → `dashboard`;
-RESIDENTE → `incidencias` (se toca SOLO con decisión del dueño).
+Aterrizaje por rol (`RUTA_INICIAL`): ADMIN → `dashboard`; RESIDENTE y
+TECNICO → `incidencias` (se toca SOLO con decisión del dueño).
 
 ```js
 // 1) arriba: import MiPantalla from "../features/x/MiPantalla";

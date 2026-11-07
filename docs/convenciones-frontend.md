@@ -97,8 +97,9 @@ Referencia completa por componente (props/ejemplos/a11y):
 ## 7. Registro de pantalla en `config/routing.js`
 
 ITEMS → GRUPOS (ver pasos y ejemplo en `docs/kit-ui-referencia.md` §5).
-Aterrizaje por rol fijado: ADMIN/TECNICO → `#/dashboard`, RESIDENTE →
-`#/incidencias`. Las pantallas de otros devs navegan con
+Aterrizaje por rol fijado: ADMIN → `#/dashboard`, RESIDENTE y TECNICO →
+`#/incidencias` (F2-11a: Indicadores solo para ADMIN; el hash `#/dashboard`
+con sesión TECNICO cae a la pantalla por defecto del rol, nunca en blanco). Las pantallas de otros devs navegan con
 `onNavigate(clave)` (adaptador legado) y se agregan a `CLAVE_PANTALLA`
 solo si su clave no coincide con el id.
 

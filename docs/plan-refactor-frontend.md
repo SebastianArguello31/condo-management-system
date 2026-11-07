@@ -40,10 +40,10 @@ Entregables: frontend refactorizado con base compartida, navegación clara,
 4. Un único archivo de configuración declarativa
    (`frontend/src/config/routing.js`: Ítems → groups por rol). AppShell y App
    no conocen claves de módulos. `features/auth/navigation.js` fue eliminado.
-5. **Aterrizaje por rol:** ADMIN y TECNICO → `#/dashboard`; **RESIDENTE →
-   `#/incidencias`** (actualizado en la integración con develop, que trae el
-   cambio del equipo: la decisión original del dueño con CP5 era ADMIN →
-   `#/usuarios` y RESIDENTE/TECNICO → `#/incidencias`).
+5. **Aterrizaje por rol:** ADMIN → `#/dashboard`; **RESIDENTE y TECNICO →
+   `#/incidencias`** (F2-11a, 2026-11-07: Indicadores solo para ADMIN;
+   hasta la integración con develop, que traía el cambio del equipo, el
+   ADMIN y el TECNICO aterrizaban en el dashboard).
 6. Token solo en memoria (sin persistencia): refresh cierra sesión. Igual que
    antes. 401 → evento "session-expired" → logout + hash limpio con replace.
 7. Copy en español neutro (tuteo) para todo lo nuevo.
@@ -404,13 +404,13 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 | ID | Pantalla / rol | Síntoma | Causa | Paso que lo resuelve (§7) |
 |----|----------------|---------|-------|---------------------------|
-| B1 | Usuarios y accesos (admin) | Detalle en Usuarios y accesos | Por verificar | F2-6 |
+| B1 | Usuarios y accesos (admin) | Detalle en Usuarios y accesos | **VERIFICADA POR EL DUEÑO (2026-11-07)** | F2-6a |
 | B2 | Nuevo empleado (modal, admin) | Popup de correo del navegador al escribir el nombre | Verificada: `CreateAccount.jsx:50` — inputs sin `name` ni `autoComplete` (solo password tiene) y `CrudPage.jsx:310-312`; el navegador adivina el campo y ofrece correo guardado | **CERRADA POR DISEÑO** (F2-6a en el crear del kit; el archivo CreateAccount quedó sin consumidores y se RETIRÓ en F2-6b) |
 | B3 | Nuevo empleado | Mensaje suelto bajo el botón al cerrar el modal | Verificada: `CreateAccount.jsx:44` renderiza el error como `<p>` sin estilos (`mg-alert`) fuera del modal al cerrarlo | **CERRADA POR DISEÑO** (F2-6a; el error vive DENTRO del FormModal y CreateAccount se retiró en F2-6b) |
-| B4 | Empleados (admin) | Detalle en Empleados | Por verificar | F2-6 (HECHA 6a; por verificar con captura del dueño) |
-| B5 | Residentes (admin) | Ver unidades en Residentes | Por verificar | F2-6b HECHA (ResidentUnitsModal al kit; **por verificar con captura del dueño**, NO se declara cerrado) |
-| B6 | Espacios (admin) | Transición rota Espacios → Políticas de reserva | **Verificada con descripción del dueño (2026-11-01):** es frontend, no backend — la subvista se abre con estado local (`EspaciosPage` setea `policySpace`) y la URL NO cambia; F5 y "Atrás" pierden el contexto (F5 recae en la pantalla o aterrizaje de sesión; el historial no registra la subvista). La lectura de `EspaciosPage.jsx`/`SpacePolicies.jsx`/`CrudPage.jsx`/rutas backend era coherente; la causa era de diseño (subvista sin hash) | **F2-7b HECHA:** hash `#/espacios?politicas=<id>` (navigate para entrar y para Volver; id inexistente/inválido → EmptyState con "Volver a espacios"; foco al h1 de Políticas y al contenedor del listado al volver). **Por verificar con captura del dueño — NO se declara cerrado** |
-| B7 | Incidencias (técnico) / Mi perfil | Detalle en el modal de incidencias y en Mi perfil | Por verificar | F2-5 (detalle) / F2-4 (perfil) |
+| B4 | Empleados (admin) | Detalle en Empleados | **VERIFICADA POR EL DUEÑO (2026-11-07)** (F2-6a con captura) | F2-6a |
+| B5 | Residentes (admin) | Ver unidades en Residentes | **VERIFICADA POR EL DUEÑO (2026-11-07)** con captura del ResidentUnitsModal | F2-6b |
+| B6 | Espacios (admin) | Transición rota Espacios → Políticas de reserva | **Verificada con descripción del dueño (2026-11-01):** es frontend, no backend — la subvista se abre con estado local (`EspaciosPage` setea `policySpace`) y la URL NO cambia; F5 y "Atrás" pierden el contexto (F5 recae en la pantalla o aterrizaje de sesión; el historial no registra la subvista). La lectura de `EspaciosPage.jsx`/`SpacePolicies.jsx`/`CrudPage.jsx`/rutas backend era coherente; la causa era de diseño (subvista sin hash) | **F2-7b HECHA:** hash `#/espacios?politicas=<id>` (navigate para entrar y para Volver; id inexistente/inválido → EmptyState con "Volver a espacios"; foco al h1 de Políticas y al contenedor del listado al volver). **Por verificar con captura del dueño — NO se declara cerrado**. **ACTUALIZACIÓN (2026-11-07): VERIFICADA POR EL DUEÑO con captura.** |
+| B7 | Incidencias (técnico) / Mi perfil | Detalle en el modal de incidencias y en Mi perfil | **VERIFICADA POR EL DUEÑO (2026-11-07).** Por lectura el front estaba correcto (el `INCIDENT_SELECT` trae edificio/unidad y el modal los pinta en el DefinitionList con respaldo de la fila; la parte del perfil quedó sin reproducible al salir los historiales); nada se corrigió porque nada estaba roto | F2-5 (detalle) / F2-4 (perfil) |
 | B8 | Nueva incidencia (modal, residente) | Error de backend se renderiza al fondo de la página con el modal abierto | Verificada: el `error` es estado único de página — `IncidentsPage.jsx:55` lo setea al crear y se renderiza solo a nivel página (`IncidentsPage.jsx:103`); el modal de creación (línea 105) no lo muestra adentro (el de detalle sí, línea 106) | F2-5 |
 | B9 | Edificios, Unidades, Especialidades (admin) | Botón azul "Reintentar carga" parpadeante: aparece y desaparece al abrir la pantalla | Verificada: condición `!ready` en `CrudPage.jsx:239-240`; `ready` inicia `false` (línea 43) y pasa a `true` al resolver la carga (línea 78) — botón visible en cada montaje hasta que llega la lista | F2-1b (CrudPage sobre useQuery; se migra Especialidades) |
 | B10 | Unidades (admin) | "Tipo de unidad" solo acepta números | Verificada: `UnitsPage.jsx:11` declara `type: "number"` → input numérico en `CrudPage.jsx:299`; el backend SÍ expone el catálogo `GET /unit-types` (`backend/app/modules/units/routes.py:16-20`). Debería ser select con lookup (como Edificios, `BuildingsPage.jsx:12-19`). **NO lo causó CP6b:** `git diff HEAD~1 HEAD` prueba que la versión anterior ya usaba `type: "number"`; el cambio solo borró la rama `buildings`/detalle/timeout | F2-2 (select del catálogo unitTypes) |
@@ -421,12 +421,11 @@ terminado un paso mientras sus bugs sigan abiertos.
 > F2-8b VERIFICADAS por el dueño — F2-8c DESCARTADA; F2-4, F2-1b, F2-2,
 > F2-5a, F2-5b, F2-5c, F2-6a, F2-6b, F2-7a y F2-7b hechas — verificación
 > pendiente; F2-9 HECHA — pendiente de verificar):**
-> 1. **Verificación por el dueño** de F2-9 (checklist del Login en
->    STATUS.md), F2-1b, F2-2 (incluida ronda 1), F2-5a, F2-5b, F2-5c,
->    F2-6a, F2-6b, F2-7a y F2-7b (checklists en STATUS.md; en la de
->    incidencias, **B7 con captura**; en F2-6a, **B1/B4 con captura**; en
->    F2-6b, **B5 con captura**; en F2-7b, **B6 con captura** — NO se
->    declara cerrado) → abrir PRs de las ramas hechas.
+> 1. **Verificación por el dueño** de F2-10a/b/c (checklists en STATUS.md)
+>    y de los checkpoints restantes sin verificación (F2-9, F2-1b, F2-2,
+>    F2-5a, F2-5b, F2-5c, F2-6a, F2-6b, F2-7a, F2-7b) → abrir PRs de las
+>    ramas hechas. **B1, B4, B5, B6 y B7 VERIFICADAS POR EL DUEÑO
+>    (2026-11-07)** — ya no quedan bugs con captura pendiente.
 > 2. **F2-5 COMPLETO pulido** (§8-bis: Cancelar del residente, mover la
 >    asignación al detalle, columna Unidad) cuando el dueño lo ordene.
 > 3. **docs/convenciones-frontend.md** (guía del kit para los demás,
@@ -2433,6 +2432,60 @@ requerido ✓ · Motivo "*" = requerido ✓ (tipo no está en el schema
 porque determina el endpoint; requerido por decisión de UI). Historial —
 "Filtrar por tipo" SIN "*" (no es requerido) ✓.
 
+## Sesión F2-11a: Indicadores solo para ADMIN y aterrizaje del TECNICO en Incidencias (2026-11-07)
+
+Corte solicitado por el dueño (entrega ~2 días). Rama indicada:
+`feature/refactor-tecnico-sin-dashboard` desde develop actualizado. Alcance
+RESPETADO: SOLO `frontend/src/config/routing.js` + docs. NO tocados:
+DashboardPage/dashboard.css (Dev 3), App.jsx, AppShell, kit, CSS,
+validations, backend, pantallas de otros módulos.
+
+**PASO 0 (verificación, solo lectura):**
+
+- (a) Estado previo: `ITEMS.dashboard.roles = [ADMIN, TECNICO]`
+  (routing.js:40), `RUTA_INICIAL[TECNICO] = "dashboard"` (:150) y
+  `GRUPOS[TECNICO]` Comunidad con "dashboard" (:170). Referencias TECNICO
+  a la pantalla dashboard en el frontend: SOLO esas tres líneas de la
+  config. AppShell no tiene enlaces duros (el menú sale de `groups`);
+  `CLAVE_PANTALLA.dashboard` existe pero ninguna pantalla de TECNICO
+  navega a esa clave; no hay `#/dashboard` hardcodeado en ningún .jsx.
+  DashboardPage NO tiene ramas por TECNICO (solo `user.rol === "ADMIN"`,
+  DashboardPage.jsx:68; el filtro "Técnico Asignado" del dashboard es
+  `isAdmin &&`, :398). Sus `onNavigate("incidents")/"employees"` van al
+  adaptador de App.jsx y la resolución por rol los guarda igual.
+- (b) **App.jsx SÍ resuelve la ruta no permitida sin pantalla en blanco**
+  (no se tocó): `active` exige que la ruta esté en los GRUPOS del rol
+  (App.jsx:96-99); si no, `shown = null` y el efecto (:112-114) navega a
+  `fallback.path` (= `RUTA_INICIAL[rol]`) con `replace: true`. Con esta
+  sesión, un TECNICO que escriba `#/dashboard` a mano (o tenga esa sesión
+  abierta) termina REDIRIGIDO a `#/incidencias`.
+- (c) Backend (solo lectura): TODOS los 6 endpoints de
+  `backend/app/modules/analytics/routes.py` usan
+  `@role_required("ADMIN", "TECNICO")` (`/dashboard`, `/incidencias`,
+  `/intervenciones`, `/inventario`, `/registros`, `/filtros`). Reportado,
+  sin tocar backend.
+- (d) Grupos/rutas del TECNICO tras el cambio: Personas = ["perfil"]
+  (`#/perfil`), Comunidad = ["incidencias", "insumos"] (`#/incidencias`,
+  `#/insumos`); aterrizaje `#/incidencias`.
+
+**Cambios (6 ítems del alcance):** `roles: [ADMIN]` en
+`ITEMS.dashboard`; `RUTA_INICIAL[TECNICO] = "incidencias"` (con comentario
+actualizado); `GRUPOS[TECNICO]` Comunidad SIN "dashboard";
+docs/convenciones-frontend.md §7 (aterrizaje ADMIN → dashboard;
+RESIDENTE/TECNICO → incidencias); docs/kit-ui-referencia.md §5 (línea de
+`RUTA_INICIAL`); plan §2.5 (decisión vigente) + esta sesión + §7-bis
+(B1/B4/B5/B6/B7 **VERIFICADAS POR EL DUEÑO** con captura, 2026-11-07)
++ §8-bis (nota de deuda
+DashboardPage/backend) + agenda (ítem 1 sin capturas pendientes);
+STATUS.md (bloque del checkpoint).
+
+**Nota de rama:** git SOLO LECTURA — no se creó la rama ni se resolvió la
+apertura de `origin/develop` (había `640a855..63c2cf4` pendiente de
+fetch en el dry-run de verificación). Los cambios quedan SIN commit en el
+árbol; si `63c2cf4` ya es la integración de F2-10c (probable), el árbol
+contiene lo mismo y el dueño crea la rama y commitea sobre ella (los
+cambios no commiteados se conservan al cambiar de rama).
+
 ## 8. Pendientes y hallazgos abiertos
 **Producto de Dev 1:**
 - [x] Verificación final de CP6b: guía `#/ui` — completada por el dueño y
@@ -2664,6 +2717,15 @@ agenda cuando el dueño lo ordene.
   `feature/refactor-insumos-listado` lo contiene —; el bloqueo de arriba
   queda resuelto para la próxima ronda de estilo de InterventionMaterials
   (F2-10c/F2-11).)*
+
+- [DashboardPage (Dev 3)] — **sin ramas por TECNICO** (el componente solo
+  distingue `user.rol === "ADMIN"`, DashboardPage.jsx:68): al retirarle la
+  pantalla al TECNICO (F2-11a) no pierde nada de su código. El backend
+  `/analytics/*` SÍ admite TECNICO (`@role_required("ADMIN", "TECNICO")`
+  en los 6 endpoints de analytics/routes.py): si el equipo quiere volver a
+  darle el dashboard al técnico, es deuda de BACKEND (restringir
+  /analytics a ADMIN) + una línea de routing, no del componente —
+  alcance: backend + routing.
 
 - [MaintenancePage] — la descripción de la columna Insumo era
   `.mg-description` (atenuada); el kit no tiene clase de texto
