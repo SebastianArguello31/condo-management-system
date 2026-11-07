@@ -11,7 +11,7 @@ import "./shell.css";
 
 const drawerQuery = window.matchMedia("(max-width: 760px)");
 
-const ROLE_LABELS = { ADMIN: "Administrador", TECNICO: "Empleado", RESIDENTE: "Residente" };
+const ROLE_LABELS = { ADMIN: "Administrador", GESTOR: "Gestor", TECNICO: "Empleado", RESIDENTE: "Residente", };
 
 export default function AppShell({ user, groups, activePath, onNavigate, onLogout, children }) {
   const [open, setOpen] = useState(false);

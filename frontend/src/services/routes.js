@@ -18,4 +18,5 @@ export const routes = Object.freeze({
   maintenance: "/maintenance",
   maintenanceCategories: "/maintenance/categories",
   analytics: "/analytics",
+  managers: "/managers",
 });

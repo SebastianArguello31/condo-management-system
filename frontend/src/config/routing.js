@@ -30,10 +30,12 @@ import GestionReservasPage from "../features/reservas/GestionReservasPage";
 import DashboardPage from "../features/dashboard/DashboardPage";
 import MaintenancePage from "../features/maintenance/MaintenancePage";
 import InsumoCategoriesPage from "../features/maintenance/InsumoCategoriesPage";
+import ManagersPage from "../features/users/ManagersPage";
 
 const ADMIN = "ADMIN";
 const RESIDENTE = "RESIDENTE";
 const TECNICO = "TECNICO";
+const GESTOR = "GESTOR";
 
 const ITEMS = {
   dashboard: {
@@ -48,7 +50,7 @@ const ITEMS = {
     label: "Incidencias",
     icon: "incidents",
     component: IncidentsPage,
-    roles: [ADMIN, RESIDENTE, TECNICO],
+    roles: [ADMIN, GESTOR, RESIDENTE, TECNICO],
   },
   tiposIncidencia: {
     path: "/tipos-incidencia",
@@ -153,7 +155,7 @@ const ITEMS = {
     label: "Gestión de reservas",
     icon: "reservationsGestion",
     component: GestionReservasPage,
-    roles: [ADMIN],
+    roles: [ADMIN, GESTOR],
   },
   /* Insumos (Dev 2, estilo legado de develop): clave de pantalla "maintenance",
    * icono con el mismo nombre (path ya preexistente en el kit de iconos). */
@@ -171,6 +173,13 @@ const ITEMS = {
     component: InsumoCategoriesPage,
     roles: [ADMIN],
   },
+  gestores: {
+    path: "/gestores",
+    label: "Gestores",
+    icon: "users",
+    component: ManagersPage,
+    roles: [ADMIN],
+  },
 };
 
 /* Pantalla por defecto por rol (decisión actualizada en la integración con
@@ -180,13 +189,14 @@ const RUTA_INICIAL = {
   [ADMIN]: "dashboard",
   [RESIDENTE]: "incidencias",
   [TECNICO]: "dashboard",
+  [GESTOR]: "incidencias",
 };
 
 const GRUPOS = {
   [ADMIN]: [
     {
       label: "Personas",
-      items: ["usuarios", "empleados", "especialidades", "administradores", "residentes"],
+      items: ["usuarios", "empleados", "especialidades", "administradores", "gestores", "residentes"],
     },
     {
       label: "Comunidad",
@@ -212,6 +222,12 @@ const GRUPOS = {
   [TECNICO]: [
     { label: "Personas", items: ["perfil"] },
     { label: "Comunidad", items: ["dashboard", "incidencias", "insumos"] },
+  ],
+  [GESTOR]: [
+    {
+      label: "Comunidad",
+      items: ["incidencias", "gestionReservas"],
+    },
   ],
 };
 
@@ -253,6 +269,7 @@ const CLAVE_PANTALLA = {
   espacios: "espacios",
   gestionReservas: "gestionReservas",
   profile: "perfil",
+  managers: "gestores",
 };
 
 /* Adaptador para onNavigate(clave) de las pantallas de develop: traduce la
