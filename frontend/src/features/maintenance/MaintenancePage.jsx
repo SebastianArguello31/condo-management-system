@@ -1,415 +1,324 @@
-import { useCallback, useEffect, useState } from "react";
+/* Insumos — F2-10c (shell y listado al kit en F2-10a; "Nuevo/Editar
+ * insumo" a FormModal en F2-10b; "Registrar movimiento" e "Historial"
+ * al kit en F2-10c). La pantalla mantiene el contrato `({ user })` de la
+ * ruta #/insumos (roles ADMIN/TECNICO, sin cambios en routing). Paridad
+ * conservada: GET /maintenance/insumos con filtros de SERVIDOR
+ * buscar/categoria/bajo_stock (vacíos omitidos), el "Nuevo insumo" solo
+ * para ADMIN, los payloads POST/PATCH del insumo intactos (en
+ * InsumoFormModal.jsx) y los POST de movimiento en
+ * MovimientoFormModal.jsx (ruta /entradas|/salidas según el tipo, y
+ * GET /insumos/:id/movimientos?tipo= en InsumoHistorialModal.jsx).
+ * Cambios respecto al legado (F2-10a): PageHeader sin eyebrow con meta
+ * mono de UNA línea "N insumos · M con stock bajo" (la descripción larga
+ * NO va en el encabezado — la nota de consumos vive SOLO en el
+ * EmptyState sin datos), FilterBar sin botón "Filtrar" (Buscar aplica
+ * con Enter; Categoría y Stock bajo consultan al cambiar; vacíos
+ * omitidos), "Actualizar" = reload() que conserva datos previos (sin
+ * parpadeo), sembrado ?bajo_stock=true desde el hash (nunca se escribe
+ * de vuelta), DataTable SIN columna ID, Existencia y Stock mínimo
+ * alineadas a la derecha con formatQuantityUnit (helpers compartidos en
+ * ./quantity, misma lógica exacta), Estado con StatusBadge override de
+ * módulo, "Movimientos" renombrado a "Historial" y Entrada/Salida
+ * unificados en "Registrar movimiento" (abre MovimientoFormModal con
+ * ENTRADA por defecto). Cambios de F2-10b: "Nuevo/Editar insumo" en
+ * InsumoFormModal (el FormModal gestiona SU error/busy por dentro).
+ * Cambios de F2-10c: el estado compartido busy/error de la pantalla y
+ * los modales legados de MOVIMIENTO/HISTORIAL (mg-form-*) fueron
+ * RETIRADOS — el nuevo MovimientoFormModal valida con `movimientoCrear`
+ * y muestra los 400 del backend DENTRO del modal; InsumoHistorialModal
+ * es un Modal de LECTURA con useQuery + Timeline (Skeleton/ErrorState
+ * locales, Sin busy global) y su Toast de éxito es "Movimiento
+ * registrado." (decisión F2-10c; el legado decía "Movimiento registrado
+ * y stock actualizado."). Helper local formatQuantity/formatDate
+ * REMOVIDOS (ahora ./quantity y el historial usa formatDateTime). */
+import { useEffect, useRef, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
-import Modal from "../../components/ui/Modal";
+import { useHashRoute } from "../../hooks/useHashRoute";
+import { useQuery } from "../../hooks/useQuery";
+import InsumoFormModal from "./InsumoFormModal";
+import InsumoHistorialModal from "./InsumoHistorialModal";
+import MovimientoFormModal from "./MovimientoFormModal";
+import { formatQuantityUnit } from "./quantity";
+import {
+  Button,
+  Checkbox,
+  DataTable,
+  Field,
+  FilterBar,
+  PageHeader,
+  RowActions,
+  SearchInput,
+  Select,
+  StatusBadge,
+} from "../../components/ui";
 
-const EMPTY_ITEM = {
-  nombre: "",
-  descripcion: "",
-  categoria: "",
-  unidad_medida: "",
-  stock_minimo: "0",
-  costo_unitario: "0",
+/* Override del Estado de módulo (convención §8-bis: nunca color solo). */
+const ESTADO_INSUMO = {
+  bajo: { estado: "Stock bajo", tone: "warning", glyph: "triangle" },
+  disponible: { estado: "Disponible", tone: "success", glyph: "check" },
 };
 
-const EMPTY_MOVEMENT = { cantidad: "", motivo: "", direccion: "ENTRADA" };
+/* Estilo LOCAL de la pantalla (ajuste 1 de F2-10a; sin CSS de kit nuevo):
+ * - .acciones-insumos envuelve por defecto (pila móvil <640px: las tarjetas
+ *   apiladas no desbordan).
+ * - En ≥640px los botones de fila NO parten su texto en 2 líneas (la
+ *   columna tiene ancho de colgroup reservado) y su padding-inline baja a
+ *   --space-2: con el --space-4 del kit, los 3 botones nowrap no caben en
+ *   el ancho --space-12*7 y la fila pasaría del --row-h.
+ * Solo tokens; nada de hex/px. */
+const ESTILOS_PANTALLA = `
+.acciones-insumos { flex-wrap: wrap; }
+@media (min-width: 640px) {
+  .acciones-insumos .ui-btn { white-space: nowrap; padding-inline: var(--space-2); }
+}`;
 
-const MOVEMENT_PATHS = {
-  INICIAL: "existencias-iniciales",
-  ENTRADA: "entradas",
-  SALIDA: "salidas",
-  AJUSTE: "ajustes",
-};
-
-const MOVEMENT_LABELS = {
-  INICIAL: "Existencias iniciales",
-  ENTRADA: "Entrada",
-  SALIDA: "Salida",
-  AJUSTE_ENTRADA: "Ajuste de entrada",
-  AJUSTE_SALIDA: "Ajuste de salida",
-  DEVOLUCION: "Devolución",
-};
-
-function errorMessage(error) {
-  return error instanceof Error ? error.message : "No se pudo completar la operación.";
-}
-
-function formatDate(value) {
-  return value ? new Date(value).toLocaleString() : "—";
-}
+/* Nota única del EmptyState sin datos (ajuste 1: la descripción larga
+ * salió del encabezado; esta frase conserva la información). */
+const NOTA_CONSUMOS =
+  "Los consumos se registran desde las intervenciones de cada incidencia.";
 
 export default function MaintenancePage({ user }) {
   const isAdmin = user.rol === "ADMIN";
-  const [items, setItems] = useState([]);
-  const [filters, setFilters] = useState({ search: "", category: "", lowStock: false });
-  const [appliedFilters, setAppliedFilters] = useState(filters);
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const { params } = useHashRoute();
+
+  const [busqueda, setBusqueda] = useState("");
+  const [busquedaAplicada, setBusquedaAplicada] = useState("");
+  const [categoria, setCategoria] = useState("");
+  const [bajoStock, setBajoStock] = useState(false);
+
+  /* Sembrado de ?bajo_stock=true desde el hash (patrón F2-5a/F2-8a): se
+   * aplica al entrar o al cambiar el hash estando en la pantalla, sin
+   * escribir de vuelta; el usuario puede DESMARCAR libremente (el hash no
+   * cambia, este efecto no vuelve a correr). */
+  const bajoStockDesdeUrl = params.bajo_stock === "true";
+  useEffect(() => {
+    if (bajoStockDesdeUrl) setBajoStock(true);
+  }, [bajoStockDesdeUrl]);
+
+  /* Catálogo de categorías: se alimenta de TODAS las cargas exitosas
+   * (sin endpoint nuevo) para que el select no se reduzca al elegir una
+   * categoría; se actualiza solo cuando crece de verdad. */
+  const catalogoRef = useRef(new Set());
+  const [categorias, setCategorias] = useState([]);
+
+  /* Misma consulta que el loadItems() anterior: GET /insumos con los
+   * mismos params de servidor (buscar/categoria/bajo_stock, vacíos
+   * omitidos). Los cambios de filtro relanzan la consulta (deps = clave
+   * de filtros) y reload() conserva datos previos (Lista sin titilar). */
+  const claveFiltros = `${busquedaAplicada.trim()}|${categoria}|${bajoStock}`;
+  const { data, loading, error: errorCarga, reload } = useQuery(async (signal) => {
+    const filtros = new URLSearchParams();
+    if (busquedaAplicada.trim()) filtros.set("buscar", busquedaAplicada.trim());
+    if (categoria) filtros.set("categoria", categoria);
+    if (bajoStock) filtros.set("bajo_stock", "true");
+
+    const query = filtros.toString();
+    const filas = (await api(`${routes.maintenance}/insumos${query ? `?${query}` : ""}`, { signal })) ?? [];
+
+    let catalogoCrece = false;
+    for (const fila of filas) {
+      if (fila.categoria && !catalogoRef.current.has(fila.categoria)) {
+        catalogoRef.current.add(fila.categoria);
+        catalogoCrece = true;
+      }
+    }
+    if (catalogoCrece) setCategorias([...catalogoRef.current].sort());
+
+    return filas;
+  }, [claveFiltros]);
+
+  const items = data ?? [];
+
+  /* Apertura de los tres modales del kit (F2-10b/10c): cada modal
+   * gestiona SU carga, error y busy por dentro; selectedItem + modal son
+   * el único estado compartido con la pantalla. */
   const [modal, setModal] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [itemForm, setItemForm] = useState(EMPTY_ITEM);
-  const [movementForm, setMovementForm] = useState(EMPTY_MOVEMENT);
-  const [movementType, setMovementType] = useState("ENTRADA");
-  const [history, setHistory] = useState([]);
-  const [historyType, setHistoryType] = useState("");
-
-  const loadItems = useCallback(async () => {
-    const params = new URLSearchParams();
-    if (appliedFilters.search.trim()) params.set("buscar", appliedFilters.search.trim());
-    if (appliedFilters.category) params.set("categoria", appliedFilters.category);
-    if (appliedFilters.lowStock) params.set("bajo_stock", "true");
-
-    const query = params.toString();
-    const result = await api(
-      `${routes.maintenance}/insumos${query ? `?${query}` : ""}`,
-    );
-    setItems(result || []);
-  }, [appliedFilters]);
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError("");
-
-    loadItems()
-      .catch((requestError) => {
-        if (active) setError(errorMessage(requestError));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [loadItems]);
-
-  async function refreshItems() {
-    setLoading(true);
-    setError("");
-    try {
-      await loadItems();
-    } catch (requestError) {
-      setError(errorMessage(requestError));
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function openCreate() {
     setSelectedItem(null);
-    setItemForm(EMPTY_ITEM);
-    setError("");
     setModal("item");
   }
 
   function openEdit(item) {
     setSelectedItem(item);
-    setItemForm({
-      nombre: item.nombre ?? "",
-      descripcion: item.descripcion ?? "",
-      categoria: item.categoria ?? "",
-      unidad_medida: item.unidad_medida ?? "",
-      stock_minimo: String(item.stock_minimo ?? 0),
-      costo_unitario: String(item.costo_unitario ?? 0),
-    });
-    setError("");
     setModal("item");
   }
 
-  async function saveItem(event) {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-    setNotice("");
-
-    const body = {
-      ...itemForm,
-      nombre: itemForm.nombre.trim(),
-      descripcion: itemForm.descripcion.trim() || null,
-      categoria: itemForm.categoria.trim(),
-      unidad_medida: itemForm.unidad_medida.trim(),
-    };
-
-    try {
-      await api(
-        selectedItem
-          ? `${routes.maintenance}/insumos/${selectedItem.id_insumo}`
-          : `${routes.maintenance}/insumos`,
-        { method: selectedItem ? "PATCH" : "POST", body },
-      );
-      setModal(null);
-      setNotice(selectedItem ? "Insumo actualizado." : "Insumo creado.");
-      await loadItems();
-    } catch (requestError) {
-      setError(errorMessage(requestError));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function openMovement(item, type) {
+  /* El tipo por defecto (ENTRADA) lo define MovimientoFormModal. */
+  function openMovement(item) {
     setSelectedItem(item);
-    setMovementType(type);
-    setMovementForm(EMPTY_MOVEMENT);
-    setError("");
     setModal("movement");
-  }
-
-  async function saveMovement(event) {
-    event.preventDefault();
-    if (!selectedItem || !MOVEMENT_PATHS[movementType]) return;
-
-    setBusy(true);
-    setError("");
-    setNotice("");
-
-    const body = {
-      cantidad: movementForm.cantidad,
-      motivo: movementForm.motivo.trim(),
-      ...(movementType === "AJUSTE" ? { direccion: movementForm.direccion } : {}),
-    };
-
-    try {
-      await api(
-        `${routes.maintenance}/insumos/${selectedItem.id_insumo}/${MOVEMENT_PATHS[movementType]}`,
-        { method: "POST", body },
-      );
-      setModal(null);
-      setNotice("Movimiento registrado y stock actualizado.");
-      await loadItems();
-    } catch (requestError) {
-      setError(errorMessage(requestError));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function loadHistory(item, type = historyType) {
-    setBusy(true);
-    setError("");
-    const params = new URLSearchParams();
-    if (type) params.set("tipo", type);
-
-    try {
-      const suffix = params.toString() ? `?${params.toString()}` : "";
-      const result = await api(
-        `${routes.maintenance}/insumos/${item.id_insumo}/movimientos${suffix}`,
-      );
-      setHistory(result || []);
-    } catch (requestError) {
-      setError(errorMessage(requestError));
-    } finally {
-      setBusy(false);
-    }
   }
 
   function openHistory(item) {
     setSelectedItem(item);
-    setHistoryType("");
-    setHistory([]);
     setModal("history");
-    loadHistory(item, "");
   }
 
-  const categories = [...new Set(items.map((item) => item.categoria))]
-    .filter(Boolean)
-    .sort();
-  const lowStockCount = items.filter((item) => item.bajo_stock).length;
+  const hayFiltros = Boolean(busquedaAplicada.trim() || categoria || bajoStock);
+  const vacioReal = !loading && !hayFiltros && items.length === 0;
+  const conStockBajo = items.filter((item) => item.bajo_stock).length;
+  const meta =
+    !loading && items.length > 0
+      ? `${items.length} ${items.length === 1 ? "insumo" : "insumos"} · ${conStockBajo} con stock bajo`
+      : undefined;
+
+  const triggerNuevo = isAdmin ? (
+    <Button onClick={openCreate}>Nuevo insumo</Button>
+  ) : null;
+
+  const columns = [
+    {
+      key: "insumo",
+      header: "Insumo",
+      render: (row) => (
+        <>
+          {row.nombre}
+          {row.descripcion ? (
+            <span style={{ display: "block" }}>{row.descripcion}</span>
+          ) : null}
+        </>
+      ),
+    },
+    { key: "categoria", header: "Categoría" },
+    {
+      key: "stock",
+      header: "Existencia",
+      align: "right",
+      width: "calc(var(--space-12) * 3)",
+      render: (row) => formatQuantityUnit(row.stock, row.unidad_medida),
+    },
+    {
+      key: "stock_minimo",
+      header: "Stock mínimo",
+      align: "right",
+      width: "calc(var(--space-12) * 3)",
+      render: (row) => formatQuantityUnit(row.stock_minimo, row.unidad_medida),
+    },
+    {
+      key: "estado",
+      header: "Estado",
+      width: "calc(var(--space-12) * 3)",
+      render: (row) => {
+        const badge = row.bajo_stock ? ESTADO_INSUMO.bajo : ESTADO_INSUMO.disponible;
+        return <StatusBadge estado={badge.estado} tone={badge.tone} glyph={badge.glyph} />;
+      },
+    },
+    {
+      key: "acciones",
+      header: "Acciones",
+      width: "calc(var(--space-12) * 7)",
+      render: (row) => (
+        <RowActions
+          className="acciones-insumos"
+          actions={[
+            {
+              label: "Historial",
+              ariaLabel: `Historial de movimientos del insumo ${row.nombre}`,
+              onSelect: () => openHistory(row),
+            },
+            ...(isAdmin
+              ? [
+                  {
+                    label: "Editar",
+                    ariaLabel: `Editar insumo ${row.nombre}`,
+                    onSelect: () => openEdit(row),
+                  },
+                  {
+                    label: "Registrar movimiento",
+                    ariaLabel: `Registrar movimiento del insumo ${row.nombre}`,
+                    onSelect: () => openMovement(row),
+                  },
+                ]
+              : []),
+          ]}
+        />
+      ),
+    },
+  ];
 
   return (
-    <section className="management-page">
-      <div className="mg-page-heading">
-        <div>
-          <p className="mg-eyebrow">MANTENIMIENTO</p>
-          <h1>Insumos</h1>
-          <p>Consulta las existencias y su historial. Registra movimientos y consumos desde las intervenciones.</p>
-        </div>
-        {isAdmin && (
-          <button className="mg-primary" type="button" onClick={openCreate}>
-            Nuevo insumo
-          </button>
-        )}
-      </div>
+    <section>
+      <style>{ESTILOS_PANTALLA}</style>
+      <PageHeader
+        title="Insumos"
+        meta={meta}
+        actions={vacioReal ? null : triggerNuevo}
+      />
 
-      {error && <p className="mg-alert mg-alert-error" role="alert">{error}</p>}
-      {notice && <p className="mg-alert mg-alert-success" role="status">{notice}</p>}
-
-      <div className="mg-stats">
-        <article className="mg-stat"><div><span>Insumos encontrados</span><strong>{items.length}</strong></div></article>
-        <article className="mg-stat"><div><span>Con stock bajo</span><strong>{lowStockCount}</strong></div></article>
-      </div>
-
-      <div className="mg-panel">
-        <form
-          className="mg-toolbar"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setAppliedFilters(filters);
+      <FilterBar>
+        <SearchInput
+          label="Buscar insumo"
+          value={busqueda}
+          onChange={setBusqueda}
+          onClear={() => setBusqueda("")}
+          placeholder="Nombre o descripción"
+          onKeyDown={(event) => {
+            if (event.key === "Enter") setBusquedaAplicada(busqueda);
           }}
-        >
-          <label className="mg-search">
-            Buscar
-            <input
-              value={filters.search}
-              onChange={(event) => setFilters({ ...filters, search: event.target.value })}
-              placeholder="Nombre o descripción"
+        />
+        <Field label="Categoría">
+          <Select value={categoria} onChange={(event) => setCategoria(event.target.value)}>
+            <option value="">Todas</option>
+            {categorias.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        {/* Ajuste 1 de F2-10a: el checkbox standalone quedaba ~9px más bajo
+         * y sin etiqueta superior; se envuelve en Field como los demás
+         * (etiqueta arriba + control alineado a la altura del kit
+         * --control-h, centrado). Sin aria-label: el Field ya nombra el
+         * control (lección F2-5c). */}
+        <Field label="Stock bajo">
+          <div style={{ display: "flex", alignItems: "center", height: "var(--control-h)" }}>
+            <Checkbox
+              checked={bajoStock}
+              onChange={(event) => setBajoStock(event.target.checked)}
             />
-          </label>
-          <div className="mg-filters">
-            <label>
-              Categoría
-              <select
-                value={filters.category}
-                onChange={(event) => setFilters({ ...filters, category: event.target.value })}
-              >
-                <option value="">Todas</option>
-                {categories.map((value) => <option key={value} value={value}>{value}</option>)}
-              </select>
-            </label>
-            <label className="mg-check-field">
-              Stock bajo
-              <input
-                type="checkbox"
-                checked={filters.lowStock}
-                onChange={(event) => setFilters({ ...filters, lowStock: event.target.checked })}
-              />
-            </label>
-            <button className="mg-primary" type="submit">Filtrar</button>
-            <button className="mg-secondary" type="button" disabled={loading} onClick={refreshItems}>
-              Actualizar
-            </button>
           </div>
-        </form>
+        </Field>
+        <Button variant="quiet" disabled={loading} onClick={reload}>
+          Actualizar
+        </Button>
+      </FilterBar>
 
-        <div className="mg-table-scroll">
-          <table className="mg-table">
-            <thead>
-              <tr>
-                <th>Insumo</th><th>Categoría</th><th>Existencia</th>
-                <th>Stock mínimo</th><th>Estado</th><th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id_insumo}>
-                  <td>
-                    <strong>{item.nombre}</strong>
-                    {item.descripcion && <span className="mg-description">{item.descripcion}</span>}
-                  </td>
-                  <td>{item.categoria}</td>
-                  <td>{item.stock} {item.unidad_medida}</td>
-                  <td>{item.stock_minimo} {item.unidad_medida}</td>
-                  <td>
-                    <span className={`mg-status ${item.bajo_stock ? "is-inactive" : "is-active"}`}>
-                      <i />{item.bajo_stock ? "Stock bajo" : "Disponible"}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="mg-row-actions">
-                      <button className="mg-secondary" type="button" onClick={() => openHistory(item)}>
-                        Movimientos
-                      </button>
-                      {isAdmin && <>
-                        <button className="mg-secondary" type="button" onClick={() => openEdit(item)}>Editar</button>
-                        <button className="mg-secondary" type="button" onClick={() => openMovement(item, "ENTRADA")}>Entrada</button>
-                        <button className="mg-secondary" type="button" onClick={() => openMovement(item, "SALIDA")}>Salida</button>
-                        <button className="mg-secondary" type="button" onClick={() => openMovement(item, "AJUSTE")}>Ajuste</button>
-                        <button className="mg-secondary" type="button" onClick={() => openMovement(item, "INICIAL")}>Inicial</button>
-                      </>}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {loading && <tr><td colSpan="6">Cargando insumos...</td></tr>}
-              {!loading && items.length === 0 && <tr><td colSpan="6">No hay insumos que coincidan con los filtros.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={items}
+        rowKey={(row) => row.id_insumo}
+        caption="Listado de insumos"
+        loading={loading}
+        error={errorCarga}
+        onRetry={reload}
+        emptyTitle={hayFiltros ? "No hay insumos que coincidan." : "No hay insumos"}
+        emptyDescription={hayFiltros ? "Ajusta la búsqueda o los filtros para ver resultados." : NOTA_CONSUMOS}
+        emptyAction={vacioReal ? triggerNuevo : undefined}
+      />
 
       {modal === "item" && (
-        <Modal title={selectedItem ? "Editar insumo" : "Nuevo insumo"} busy={busy} onClose={() => setModal(null)}>
-          <form onSubmit={saveItem}>
-            <div className="mg-form-body">
-              {error && <p className="mg-alert mg-alert-error" role="alert">{error}</p>}
-              <div className="mg-form-grid">
-                <label>Nombre *<input required maxLength="150" value={itemForm.nombre} onChange={(event) => setItemForm({ ...itemForm, nombre: event.target.value })} /></label>
-                <label>Categoría *<input required maxLength="80" value={itemForm.categoria} onChange={(event) => setItemForm({ ...itemForm, categoria: event.target.value })} /></label>
-                <label>Unidad de medida *<input required maxLength="40" value={itemForm.unidad_medida} onChange={(event) => setItemForm({ ...itemForm, unidad_medida: event.target.value })} /></label>
-                <label>Stock mínimo *<input required type="number" min="0" step="0.001" value={itemForm.stock_minimo} onChange={(event) => setItemForm({ ...itemForm, stock_minimo: event.target.value })} /></label>
-                <label>Costo unitario<input type="number" min="0" step="0.01" value={itemForm.costo_unitario} onChange={(event) => setItemForm({ ...itemForm, costo_unitario: event.target.value })} /></label>
-                <label className="mg-full-field">Descripción<textarea maxLength="2000" rows="3" value={itemForm.descripcion} onChange={(event) => setItemForm({ ...itemForm, descripcion: event.target.value })} /></label>
-              </div>
-            </div>
-            <div className="mg-modal-actions">
-              <button className="mg-primary" disabled={busy}>{busy ? "Guardando..." : "Guardar"}</button>
-              <button className="mg-secondary" type="button" disabled={busy} onClick={() => setModal(null)}>Cancelar</button>
-            </div>
-          </form>
-        </Modal>
+        <InsumoFormModal
+          insumo={selectedItem}
+          categorias={categorias}
+          onClose={() => setModal(null)}
+          onGuardado={reload}
+        />
       )}
 
       {modal === "movement" && selectedItem && (
-        <Modal title={`Movimiento · ${selectedItem.nombre}`} busy={busy} onClose={() => setModal(null)}>
-          <form onSubmit={saveMovement}>
-            <div className="mg-form-body">
-              {error && <p className="mg-alert mg-alert-error" role="alert">{error}</p>}
-              <div className="mg-form-grid">
-                <label className="mg-full-field">Tipo de movimiento
-                  <select value={movementType} onChange={(event) => setMovementType(event.target.value)}>
-                    <option value="INICIAL">Existencias iniciales</option>
-                    <option value="ENTRADA">Entrada</option>
-                    <option value="SALIDA">Salida</option>
-                    <option value="AJUSTE">Ajuste</option>
-                  </select>
-                </label>
-                {movementType === "AJUSTE" && <label>Dirección
-                  <select value={movementForm.direccion} onChange={(event) => setMovementForm({ ...movementForm, direccion: event.target.value })}>
-                    <option value="ENTRADA">Aumentar stock</option>
-                    <option value="SALIDA">Disminuir stock</option>
-                  </select>
-                </label>}
-                <label>Cantidad *<input required type="number" min="0.001" step="0.001" value={movementForm.cantidad} onChange={(event) => setMovementForm({ ...movementForm, cantidad: event.target.value })} /></label>
-                <label className="mg-full-field">Motivo *<textarea required minLength="3" maxLength="500" rows="3" value={movementForm.motivo} onChange={(event) => setMovementForm({ ...movementForm, motivo: event.target.value })} /></label>
-              </div>
-            </div>
-            <div className="mg-modal-actions">
-              <button className="mg-primary" disabled={busy}>{busy ? "Procesando..." : "Registrar movimiento"}</button>
-              <button className="mg-secondary" type="button" disabled={busy} onClick={() => setModal(null)}>Cancelar</button>
-            </div>
-          </form>
-        </Modal>
+        <MovimientoFormModal
+          insumo={selectedItem}
+          onClose={() => setModal(null)}
+          onGuardado={reload}
+        />
       )}
 
       {modal === "history" && selectedItem && (
-        <Modal title={`Movimientos · ${selectedItem.nombre}`} busy={busy} onClose={() => setModal(null)}>
-          <div className="mg-form-body">
-            {error && <p className="mg-alert mg-alert-error" role="alert">{error}</p>}
-            <label>Filtrar por tipo
-              <select value={historyType} onChange={(event) => {
-                const value = event.target.value;
-                setHistoryType(value);
-                loadHistory(selectedItem, value);
-              }}>
-                <option value="">Todos</option>
-                {Object.entries(MOVEMENT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </label>
-            {busy && <p>Cargando movimientos...</p>}
-            {!busy && history.length === 0 && <p>No hay movimientos para mostrar.</p>}
-            <ul>
-              {history.map((movement) => (
-                <li key={movement.id_movimiento}>
-                  {formatDate(movement.fecha)} · {MOVEMENT_LABELS[movement.tipo] || movement.tipo} · {movement.cantidad} · Stock: {movement.stock_resultante} · {movement.motivo} · {movement.responsable_nombre} {movement.responsable_apellido}
-                  {movement.id_intervencion ? ` · Intervención #${movement.id_intervencion}` : ""}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Modal>
+        <InsumoHistorialModal insumo={selectedItem} onClose={() => setModal(null)} />
       )}
     </section>
   );

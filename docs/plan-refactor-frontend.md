@@ -340,18 +340,43 @@ final, según alcance).
   verificar con captura del dueño — NO se declara cerrado**. La limpieza
   del modo legado de CrudPage (ex-7c) pasa a **F2-11**.
 - **F2-8** `refactor:` Gestión de reservas + CreateReservation. —
-  **F2-8a HECHA (pendiente de verificar):** Gestión de reservas (ADMIN) al
+  **F2-8a HECHA y VERIFICADA por el dueño:** Gestión de reservas (ADMIN) al
   kit en la rama `feature/refactor-gestion-reservas` (detalle en "Sesión
-  F2-8: análisis y plan" y "Sesión F2-8a" más abajo). **F2-8b HECHA
-  (pendiente de verificar):** "Nueva reserva" (CreateReservation) a
-  FormModal (detalle en "Sesión F2-8b" más abajo). El pulido queda para
-  F2-8c según las decisiones del dueño.
+  F2-8: análisis y plan" y "Sesión F2-8a" más abajo). **F2-8b HECHA y
+  VERIFICADA por el dueño:** "Nueva reserva" (CreateReservation) a
+  FormModal (detalle en "Sesión F2-8b" más abajo). **F2-8c DESCARTADA** por
+  el dueño (2026-11-03: verificó 8a/8b y no la necesita); sus ítems de
+  pulido pasan a §8-bis (detalle de reserva ADMIN ya estaba como pulido;
+  el pulido 375px de reservas se añade abajo).
 - **F2-9** `feat:` Rediseño del Login (login.css nuevo sobre tokens;
-  mantener `onLogin(result)` intacto).
+  mantener `onLogin(result)` intacto). — **HECHA (pendiente de verificar):**
+  Login migrado al kit en la rama `feature/refactor-login` (nacida de
+  `feature/refactor-gestion-reservas`); detalle en "Sesión F2-9" más abajo.
 - **F2-10** `refactor:` Pantallas nuevas de Dev 2 (inventario) y Dev 3
   (dashboard) cuando lleguen: el dueño las migra. El dashboard se diseña con
   el kit: cifras en serif, tokens `--chart-*`, enlaces a listados filtrados
-  por hash con query params. Ambas se registran en `config/routing.js`.
+  por hash con query params. Ambas se registran en `config/routing.js`. —
+  **F2-10a HECHA (pendiente de verificar):** Insumos (`MaintenancePage`,
+  sobre `feature/refactor-insumos-listado`, con `3a3d0de` de Dev 2 ya
+  integrado): shell y listado al kit; modales y lógica quedan LEGADOS para
+  F2-10b (insumo) y F2-10c (movimiento/historial); detalle en "Sesión
+  F2-10a" más abajo. **F2-10b HECHA (pendiente de verificar),** en la rama
+  `feature/refactor-insumos-crear` (NACIDA de
+  `feature/refactor-insumos-listado`, con F2-10a ya commiteada `91387e3`):
+  "Nuevo/Editar insumo" a FormModal (`InsumoFormModal`, único componente
+  con dos modos; schemas `insumoCrear`/`insumoEditar` espejo EXACTO del
+  backend + regla `decimal(places, min)` ADITIVA en rules.js); detalle en
+  "Sesión F2-10b" más abajo. **F2-10c HECHA (pendiente de verificar),**
+  en la rama `feature/refactor-insumos-movimientos` (NACIDA de
+  `feature/refactor-insumos-crear`, con F2-10b ya commiteada `2f889c0`):
+  "Registrar movimiento" a FormModal (`MovimientoFormModal` con schema
+  `movimientoCrear`, `decimal` + exclusividad del mínimo, existencia
+  actual de la fila visible y los 400 de stock negativo/insumo inactivo
+  DENTRO del modal con su texto exacto) e "Historial" a Modal de lectura
+  (`InsumoHistorialModal`: useQuery + Timeline, filtro de tipo en
+  servidor `?tipo=`, fechas con formatDateTime, vacíos explícitos, sin
+  busy global); helpers de cantidades a `quantity.js` (InterventionMaterials
+  intacto con su copia); detalle en "Sesión F2-10c" más abajo.
 - **F2-11** `style/chore:` pasada responsive + a11y, limpieza de CSS legado
   (lista en §8) y `docs/convenciones-frontend.md`.
 
@@ -392,28 +417,27 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 ## Agenda de integración (luego de F2-1b — y quizá F2-2)
 
-> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-7b, 2026-11-01; F2-4,
-> F2-1b, F2-2, F2-5a, F2-5b, F2-5c, F2-6a, F2-6b, F2-7a y F2-7b hechas —
-> verificación pendiente):**
-> 1. **Verificación por el dueño** de F2-1b, F2-2 (incluida ronda 1),
->    F2-5a, F2-5b, F2-5c, F2-6a, F2-6b, F2-7a y F2-7b (checklists en
->    STATUS.md; en la de incidencias, **B7 con captura**; en F2-6a,
->    **B1/B4 con captura**; en F2-6b, **B5 con captura**; en F2-7b,
->    **B6 con captura** — NO se declara cerrado) → abrir PRs de las ramas
->    hechas.
+> **ORDEN RESTANTE VIGENTE (cierre de sesión F2-9, 2026-11-03; F2-8a y
+> F2-8b VERIFICADAS por el dueño — F2-8c DESCARTADA; F2-4, F2-1b, F2-2,
+> F2-5a, F2-5b, F2-5c, F2-6a, F2-6b, F2-7a y F2-7b hechas — verificación
+> pendiente; F2-9 HECHA — pendiente de verificar):**
+> 1. **Verificación por el dueño** de F2-9 (checklist del Login en
+>    STATUS.md), F2-1b, F2-2 (incluida ronda 1), F2-5a, F2-5b, F2-5c,
+>    F2-6a, F2-6b, F2-7a y F2-7b (checklists en STATUS.md; en la de
+>    incidencias, **B7 con captura**; en F2-6a, **B1/B4 con captura**; en
+>    F2-6b, **B5 con captura**; en F2-7b, **B6 con captura** — NO se
+>    declara cerrado) → abrir PRs de las ramas hechas.
 > 2. **F2-5 COMPLETO pulido** (§8-bis: Cancelar del residente, mover la
 >    asignación al detalle, columna Unidad) cuando el dueño lo ordene.
 > 3. **docs/convenciones-frontend.md** (guía del kit para los demás,
 >    parte de F2-11; ya va llevada por sesión con una línea por pantalla
 >    en §9).
-> 4. **F2-7 → F2-9** — resto de pantallas (espacios + políticas, gestión
->    de reservas (F2-8a HECHA, pendiente de verificar) + "Nueva reserva"
->    (F2-8b HECHA, pendiente de verificar), Login rediseño).
-> 5. **F2-10** — pantallas nuevas de Dev 2 (insumos ya integró) y Dev 3
+> 4. **F2-10** — pantallas nuevas de Dev 2 (insumos ya integró) y Dev 3
 >    (dashboard): migración del dueño; enlazar drilldowns a
 >    `#/incidencias?estado=...`.
-> 6. **F2-11** — limpieza de CSS, responsive y a11y (unifica el marco legado
->    del shell y el ErrorBoundary global).
+> 5. **F2-11** — limpieza de CSS (incluye .login-container/.login-form
+>    muertos de index.css, ver §8-bis), responsive y a11y (unifica el
+>    marco legado del shell y el ErrorBoundary global).
 >
 > Lo explícito del sprint tiene prioridad al elegir dentro de este orden.
 
@@ -1794,6 +1818,621 @@ SIN tocar. Sin npm/node. Firma INTACTA: `({ spaces, events, onCreated })`;
   "Seleccioná" del legado desaparece).
 - Verificación pendiente del dueño: checklist F2-8b en STATUS.md.
 
+## F2-9: análisis y plan (solo lectura 2026-11-03; rama feature/refactor-login)
+
+Rama nacida de `feature/refactor-gestion-reservas` (`3fc81c4`, merge de
+develop incluido; árbol limpio). Análisis APROBADO por el dueño con las 6
+recomendaciones: (1) `noValidate` + `validate(form, login)`; (2)
+`err.errors` → Field y resto → Alert; (3) `autoFocus` en Email; (4) sin
+bloque de marca de color; (5) botón siempre activo con dedupe; (6) el CSS
+muerto de index.css se reporta a F2-11 sin tocarlo.
+
+**Hallazgos del análisis:** (a) `login.css` era 100% hex hardcodeado con
+radio 16px, sombra decorativa, icono sobre cuadrado de color (prohibido §3)
+y breakpoint propio 480px; (b) grep `.login-*`: solo Login.jsx consume
+`login.css`; `.login-container`/`.login-form` de `index.css:161-177` están
+muertos (cero consumidores; grep fresco 2026-11-03; el listado de §8 CSS
+legado ya los incluía desde CP6b) → limpieza F2-11; (c) el guard de 401 de api.js ya
+excluye el login (`path !== routes.auth/login`, api.js:48) → sin sesión
+expirada al fallar credenciales; (d) el schema `login` de validations/
+(exacto espejo de LoginSchema: password 1–200 sin política) no estaba
+conectado; (e) contrato: `Login({ onLogin })` → POST → `onLogin(result)`
+directo a App.jsx (token+user); redirección/aterrizaje por rol 100% de App.
+
+## Sesión F2-9: Login al kit (2026-11-03)
+
+Alcance RESPETADO: SOLO `features/auth/Login.jsx` + `login.css` (+ docs).
+Kit/ui.css, index.css, api.js, routes.js, routing.js, App.jsx,
+validations/ y backend SIN tocar. Cero npm/node.
+
+- **Paridad:** firma `({ onLogin })` intacta; POST `/auth/login` con
+  `{ email: email.trim(), password }` (mismo payload, mismo endpoint);
+  `result` va DIRECTO a `onLogin(result)` sin transformar. Cambia TODO lo
+  presentacional: componentes del kit (Field/Input/Button/Alert/Icon),
+  validación en cliente con el schema `login` (noValidate; mensajes en
+  español neutro: "Este campo es requerido."/"Ingresa un correo
+  válido."), `err.errors` del backend → errores por campo (arrays →
+  primer mensaje), resto (401 credenciales, red) → Alert danger con
+  foco, dedupe por `useMutation` (busy → spinner en el Button), etiquetas
+  a la izquierda con glifo mail/lock inline (aria-hidden del Icon,
+  nativo), sin marca de color (glifo `buildings` en `--brand` sin
+  contenedor junto al kicker "CONDOMINIO" en --ink-3), un solo h1
+  ("Iniciar sesión", --font-display --fs-28).
+- **Etiquetas con icono a la izquierda (decisión del equipo):** Field SÍ
+  acepta `label` como ReactNode (lo renderiza tal cual dentro del
+  `<label htmlFor>`) → NO tocó el kit. La regla legada
+  `label { display: flex; flex-direction: column }` de index.css ya
+  estaba neutra por `.ui-field-label { display: block }` (K1 de ui.css);
+  para el gap del glifo y su alineación se añadió UNA regla acotada a
+  `.login-panel .ui-field-label { display: inline-flex; align-items:
+  center; gap: var(--space-2) }` en login.css (especificidad 0,2,0 gana a
+  .ui-field-label y al selector de elemento legacy; sin tocar index.css
+  ni ui.css).
+- **Estados:** errores por campo con foco al PRIMER `.ui-control-invalid`
+  (contador `intento`, patrón F2-8b: solo cuenta intentos fallidos); el
+  error de campo se limpia al editar ese campo; error de la ACCIÓN en
+  `Alert tone="danger"` como primer hijo del form (role="alert" por tono)
+  dentro de un envoltorio `tabIndex={-1}` que recibe el foco (Alert no es
+  forwardRef: sin cambio de kit, foco al contenedor accesible).
+- **login.css REESCRITO tokens-only:** página en `--bg`, panel
+  `.login-panel` en `--surface` con borde 1px `--line` y `--radius-md`,
+  SIN sombra/gradiente; ancho `min(100%, calc(var(--space-12) * 8))`
+  (384px); padding `--space-4` (móvil) → `--space-6` en UNA media query
+  `min-width: 640px` (el 480px del legado fue eliminado); h1 serif,
+  descripción `--ink-2`; form en `.ui-form-stack` con botón en
+  `.ui-form-actions` (clases del kit, sin CSS nuevo para controles);
+  transiciones solo color/opacidad (ya definidas en ui.css). Botón
+  "Iniciar sesión" /
+  "Ingresando…" (busy), SIEMPRE activo salvo busy.
+- **Reporte (sin corregir, alcance F2-11):** `.login-container` y
+  `.login-form` de index.css siguen sin consumidores (grep fresco); ya
+  figuraban en el inventario de §8 y quedan confirmados para la limpieza.
+- Verificación pendiente del dueño: checklist F2-9 en STATUS.md.
+
+## Sesión F2-10a: Insumos — shell y listado al kit (2026-11-05)
+
+Rama `feature/refactor-insumos-listado`, NACIDA de
+`feature/refactor-insumos` con `3a3d0de` de Dev 2 ("mejorar formulario de
+consumo y cantidades") YA integrado (verificado: `git merge-base
+--is-ancestor 3a3d0de HEAD` y `b603335` merge en HEAD). Alcance RESPETADO:
+SOLO `features/maintenance/MaintenancePage.jsx` + docs. NO tocados:
+`InterventionMaterials.jsx`, `components/ui`, ui.css, index.css,
+users-ui.css, api.js, routes.js, routing.js, App.jsx, validations/,
+backend, dashboard.
+
+**PASO 0 (verificado con solo lectura):** árbol limpio; select de tipo del
+modal de movimiento tiene SOLO Entrada/Salida (sin Dirección; los tipos
+libran MOVEMENT_LABELS de 6 pero el select legado ofrece 2 — queda igual);
+`formatQuantity` está DUPLICADA como función privada en
+MaintenancePage.jsx:39 e InterventionMaterials.jsx:23 (idénticas,
+`Intl.NumberFormat("es-PY", { maximumFractionDigits: 3, useGrouping:
+false })`); "Insumos encontrados"/"Con stock bajo" se calculaban de la
+LISTA CARGADA (con filtros: `items.length` y
+`items.filter(bajo_stock).length`); las opciones del select de categoría
+salían del listado filtrado (`[...new Set(items.map(categoria))]` — se
+reducían al filtrar); la pantalla recibe `{ user }` y decide por
+`user.rol === "ADMIN"` (header con "Nuevo insumo" y fila con Movimientos+
+Editar+Entrada+Salida vs solo Movimientos). Unidades del seed
+(seed_demo.sql:193-202): **metro, unidad, cartucho, litro**; input de
+cantidad del modal de movimiento: `required type="number" min="0.001"
+step="0.001"` (MaintenancePage legado, línea 366).
+
+**Lo hecho (decisiones 1–9 del prompt, aplicadas sin cambios de kit):**
+
+1. **PageHeader "Insumos"** SIN eyebrow: meta = descripción actual +
+   `· N insumos · M con stock bajo` (misma semántica que las tarjetas:
+   cuenta de la lista cargada con filtros activos; se muestra solo
+   cuando `!loading && items.length > 0`). Las 2 tarjetas `.mg-stat`
+   ELIMINADAS (sin componente KPI).
+2. **FilterBar** (sin botón "Filtrar"): SearchInput "Buscar insumo"
+   (aplica con **Enter** — el kit/hooks NO tienen debounce, no se
+   inventó), Select de Categoría y Checkbox "Stock bajo" que consultan
+   AL CAMBIAR (servidor: `buscar`/`categoria`/`bajo_stock`, vacíos
+   omitidos; la clave de deps deriva de los tres), botón "Actualizar"
+   (Button quiet, `disabled={loading}`) → `reload()` que conserva datos
+   previos (sin titilar). Sembrado `?bajo_stock=true` desde
+   `useHashRoute` (reacciona al hash estando en pantalla, NUNCA escribe
+   de vuelta; el usuario puede desmarcar libremente).
+3. **Catálogo de categorías conservado:** ref acumulado
+   (`catalogoRef.current`) que se alimenta de CADA carga exitosa y
+   actualiza el estado solo cuando crece → el select NO se reduce al
+   elegir una categoría. Sin endpoint nuevo (legado lo sacaba de la
+   lista filtrada).
+4. **DataTable** con caption "Listado de insumos", `rowKey`
+   `id_insumo`, SIN columna ID. Columnas: Insumo (nombre + descripción
+   en segunda línea), Categoría, Existencia (`align: "right"`,
+   `formatQuantityUnit(stock, unidad_medida)`), Stock mínimo (right,
+   ídem), Estado (StatusBadge override de MÓDULO `ESTADO_INSUMO`:
+   "Stock bajo" tone warning + glifo triangle; "Disponible" tone success
+   + glifo check) y Acciones (width `calc(var(--space-12) * 5)` = 3
+   botones, criterio F2-8a).
+5. **Acciones por rol** en `.ui-actions-inline` (RowActions, 3 ≤ límite,
+   sin menú): TECNICO = "Historial"; ADMIN = "Historial", "Editar",
+   "Registrar movimiento" — este ÚLTIMO reemplaza Entrada/Salida y abre
+   el modal de movimiento LEGADO con `openMovement(item, "ENTRADA")` por
+   defecto (los tipos disponibles siguen siendo Entrada/Salida). aria-label SIEMPRE con el nombre del insumo ("Historial de movimientos del
+   insumo X", "Editar insumo X", "Registrar movimiento del insumo X").
+6. **Los 3 modales quedan LEGADOS e intactos** (insumo, movimiento,
+   historial; `mg-form-body`/`mg-modal-actions` siguen — F2-10b y F2-10c
+   los migran). Único cambio puntual: el `notice` de página pasó a
+   Toast ("Insumo creado./Insumo actualizado./Movimiento registrado y
+   stock actualizado.") en el punto de llamada de saveItem/saveMovement
+   (trivial); el error sigue siendo el estado `error` único del legado
+   y se muestra DENTRO de cada modal (no hubo que tocar su lógica
+   interna). Errores del listado → ErrorState del DataTable con
+   Reintentar (`reload`); los refresh `await loadItems()` de esos
+   saveX pasaron a `await reload()` (sin titilar).
+7. **formatQuantity:** SIN mover ni cambiar export/firma (sigue privada
+   local; InterventionMaterials de Dev 2 INTACTO — el pluralizador no lo
+   toca).
+8. **Plural del listado — helper de MÓDULO en el propio archivo** (NO en
+   utils/, formatQuantity intacta): `formatQuantityUnit(value, unit)` →
+   `formatQuantity(value)` + unidad; singular solo con
+   `Number(value) === 1`. Plural conservador de unidad: solo si la
+   unidad es UNA palabra, minúsculas, sin tildes y ≥4 letras
+   (`/^[a-z]{4,}$/`); termina en vocal → +"s"; en l/r/n/d → +"es";
+   cualquier otra (abreviaturas kg/m/lt/m2, varias palabras, con tilde)
+   queda IGUAL. Usado en Existencia y Stock mínimo. Tabla del seed:
+
+   | unidad (seed) | 1 | 10 | regla aplicada |
+   |---|---|---|---|
+   | metro | 1 metro | 10 metros | vocal → +s ✓ |
+   | unidad | 1 unidad | 10 unidades | consonante d → +es ✓ |
+   | litro | 1 litro | 10 litros | vocal → +s ✓ |
+   | cartucho | 1 cartucho | 10 cartuchos | vocal → +s ✓ |
+
+   Las 4 salen bien por regla; no se añadió ninguna excepción. (Con
+   0/0,5/1,5/200 → plural: "0,5 metros", "1,5 unidades".)
+9. **Excepción puntual del modal de movimiento:** SOLO el atributo
+   `step` del input de cantidad pasó de `step="0.001"` a `step="any"`
+   (las flechas suben de 1 en 1 y se siguen aceptando decimales; el
+   backend valida 3 decimales). `min="0.001"`, `required`, onChange y el
+   payload `{ cantidad, motivo }` SIN cambios; la versión definitiva
+   (noValidate + `movimientoCrear`) va en F2-10c. Antes:
+   `<input required type="number" min="0.001" step="0.001" .../>`;
+   después: `<input required type="number" min="0.001" step="any" .../>`.
+
+**Estados:** carga → Skeleton (estado inicial loading, sin flash de
+"Reintentar" — patrón B9); error de carga → ErrorState con Reintentar;
+vacío DISTINTO: con búsqueda/filtros → "No hay insumos que coincidan."
+(con descripción, sin acción) vs vacío real → "No hay insumos" con el
+trigger "Nuevo insumo" para ADMIN (instancia ÚNICA: se oculta del
+PageHeader cuando es vacío real). Español neutro (tuteo); cero
+window.confirm/alert; cero cambios de kit.
+
+**Paridad NO alcanzada (menor, reportada):** la descripción de la
+columna Insumo era `.mg-description` (tinte atenuado); el kit no tiene
+clase de texto secundario para celdas → quedó texto normal con
+`<span style={{ display: "block" }}>` (sin hex, sin clase nueva); queda
+como pulido §8-bis si el dueño quiere un estilo "subline" en el kit.
+
+**Riesgos/verificaciones pendientes del dueño:** (a) tabla → tarjetas
+apiladas a 375 sin scroll horizontal (data-label del DataTable); (b) el
+checkbox "Stock bajo" es standalone (sin Field en la FilterBar): la
+etiqueta queda a la derecha del control y la alineación por base se
+decide cuando haya una segunda pantalla con checkbox — reportado a
+§8-bis; (c) la meta del PageHeader no se muestra mientras carga ni con listado
+vacío (criterio F2-5a); (d) `reload()` tras crear insumo respeta los
+filtros activos del hash.
+
+`git diff --stat` esperado: MaintenancePage.jsx + docs.
+Commit sugerido: `refactor(maintenance): Insumos shell y listado al kit
+(F2-10a)`.
+
+**Ajuste 1 (2026-11-05, captura del dueño a 1280; SIN commit, alcance
+MaintenancePage.jsx + docs):**
+
+1. **Meta del PageHeader** = SOLO "N insumos · M con stock bajo" (antes
+   tenía la descripción larga y la `meta` es UNA línea mono según la
+   referencia del kit). La descripción larga ya NO vive en el encabezado
+   (se eliminó DESCRIPCION_PAGINA); la información NO se pierde: el
+   EmptyState SIN DATOS lleva la nota "Los consumos se registran desde
+   las intervenciones de cada incidencia." (NOTA_CONSUMOS, SOLO ahí).
+2. **Columna Acciones:** width `calc(var(--space-12) * 7)` (336px) y un
+   bloque de estilo LOCAL en el propio .jsx (`ESTILOS_PANTALLA`, sin CSS
+   de kit): `.acciones-insumos { flex-wrap: wrap }` (por defecto: envuelve
+   en la pila móvil sin desbordar) y en ≥640px `.ui-btn { white-space:
+   nowrap }` — los botones dejan de partir "Registrar movimiento" en 2
+   líneas. ADEMÁS `padding-inline: var(--space-2)` en esos botones
+   (solo ≥640px): con el `--space-4` del kit los 3 botones nowrap medían
+   ~344px y NO cabían en el colgroup de 336px (la fila volvería a ~61px);
+   con --space-2 quedan ~283px y la fila vuelve a `--row-h`. Los botones
+   siguen siendo `Button variant="quiet" size="sm"` vía RowActions (sin
+   danger: nada destructivo acá).
+3. **Checkbox "Stock bajo" en FilterBar:** la causa visual era que el
+   checkbox standalone no reserva la fila de etiqueta del Field (el kit
+   `.ui-filterbar` ya alinea por base flex-end — NO se tocó). Se envolvió
+   en `Field label="Stock bajo"` + un contenedor flex de altura
+   `var(--control-h)` centrado (inline en el .jsx): etiqueta arriba como
+   Buscar/Categoría y el control al centro de la altura del control del
+   kit. Sin aria-label del checkbox (el Field ya nombra; lección F2-5c).
+4. **Separación Stock mínimo/Estado:** widths explícitos de colgroup con
+   tokens: Existencia y Stock mínimo `calc(var(--space-12) * 3)` (144px,
+   ambas siguen `align: "right"` con tabular-nums) y Estado
+   `calc(var(--space-12) * 3)` (izquierda). Con el colgroup la tabla deja
+   el auto-layout que pegaba Estado al borde del valor de Stock mínimo.
+   Los paddings de celda son del kit: sin tocar.
+
+**Advertencia reportada (decisión del dueño):** la columna Insumo apila
+nombre + descripción (`<span display:block>`, decisión ronda 0 con
+paridad del `.mg-description` legado): las filas de insumos CON
+descripción siguen midiendo ~2 líneas (> `--row-h`) aunque Acciones ya
+no crece. Si el dueño exige 44px estrictos para TODAS las filas, hay que
+truncar u omitir la descripción — pulido §8-bis si lo pide.
+
+## Sesión F2-10b: "Nuevo/Editar insumo" a FormModal (2026-11-05)
+
+Rama `feature/refactor-insumos-crear`, NACIDA de
+`feature/refactor-insumos-listado` con F2-10a ya commiteada (`91387e3`;
+verificado con `git log --oneline` sobre la rama, árbol limpio).
+Alcance RESPETADO: NUEVO `features/maintenance/InsumoFormModal.jsx` +
+`MaintenancePage.jsx` (solo para montar el modal nuevo y quitar el
+estado/markup/handlers del modal legado de insumo) +
+`validations/schemas.js` (+ regla ADITIVA en `validations/rules.js`).
+NO tocados: InterventionMaterials, kit/ui.css, index.css, users-ui.css,
+api.js, routes.js, routing.js, App.jsx, backend, dashboard, y LOS MODALES
+de MOVIMIENTO e HISTORIAL (legados intactos en el mismo archivo,
+incluido el step="any" de F2-10a en la cantidad del movimiento).
+`validations/index.js` SIN cambio (reexporta schemas con `*`, los
+schemas nuevos ya salen; exacto al caso espacioCrear de F2-7a).
+
+**PASO 0 (verificado en solo lectura):**
+
+- `backend/app/modules/maintenance/schemas.py` — `InsumoCreateSchema`:
+  nombre required 2–150, descripcion opcional ≤2000, categoria required
+  2–80, unidad_medida required 1–40, stock_minimo required Decimal
+  places=3 Range(≥0), costo_unitario opcional Decimal places=2 Range(≥0)
+  con load_default="0". `InsumoUpdateSchema`: TODOS opcionales (mismos
+  límites) y **`activo` Boolean SÍ aceptado en PATCH** (el legado nunca
+  lo enviaba; decisión 5 del dueño: la UI no lo expone).
+- Modal legado de insumo (pre-F2-10b): 6 campos; **Categoría era TEXTO
+  LIBRE** (input maxLength 80; no hay endpoint de catálogo — el select
+  de categoría es solo FILTRO del listado); POST y PATCH envían TODOS
+  los campos: `{...itemForm, nombre: trim, descripcion: trim || null,
+  categoria: trim, unidad_medida: trim}` (spread conserva
+  stock_minimo/costo_unitario como los STRINGS del input, prefilled
+  "0"); al editar precargaba `String(item.x ?? 0)` → el modal mostraba
+  "1.000"/"1500.00" porque el backend trae Decimals como strings
+  (as_string=True).
+- `validations/` (pre-F2-10b): `rules.js` tiene requerido, longitud,
+  maximo, correo, contrasena, entero, fecha, hora, listaDeEnteros —
+  FALTABA una primitiva de decimal con places (lo disponible era el
+  helper module-local `monto` de schemas.js, SOLO para políticas).
+  `validate()` trima (como el pre_load del backend; excepto password)
+  y toma el PRIMER mensaje por campo; `index.js` `export * from
+  "./schemas"` → schemas nuevos NO necesitan tocarlo.
+- Patrón vigente: `EspacioFormModal` (EspaciosPage.jsx:72) es el
+  REFERENTE directo de UN modal con dos modos (crear/editar);
+  `ResidentCreateModal` (F2-6b) e `IncidentsCreateModal` (F2-5b)
+  comparten la estructura: FormModal + useMutation (dedupe) + Toast
+  propio + err.errors (arrays → string) → error DIRECTO al Field
+  (lección F2-5b: los Field son JSX inline fuera del
+  FormErrorsContext) + foco al primer `.ui-control-invalid` por
+  contador `intento`. Los tres manejan err.errors y el foco igual.
+
+**Lo hecho (decisiones 1–7 del dueño, aplicadas sin cambios de kit):**
+
+1. **NUEVO `InsumoFormModal.jsx`** — UN único componente con dos modos
+   (`insumo = null → crear; insumo → editar`), patrón EspacioFormModal
+   (F2-6b/F2-7b/F2-5b). FormModal "Nuevo insumo"/"Editar insumo"
+   (description "Insumo: <nombre>" solo al editar), showRequiredNote,
+   submitLabel "Guardar" (SIEMPRE activo; solo el busy lo deshabilita
+   con spinner), cierre bloqueado mientras envía, error de la acción
+   DENTRO del modal (Alert danger del FormModal con foco/scroll).
+   Campos en `.ui-form-stack` del cuerpo, TODOS vía Field con name y
+   autoComplete="off": Nombre (maxLength 150), Categoría (maxLength
+   80), Unidad de medida (maxLength 40), Stock mínimo, Costo unitario
+   (opcional) y Descripción (Textarea rows 3, maxLength 2000 + ayuda
+   "Opcional, hasta 2000 caracteres.").
+2. **Categoría sigue TEXTO LIBRE** (paridad del legado; "no cambiar a
+   select ni inventar endpoints"): mismo input, con `<datalist>` que
+   recibe el catálogo de categorías YA cargado por el listado (ref
+   acumulado de F2-10a, pasado por prop `categorias`) y solo renderiza
+   opciones si `categorias.length > 0`; se usa la prop `list` que el
+   Input del kit ya reenvía tal cual (spread de props: sin tocar el
+   kit). Con catálogo cargado, Field help "Texto libre; puedes elegir
+   una categoría existente del catálogo.".
+3. **Números:** inputs type="number" con inputMode="decimal", min="0"
+   y step="any" (decisión 3 del dueño: las flechas suben de 1 en 1 y
+   se aceptan decimales; la precisión de decimales la valida el
+   backend con su 400 — el espejo en cliente también la checa). Los
+   valores iniciales al editar se NORMALIZAN para mostrar sin ceros
+   sobrantes con función local `valorInicialNumero` ("1.000" → "1",
+   "1500.00" → "1500", "0.00" → "0"; sin NaN — y defaults "0" del
+   legado al CREAR para paridad exacta). El payload envía **stock_minimo
+   / costo_unitario como NÚMERO** (Number(...); costo vacío → 0, el
+   mismo load_default del backend — el legado enviaba el string del
+   input y "" caería como 400 "Not a valid number"; decisión
+   confirmada: "el payload sigue enviando número válido"); los demás
+   campos en paridad EXACTA (trim, descripcion vacía → null, y SIEMPRE
+   los 6 campos en POST y PATCH como el legado).
+4. **Schemas NUEVOS en `validations/schemas.js` con espejo EXACTO del
+   backend:** `insumoCrear` — nombre [requerido, longitud(2,150)],
+   descripcion [maximo(2000)], categoria [requerido,
+   longitud(2,80)], unidad_medida [requerido, longitud(1,40)],
+   stock_minimo [requerido, decimal(3)], costo_unitario [decimal(2)]
+   (opcional); `insumoEditar` — MISMO set SIN `requerido()`
+    (InsumoUpdateSchema todo opcional; sin `activo` porque la UI no lo
+    toca). **Regla ADITIVA y retrocompatible en
+   `validations/rules.js`: `decimal(places, min = 0)`** (faltaba la
+   primitiva; origen citado en el archivo) — vacío pasa (el `requerido`
+   decide), no-finite ("abc") → "Ingresa un número válido.", "< min" →
+   "No puede ser menor que N.", > places decimales → "Máximo N
+   decimales." (mensajes heredados del patrón aprobado del helper
+   `monto` de F2-7b, que NO se toca). `validations/index.js` SIN
+   cambio (reexporta `*`).
+5. **`activo` NO se expone** (paridad; decisión 5): ni en el form ni
+   en el payload de POST ni de PATCH (el legado tampoco lo enviaba).
+6. **MaintenancePage:** "Nuevo insumo" y "Editar" montan
+   `<InsumoFormModal insumo={selectedItem} categorias={categorias}
+   onClose={() => setModal(null)} onGuardado={reload} />`. Se quitaron
+   EMPTY_ITEM, itemForm, saveItem y el `<Modal>` legado con `mg-form-*`;
+   el modal nuevo emite los Toast "Insumo creado."/"Insumo
+   actualizado." (paridad de textos con F2-10a) al cerrar y luego llama
+   `onGuardado()` = `reload()` del listado (sin titilar). El estado
+   compartido busy/error DEL PADRE queda SOLO para movimiento/
+   historial (el FormModal gestiona el suyo). Permiso conservado:
+   crear/editar SOLO ADMIN (los triggers "Nuevo insumo" de
+   PageHeader/EmptyState y la acción "Editar" ya se filtran por
+   isAdmin desde F2-10a; sin cambio).
+7. **Payload y endpoints IDÉNTICOS al legado (decisión 7):** POST
+   `/maintenance/insumos` y PATCH `/maintenance/insumos/:id` con los
+   MISMOS 6 campos; la única variación aceptada por el dueño es el
+   TIPO de los 2 numéricos (número, aceptado por el Decimal del
+   backend). Mutación con useMutation — doble clic = UN solo POST o
+   PATCH (dedupe). Catch: `setAccionError(err.message)` a la Alert del
+   FormModal (con foco/scroll) + `err.errors` (arrays → primer
+   mensaje por campo) a `camposErr` → Field directo + foco al primer
+   `.ui-control-invalid` via contador `intento`. El error por campo
+   se limpia al editar ESE campo; sin window.confirm en ningún flujo.
+   Español neutro (tuteo) en todo el copy.
+
+**Paridad (≤10 líneas):** conserva los endpoints (POST/PATCH
+`/maintenance/insumos[/:id]`), la FORMA del payload (6 campos, trim,
+descripcion → null), los permisos (crear/editar SOLO ADMIN), la
+categoría como texto libre (solo suma datalist con el catálogo ya
+cargado, sin endpoint nuevo) y los modales de MOVIMIENTO e HISTORIAL
+100% intactos. Cambia: el modal va en FormModal del kit con validación
+en CLIENTE en español (schemas espejo), errores por campo/Alert
+DENTRO del modal (el legado no validaba nada en cliente y el error
+usaba mg-alert), éxito SIEMPRE por Toast + reload() sin titilar,
+flechas de step="any" (de 1 en 1) en stock y costo, y valores
+iniciales normalizados ("1500.00" → 1500).
+
+**Pulido aplazado (§8-bis):** NINGUNO para cerrar el paso. (El borde
+de validación conserva: descripción solo con maxLength + ayuda, sin
+contador en vivo — mismo tratamiento que Observaciones de reservas en
+F2-8b, cuyo contador está en §8-bis; si el dueño lo pide para ambos,
+alcance pantalla.)
+
+**Pendiente:** verificación del dueño con el checklist de STATUS.md
+("Pruebas pendientes" SOLO lo no ejecutado). `git diff --stat`
+esperado: InsumoFormModal.jsx (N) + MaintenancePage.jsx +
+validations/rules.js + validations/schemas.js + docs. Commit sugerido:
+`refactor(maintenance): Nuevo/Editar insumo a FormModal (F2-10b)`.
+
+## Sesión F2-10c: "Registrar movimiento" e "Historial" al kit (2026-11-05)
+
+Rama `feature/refactor-insumos-movimientos`, NACIDA de
+`feature/refactor-insumos-crear` con F2-10b ya commiteada (`2f889c0`;
+verificado con `git log --oneline`, árbol limpio). Alcance RESPETADO:
+NUEVOS `features/maintenance/MovimientoFormModal.jsx`,
+`InsumoHistorialModal.jsx` y `quantity.js` + `MaintenancePage.jsx` +
+`validations/schemas.js` (+ parámetro ADITIVO en `validations/rules.js`).
+NO tocados: InterventionMaterials (propia copia de formatQuantity),
+InsumoFormModal, components/ui, ui.css, index.css, users-ui.css,
+api.js, routes.js, routing.js, App.jsx, backend, dashboard.
+`validations/index.js` SIN cambio (reexporta `*`).
+
+**PASO 0 (verificado en solo lectura):**
+
+- `backend/.../maintenance/schemas.py` — `MovimientoSchema`: cantidad
+  Decimal required as_string places=3 con Range(min=0, min_inclusive=
+  False) → DEBE ser mayor que 0; motivo Str required Length(3, 500). Es
+  el body de /entradas y /salidas (solo ADMIN) y la base de
+  /existencias-iniciales (INICIAL), /ajustes (AjusteSchema añade
+  `direccion`, SIN UI) y de Consumo/Devolucion (intervenciones;
+  InterventionMaterials). `GET /insumos/:id/movimientos` (ADMIN/
+  TECNICO) acepta desde/hasta/tipo/id_intervencion — la UI solo usa
+  `tipo` (igual que el legado).
+- **Los 400 EXACTOS** en `services/inventory.py` (`register_movement`):
+  insumo inactivo → "No se pueden registrar movimientos para un insumo
+  inactivo" (línea 51); salida que dejaría stock <0 → "El movimiento
+  dejaría el stock en negativo" (línea 58); (INICIAL ya registrado →
+  "Las existencias iniciales ya fueron registradas", sin UI).
+- Modal legado de movimiento: título "Movimiento · <nombre>", select
+  SOLO ENTRADA/SALIDA, cantidad `required min="0.001" step="any"`
+  (el step provisional de F2-10a), motivo `required 3–500`, payload
+  `{ cantidad: STRING del input, motivo: trim }`; éxito: cerrar + Toast
+  "Movimiento registrado y stock actualizado." + reload. Modal legado de
+  historial: título "Movimientos · <nombre>", "Filtrar por tipo" con
+  TODAS las opciones de MOVEMENT_LABELS (6: INICIAL, ENTRADA, SALIDA,
+  AJUSTE_ENTRADA, AJUSTE_SALIDA, DEVOLUCION; puede haber INICIAL/AJUSTE
+  de datos previos), GET `?tipo=`, lista cruda `<li>` con
+  toLocaleString · tipo (fallback al código) · formatQuantity(cantidad)
+  · Stock: · motivo · responsable · "Intervención #N" opcional; los dos
+  modales compartían el busy/error GLOBALES de la pantalla (el busy
+  bloqueaba TODOS los botones con disabled).
+- Kit (kit-ui-referencia.md): Modal (title→UN `<h2>`, footer node,
+  busy bloquea cierre, abre al MONTAR → render condicional); FormModal
+  (open/busy/error→Alert danger con foco/scroll/fieldErrors/onSubmit
+  noValidate YA preventDefault); Timeline (entries {id?, time, title,
+   meta?, detail?, tone?}, hora en mono, `<ol>`); Select: props nativas
+   + children `<option>`; Skeleton (lines) / ErrorState (onRetry→"Reintentar",
+   role alert). Patrón de lectura: `IncidentsDetailModal` (F2-5c) —
+  Skeleton/ErrorState SOLO sin datos (los reload conservan contenido),
+  footer solo "Cerrar", Timeline con formatDateTime.
+- `formatQuantity` DUPLICADA (privada en MaintenancePage.jsx:126 y en
+  InterventionMaterials.jsx:23, idénticas) y formatQuantityUnit +
+  unidadPlural locales en la página; moverlas a `quantity.js` es SEGURO
+  (archivo nuevo, misma lógica exacta, un import por consumidor;
+  InterventionMaterials queda INTACTO con su copia).
+
+**Lo hecho (decisiones 1–8 del dueño, sin cambios de kit):**
+
+1. **NUEVO `MovimientoFormModal.jsx`** — FormModal "Registrar
+   movimiento · <nombre del insumo>", showRequiredNote, submitLabel
+   "Registrar movimiento", botón SIEMPRE activo salvo busy (spinner),
+   cierre bloqueado en busy. SOLO LECTURA arriba del stack: "Existencia
+   actual: N unidades" con formatQuantityUnit de la FILA (sin GET
+   extra), para que la salida no se pida si no hay stock; el caso
+   NO se calcula en cliente: el 400 exacto (de arriba) llega a la
+   Alert DENTRO del modal con foco/scroll.
+2. **Campos (paridad del legado):** Tipo (Select con constante de
+   MÓDULO `MOVIMIENTO_TIPOS` SOLO Entrada/Salida; ENTRADA por defecto
+   como el legado; los tipos INICIAL/AJUSTE_*/DEVOLUCION siguen FUERA
+   del UI), Cantidad (type="number" inputMode="decimal" min="0"
+   step="any" — flechas de 1 en 1, decimales aceptados; el step="any"
+   provisional de F2-10a queda DEFINITIVO al retirarse el modal
+   legado; la precisión la validan el espejo y el backend) y Motivo
+   (Textarea rows 3, maxLength 500; el mínimo 3 lo valida el espejo).
+   Todo Field con name y autoComplete="off" en `.ui-form-stack`.
+3. **Validación:** schema NUEVO `movimientoCrear` en
+   `validations/schemas.js` — cantidad [requerido(), decimal(3, 0,
+   true)], motivo [requerido(), longitud(3, 500)] — espejo EXACTO de
+   MovimientoSchema. **Regla ADITIVA en `validations/rules.js`:**
+   `decimal(places, min = 0, minExclusivo = false)` (Range
+   min_inclusive=False): el 0 exacto →    "Debe ser mayor que N." y el
+   negativo → "No puede ser menor que N." ("Máximo N decimales."
+   sigue); los llamadores sin exclusividad NO cambian. SIN campo
+   Dirección (no existe en el UI vigente) y sin regla nueva extra.
+4. **Endpoint por tipo + payload (decisión 4):** `MOVIMIENTO_RUTAS`
+   hereda el mapeo del legado: ENTRADA → /entradas, SALIDA → /salidas;
+   el useMutation lee form.tipo al ejecutar (cambiar el select cambia
+   el destino del próximo POST). Payload IDÉNTICO al del legado:
+   `{ cantidad: el valor del INPUT (string numérico — el Decimal del
+   backend lo carga igual que un número), motivo: trim }`. Catch:
+   err.message → Alert DENTRO (los 400 de stock negativo/insumo
+   inactivo llegan EXACTOS) + err.errors (arrays → string) por campo →
+   Field directo; foco al PRIMER `.ui-control-invalid` por contador
+   `intento`; el error por campo se limpia al editar ESE campo.
+5. **NUEVO `InsumoHistorialModal.jsx`** — Modal de LECTURA "Movimientos
+   · <nombre del insumo>" (UN solo `<h2>`: el título del Modal),
+   footer con SOLO "Cerrar" (Button quiet). Datos con useQuery + signal
+   (GET /insumos/:id/movimientos con SOLO `?tipo=` — param vacío
+   omitido, igual que el legado): loading sin datos → Skeleton;
+   error sin datos → ErrorState "No se pudo cargar el historial" +
+   Reintentar LOCAL (reload() conserva contenido previo, sin titilar);
+   SIN el busy global que bloqueaba botones en el legado. Filtro por
+   tipo: Select con TODAS las opciones del legado (MOVEMENT_LABELS
+   movida aquí, ÚNICA consumidora) + "Todos"; cambiar el filtro
+   reconsulta al SERVIDOR (el param va en deps; al cambiar de filtro la
+   data del tipo anterior se descarta y, mientras llega la nueva, se ve
+   el Skeleton porque todavía no hay datos del nuevo tipo).
+6. **Timeline del kit por movimiento** (patrón IncidentsDetailModal):
+   time = formatDateTime(fecha) (CON hora; NUNCA solo formatDate ni
+   ISO crudo — el legado mostraba toLocaleString con hora), title =
+   etiqueta de MOVEMENT_LABELS con FALLBACK al código sin mapear,
+   meta = "cantidad (formatQuantityUnit) · Stock resultante:
+   formatQuantity" y detail = motivo · responsable (nombre apellido)
+   · "Intervención #N" cuando el movimiento viene de una intervención;
+   marcador neutro (sin tone: el tipo no mapea a estado de kit).
+7. **Vacío EXPLÍCITO:** sin filtro → "Sin movimientos registrados.";
+   con filtro → "Sin movimientos de este tipo." (el legado solo decía
+   "No hay movimientos para mostrar.").
+8. **Helper NUEVO `features/maintenance/quantity.js`:** formatQuantity,
+   unidadPlural y formatQuantityUnit movidos aquí SIN cambiar
+   comportamiento (comentario de origen); MaintenancePage y los dos
+   modales importan de ahí (`./quantity`); InterventionMaterials
+   conserva SU copia (no la toca). MaintenancePage queda SIN
+   formatQuantity/formatDate locales NI toLocaleString crudo.
+9. **MaintenancePage sin legados:** se retiraron EMPTY_MOVEMENT,
+   MOVEMENT_PATHS, MOVEMENT_LABELS, saveMovement, loadHistory,
+   openMovement(type)/openHistory con precarga, los estados globales
+   busy/error (ya SIN consumidores: InsumoFormModal y los dos modales
+   nuevos gestionan el suyo por dentro) y los 2 `<Modal>` legados con
+   `mg-form-*`/mg-alert/mg-modal-actions; aperturas nuevas
+   openMovement(row)/openHistory(row) SOLO setean selectedItem+modal;
+   montaje `<MovimientoFormModal insumo={selectedItem} onClose=...
+   onGuardado={reload}/>` — éxito: el modal cierra + Toast "Movimiento
+   registrado." (decisión 7 del dueño; el legado decía "Movimiento
+   registrado y stock actualizado.") + reload() sin titilar — y
+   `<InsumoHistorialModal insumo={selectedItem} onClose={...}/>`. La
+   página ya NO importa Modal ni useToast. Permisos INTACTOS:
+   Historial ADMIN/TECNICO y "Registrar movimiento" SOLO ADMIN (los
+   triggers ya filtrados desde F2-10a; sin cambio).
+
+**Paridad (≤10 líneas):** conserva los endpoints (POST /entradas y
+/salidas ADMIN; GET /movimientos ADMIN/TECNICO), la FORMA del payload
+(`{ cantidad del input, motivo trim }`, SIN variaciones), los permisos
+por rol, el filtro de tipo EN SERVIDOR `?tipo=` del historial con TODAS
+sus opciones, las etiquetas de los 6 tipos y el formato de cantidades
+(formatQuantity/formatQuantityUnit EXACTOS, plural del seed incluido).
+Cambia: FormModal con validación en CLIENTE (`movimientoCrear` — el
+legado solo validaba con `required` nativo) y errores por campo/Alert
+DENTRO del modal; "Existencia actual" de la fila visible al registrar
+(decisión 1); historial en Timeline del kit (formatDateTime y vacíos
+explícitos, antes `<li>` crudo con toLocaleString); SIN busy global (ya
+no se bloquean más botones de la pantalla); éxito con Toast "Movimiento
+registrado." (texto más corto por decisión del dueño) + reload() sin
+titilar; foco al primer inválido en el form y Skeleton/ErrorState
+LOCALES en el historial (Reintentar sin cerrar el modal).
+
+**Pulido aplazado (§8-bis):** NINGUNO para cerrar el paso. Reporte F2-11
+(sin borrar nada): tras F2-10c, `mg-full-field` y `mg-modal-actions`
+quedan SIN consumidores JSX (solo su definición en users-ui.css, sin
+tocar todavía); el resto de `mg-` (mg-form-body/grid, mg-alert [
+-error], mg-primary, mg-secondary) sigue usado por CrudPage (modo
+legado que se retira en F2-11) y por InterventionMaterials (Dev 2) —
+la lista completa de CSS muerto está en §8.
+
+**Pendiente:** verificación del dueño con el checklist de STATUS.md
+("Pruebas pendientes" SOLO lo no ejecutado). `git diff --stat`
+esperado: MovimientoFormModal.jsx (N) + InsumoHistorialModal.jsx (N) +
+quantity.js (N) + MaintenancePage.jsx + validations/rules.js +
+validations/schemas.js + docs. Commit sugerido:
+`refactor(maintenance): Registrar movimiento e Historial al kit
+(F2-10c)`.
+
+**Ajuste ronda 1 (de 2) de F2-10c (2026-11-06, SIN commit, mismo working
+tree): indicador de obligatorio, hint de costo y filtro de tipo del
+historial por tipos presentes.** PASO 0 re-verificado de lectura: tipos
+generados HOY: existencias-iniciales → INICIAL (routes.py:68), entradas →
+ENTRADA (:79), salidas → SALIDA (:90), ajustes → AJUSTE + `direccion`
+(AjusteSchema OneOf ENTRADA/SALIDA) → **AJUSTE_ENTRADA/AJUSTE_SALIDA**
+(inventory.py:40-42), consumo desde intervención → **SALIDA**
+(services/interventions.py:63) y devolución → **DEVOLUCION**
+(interventions.py:104) — DEVOLUCION y AJUSTE_* SÍ siguen generándose
+(endpoints activos, no solo catálogo); CHECK de DB (migración 009) con
+los mismos 6. **Seed:** `database/seed.sql` y `seed_demo.sql` NO
+siembran insumos ni movimientos (cero matches). `git grep -n "_\*/" --
+frontend/src` → cero (la corrección del dueño quedó sola, sin otras).
+**Payload editar con Costo vacío (InsumoFormModal):** `armarPayload`
+envía `costo_unitario: 0` (`form.costo_unitario === "" ? 0 : Number`),
+NUNCA omite el campo (legado igual); SIN cambio (reporte). Cambios:
+
+1. **MovimientoFormModal:** Field "Tipo de movimiento" con `required`
+   (asterisco + "(obligatorio)" oculto, igual que Cantidad y Motivo) y
+   `<Select required>` aunque el valor no puede vaciarse (ENTRADA por
+   defecto). Sin cambios de payload/schema/endpoint.
+2. **InsumoFormModal:** Field "Costo unitario" sigue OPCIONAL (sin
+   asterisco) y con hint visible vía `help` del Field — "Opcional. Si
+   lo dejas vacío, se registra 0." — (Field NO tiene prop `hint`; su
+   prop visible de ayuda es `help`, kit SIN tocar). Sin cambios de
+   payload ni de schema.
+3. **InsumoHistorialModal:** el Select de filtro ofrece "Todos" + SOLO
+   los tipos PRESENTES en los movimientos de ESE insumo, derivados de
+   las cargas (la primera va sin filtrar; tiposRef acumulado que SOLO
+   crece + estado `tipos`, misma técnica del catálogo de categorías
+   F2-10a) — no se reduce al elegir un tipo -, etiquetas con
+   MOVEMENT_LABELS (fallback al código; orden estable de las etiquetas
+   mapeadas primero, tipos sin mapear al final). Si el insumo no tiene
+   movimientos, NO se muestra el filtro (solo el vacío explícito "Sin
+   movimientos registrados."). La consulta sigue en SERVIDOR con
+   ?tipo=; sin endpoint nuevo SIN tocar backend; etiquetas históricas
+   NO se eliminaron de MOVEMENT_LABELS.
+
+**Verificación de asteriscos campo→schema:** InsumoFormModal (insumoCrear) —
+Nombre "*" = requerido ✓ · Categoría "*" = requerido ✓ · Unidad de medida
+"*" = requerido ✓ · Stock mínimo "*" = requerido ✓ · Costo unitario SIN
+"*" = opcional (decimal(2)) ✓ · Descripción SIN "*" = opcional ✓; en
+insumoEditar TODOS son opcionales (schema parcial) pero los "*" reflejan
+el CREAR (coherente: son el mínimo para poder crear). MovimientoFormModal
+(movimientoCrear) — Tipo de movimiento "*" (nuevo) · Cantidad "*" =
+requerido ✓ · Motivo "*" = requerido ✓ (tipo no está en el schema
+porque determina el endpoint; requerido por decisión de UI). Historial —
+"Filtrar por tipo" SIN "*" (no es requerido) ✓.
+
 ## 8. Pendientes y hallazgos abiertos
 **Producto de Dev 1:**
 - [x] Verificación final de CP6b: guía `#/ui` — completada por el dueño y
@@ -1885,7 +2524,19 @@ agenda cuando el dueño lo ordene.
 - [GestionReservasPage] — **modal de detalle de la reserva para ADMIN**
   (el legado no lo tenía; Mis reservas ya lo tiene; el listado trae
   costo_total/observaciones/created_at que hoy no se ven) — decisión del
-  dueño en F2-8c — alcance: pantalla.
+  dueño en F2-8c — alcance: pantalla. — **F2-8c DESCARTADA (2026-11-03,
+  el dueño). Pasa a pulido pendiente de este listado.**
+- [GestionReservasPage] — **pulido 375px de reservas** (heredado de la
+  F2-8c descartada: revisión detallada del listado/filterbar/acciones en
+  móvil angosto) — pasa a pulido pendiente por decisión del dueño.
+- [Login] — CSS muerto de index.css para F2-11: `.login-container` y
+  `.login-form` (index.css:161-177) sin consumidores (grep fresco);
+  figuraban en el inventario de §8 desde CP6b — borrarlos en la limpieza
+  final — alcance: F2-11 (CSS legado).
+- [Login] — el glifo de la marca no tiene variante con márgenes si el
+  dueño quiere un wordmark más desarrollado (hoy glifo `buildings` en
+  --brand sin contenedor + kicker de texto) — alcance: pantalla (si se
+  pide).
 - [GestionReservasPage] — el select de Residente del filtro requiere
   cargar TODOS los residentes del condominio (GET /residents) para
   filtrar por uno; si el listado crece, definir búsqueda/paginación —
@@ -2008,6 +2659,32 @@ agenda cuando el dueño lo ordene.
   fila original exigiría exponer los RowActions de CrudPageUi al padre
   (más que un prop aditivo) — si el dueño lo quiere, pedirlo como
   mejora de kit — alcance: kit/UI (futuro).
+
+   *(Nota F2-10a: `3a3d0de` ya está INTEGRADO — la rama
+  `feature/refactor-insumos-listado` lo contiene —; el bloqueo de arriba
+  queda resuelto para la próxima ronda de estilo de InterventionMaterials
+  (F2-10c/F2-11).)*
+
+- [MaintenancePage] — la descripción de la columna Insumo era
+  `.mg-description` (atenuada); el kit no tiene clase de texto
+  secundario para celdas → quedó texto normal con un `<span display:
+  block>` (sin hex ni clase nueva): si el dueño quiere una "subline" de
+  kit, agregarla a ui.css y usarla AQUÍ — alcance: kit.
+- [MaintenancePage] — el checkbox "Stock bajo" del FilterBar es
+  standalone (sin Field): su etiqueta va a la derecha; decidir patrón de
+  alineación cuando una segunda pantalla use checkbox en FilterBar —
+  alcance: kit/UI.
+- [MaintenancePage] — la búsqueda NO tiene debounce (el kit/hooks no lo
+  tienen y no se inventaron): "Buscar insumo" aplica con Enter; si el
+  dueño lo pide, debounce de FilterBar como kit — alcance: kit.
+- [MaintenancePage/F2-10b] — contador EN VIVO de caracteres para la
+  Descripción del insumo (hoy maxLength 2000 + ayuda estática, igual
+  que Observaciones en F2-8b; si el dueño lo pide, para ambos) —
+  alcance: pantalla.
+- [MaintenancePage] — busca por nombre/descripción EXACTA del legado
+  (`buscar` del backend, sin precisar si cubre sintilde/caso): probar
+  "tubería"/"TUBERIA" en la verificación y reportar si el backend es
+  sensible a tildes/caso — alcance: backend (solo reporte).
 
 ## 8-ter. Plantilla de migración de pantalla
 
