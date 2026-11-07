@@ -28,7 +28,7 @@ import { useHashRoute } from "../../hooks/useHashRoute";
 import { useQuery } from "../../hooks/useQuery";
 import { useMutation } from "../../hooks/useMutation";
 import { useConfirm } from "../../hooks/useConfirm";
-import { formatDate } from "../../utils/format";
+import { formatDate, formatTime } from "../../utils/format";
 import {
   Button,
   DataTable,
@@ -40,7 +40,9 @@ import {
   Select,
   StatusBadge,
   useToast,
+  ErrorState,
 } from "../../components/ui";
+
 
 const DESCRIPCION =
   "Revisa todas las reservas del condominio y gestiona su aprobación, rechazo o cancelación.";
@@ -83,20 +85,31 @@ const EMPTY_FILTERS = { espacio: "", estado: "", fecha: "", residente: "" };
 const nombreCompleto = (row) =>
   [row?.residente_nombre, row?.residente_apellido].filter(Boolean).join(" ") || "—";
 
-export default function GestionReservasPage() {
+export default function GestionReservasPage({ user }) {
+  const isAdmin = user?.rol === "ADMIN";
+  const isManager = user?.rol === "GESTOR";
+  const puedeAprobar = isAdmin || isManager;
   const notify = useToast();
   const confirmar = useConfirm();
   const { params } = useHashRoute();
 
   /* Catálogos en una consulta separada con deps []: NO se repite al
    * cambiar un filtro (la dep de recarga es solo `consulta`). */
-  const { data: catalogos } = useQuery(async (signal) => {
+  const {
+    data: catalogos,
+    error: errorCatalogos,
+    reload: recargarCatalogos,
+  } = useQuery(async (signal) => {
     const [espacios, residentes] = await Promise.all([
       api(routes.commonSpaces, { signal }),
-      api(routes.residents, { signal }),
+      isAdmin
+        ? api(routes.residents, { signal })
+        : Promise.resolve([]),
     ]);
+
     return [espacios ?? [], residentes ?? []];
-  }, []);
+  }, [user?.id_usuario, isAdmin]);
+
   const [espacios = [], residentes = []] = catalogos || [];
 
   const [filtros, setFiltros] = useState({ ...EMPTY_FILTERS });
@@ -157,10 +170,12 @@ export default function GestionReservasPage() {
 
   async function pedirCambio(row, estado) {
     if (cambiarEstado.busy) return;
+    if (!puedeAprobar) return;
+    if (!isAdmin && estado !== "CONFIRMADA") return;
     const textos = CONFIRMACION[estado];
     const ok = await confirmar({
       title: textos.title,
-      message: `La reserva de ${nombreCompleto(row)} en ${row.espacio} del ${row.fecha} quedará ${estado}.${
+      message: `La reserva de ${nombreCompleto(row)} en ${row.espacio} del ${formatDate(row.fecha)} quedará ${estado}.${
         estado === "CANCELADA" ? " No hay vuelta atrás." : ""
       }`,
       confirmLabel: textos.confirmLabel,
@@ -184,7 +199,10 @@ export default function GestionReservasPage() {
     : rows.length > 0
       ? `${rows.length} ${rows.length === 1 ? "reserva" : "reservas"} · ${pendientes} ${pendientes === 1 ? "pendiente" : "pendientes"}`
       : undefined;
-  const meta = [DESCRIPCION, conteo].filter(Boolean).join(" · ") || undefined;
+  const descripcion = isAdmin
+    ? DESCRIPCION
+    : "Revisa las solicitudes y aprueba las reservas pendientes.";
+  const meta = [descripcion, conteo].filter(Boolean).join(" · ") || undefined;
 
   const hayFiltros = consulta !== "";
 
@@ -193,6 +211,7 @@ export default function GestionReservasPage() {
       key: "fecha",
       header: "Fecha",
       cellClassName: "ui-mono",
+      align: "right",
       render: (row) => formatDate(row.fecha),
     },
     { key: "espacio", header: "Espacio", render: (row) => row.espacio },
@@ -201,43 +220,52 @@ export default function GestionReservasPage() {
     {
       key: "horario",
       header: "Horario",
+      align: "right",
       cellClassName: "ui-mono",
-      render: (row) => `${row.hora_inicio} - ${row.hora_fin}`,
+      render: (row) =>
+        [
+          formatTime(`${row.fecha}T${row.hora_inicio}`),
+          formatTime(`${row.fecha}T${row.hora_fin}`),
+        ].join(" - "),
     },
     { key: "personas", header: "Personas", align: "right", render: (row) => row.cantidad_personas },
     { key: "estado", header: "Estado", render: (row) => <StatusBadge estado={row.estado} /> },
     {
       key: "acciones",
       header: "Acciones",
-      /* Tres botones en la fila PENDIENTE (Aprobar/Rechazar/Cancelar)
-       * no caben en el ancho de 192px de 2 acciones: 240px reservados. */
-      width: "calc(var(--space-12) * 5)",
+      width: isAdmin
+        ? "calc(var(--space-12) * 5)"
+        : "calc(var(--space-12) * 4)",
       render: (row) => (
         <RowActions
           actions={[
-            ...(row.estado === "PENDIENTE"
+            ...(puedeAprobar && row.estado === "PENDIENTE"
               ? [
                   {
                     label: "Aprobar",
-                    ariaLabel: `Aprobar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${row.fecha}`,
+                    ariaLabel: `Aprobar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${formatDate(row.fecha)}`,
                     disabled: cambiarEstado.busy,
                     onSelect: () => pedirCambio(row, "CONFIRMADA"),
                   },
+                ]
+              : []),
+            ...(isAdmin && row.estado === "PENDIENTE"
+              ? [
                   {
                     label: "Rechazar",
                     danger: true,
-                    ariaLabel: `Rechazar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${row.fecha}`,
+                    ariaLabel: `Rechazar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${formatDate(row.fecha)}`,
                     disabled: cambiarEstado.busy,
                     onSelect: () => pedirCambio(row, "RECHAZADA"),
                   },
                 ]
               : []),
-            ...(ESTADOS_CANCELABLES.includes(row.estado)
+            ...(isAdmin && ESTADOS_CANCELABLES.includes(row.estado)
               ? [
                   {
                     label: "Cancelar",
                     danger: true,
-                    ariaLabel: `Cancelar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${row.fecha}`,
+                    ariaLabel: `Cancelar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${formatDate(row.fecha)}`,
                     disabled: cambiarEstado.busy,
                     onSelect: () => pedirCambio(row, "CANCELADA"),
                   },
@@ -252,6 +280,13 @@ export default function GestionReservasPage() {
   return (
     <section>
       <PageHeader title="Gestión de reservas" meta={meta} />
+        {errorCatalogos && (
+          <ErrorState
+            title="No se pudieron cargar los filtros"
+            description={errorCatalogos.message}
+            onRetry={recargarCatalogos}
+          />
+        )}
 
       <FilterBar onReset={limpiarFiltros}>
         <Field
@@ -280,19 +315,35 @@ export default function GestionReservasPage() {
         <Field label="Fecha">
           <Input type="date" name="fecha" value={filtros.fecha} onChange={actualizarFiltro} />
         </Field>
-        <Field
-          label="Residente"
-          help={residentesUnicos.length === 0 ? "Aún no hay residentes registrados." : undefined}
-        >
-          <Select name="residente" value={filtros.residente} onChange={actualizarFiltro}>
-            <option value="">Todos los residentes</option>
-            {residentesUnicos.map((residente) => (
-              <option key={residente.id_usuario} value={residente.id_usuario}>
-                {[residente.nombre, residente.apellido].filter(Boolean).join(" ")}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        {isAdmin && (
+          <Field
+            label="Residente"
+            help={
+              residentesUnicos.length === 0
+                ? "Aún no hay residentes registrados."
+                : undefined
+            }
+          >
+            <Select
+              name="residente"
+              autoComplete="off"
+              value={filtros.residente}
+              onChange={actualizarFiltro}
+            >
+              <option value="">Todos los residentes</option>
+              {residentesUnicos.map((residente) => (
+                <option
+                  key={residente.id_usuario}
+                  value={residente.id_usuario}
+                >
+                  {[residente.nombre, residente.apellido]
+                    .filter(Boolean)
+                    .join(" ")}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
         <Button variant="quiet" disabled={loading} onClick={reload}>
           Actualizar
         </Button>

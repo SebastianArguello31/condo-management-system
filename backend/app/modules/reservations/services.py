@@ -36,7 +36,7 @@ def list_reservations(user, space=None, status=None, reservation_date=None, resi
 
 
 def get_reservation(reservation_id, user):
-    require_role(user, "ADMIN", "RESIDENTE")
+    require_role(user, "ADMIN", "GESTOR", "RESIDENTE")
 
     reservation = reservation_repo.get_reservation(reservation_id)
 
@@ -102,7 +102,7 @@ def create_reservation(data, user):
 
 
 def update_reservation_status(reservation_id, new_status, user):
-    require_role(user, "ADMIN", "RESIDENTE")
+    require_role(user, "ADMIN", "GESTOR", "RESIDENTE")
 
     # Mantener el orden de bloqueo: primero el espacio, después la reserva.
     with transaction() as cursor:

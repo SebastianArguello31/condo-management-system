@@ -17,7 +17,7 @@ def create_reservation():
 
 @reservations_bp.get("")
 @token_required
-@role_required("RESIDENTE", "ADMIN")
+@role_required("RESIDENTE", "ADMIN", "GESTOR")
 def list_reservations():
     params = ReservationListQuerySchema().load(request.args.to_dict())
 
@@ -38,13 +38,13 @@ def list_event_types():
 
 @reservations_bp.get("/<int:reservation_id>")
 @token_required
-@role_required("RESIDENTE", "ADMIN")
+@role_required("RESIDENTE", "ADMIN", "GESTOR")
 def get_reservation(reservation_id):
     return jsonify(services.get_reservation(reservation_id, g.current_user))
 
 @reservations_bp.patch("/<int:reservation_id>/status")
 @token_required
-@role_required("RESIDENTE", "ADMIN")
+@role_required("RESIDENTE", "ADMIN", "GESTOR")
 def update_status(reservation_id):
     data = read_json(ReservationStatusSchema())
 
