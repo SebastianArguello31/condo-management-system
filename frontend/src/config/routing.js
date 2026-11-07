@@ -21,6 +21,7 @@ import EmployeeProfile from "../features/users/EmployeeProfile";
 import BuildingsPage from "../features/units/BuildingsPage";
 import UnitsPage from "../features/units/UnitsPage";
 import IncidentsPage from "../features/incidents/IncidentsPage";
+import IncidentTypesPage from "../features/incidents/IncidentTypesPage";
 import EspaciosPage from "../features/espacios-comunes/EspaciosPage";
 import MisReservasPage from "../features/reservas/MisReservasPage";
 import GestionReservasPage from "../features/reservas/GestionReservasPage";
@@ -45,6 +46,13 @@ const ITEMS = {
     icon: "incidents",
     component: IncidentsPage,
     roles: [ADMIN, RESIDENTE, TECNICO],
+  },
+  tiposIncidencia: {
+    path: "/tipos-incidencia",
+    label: "Tipos de incidencia",
+    icon: "incidents",
+    component: IncidentTypesPage,
+    roles: [ADMIN],
   },
   miPerfil: {
     path: "/mi-perfil",
@@ -158,7 +166,16 @@ const GRUPOS = {
     },
     {
       label: "Comunidad",
-      items: ["dashboard", "incidencias", "insumos", "edificios", "unidades", "espacios", "gestionReservas"],
+      items: [
+        "dashboard",
+        "incidencias",
+        "tiposIncidencia",
+        "insumos",
+        "edificios",
+        "unidades",
+        "espacios",
+        "gestionReservas",
+      ],
     },
   ],
   [RESIDENTE]: [
