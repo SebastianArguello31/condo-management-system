@@ -3,7 +3,12 @@ from flask import Blueprint, jsonify
 from app.core.decorators import role_required, token_required
 from app.core.validation import read_json
 from app.modules.units import services
-from app.modules.units.schemas import BuildingCreateSchema, UnitCreateSchema
+from app.modules.units.schemas import (
+    BuildingCreateSchema,
+    BuildingTypeCreateSchema,
+    BuildingTypeUpdateSchema,
+    UnitCreateSchema,
+)
 
 units_bp = Blueprint("units", __name__)
 
@@ -12,6 +17,27 @@ units_bp = Blueprint("units", __name__)
 @role_required("ADMIN")
 def list_building_types():
     return jsonify(services.list_building_types())
+
+@units_bp.post("/building-types")
+@token_required
+@role_required("ADMIN")
+def create_building_type():
+    data = read_json(BuildingTypeCreateSchema())
+    return jsonify(services.create_building_type(data)), 201
+
+@units_bp.patch("/building-types/<int:type_id>")
+@token_required
+@role_required("ADMIN")
+def update_building_type(type_id):
+    data = read_json(BuildingTypeUpdateSchema(), partial=True)
+    return jsonify(services.update_building_type(type_id, data))
+
+@units_bp.delete("/building-types/<int:type_id>")
+@token_required
+@role_required("ADMIN")
+def delete_building_type(type_id):
+    services.delete_building_type(type_id)
+    return "", 204
 
 @units_bp.get("/unit-types")
 @token_required
