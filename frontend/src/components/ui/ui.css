@@ -1,0 +1,1266 @@
+/* ==========================================================================
+   ui.css — estilos de los componentes básicos (CP3) y compuestos (CP4).
+   Solo consume tokens de styles/tokens.css; prohibido hex o px hardcodeados
+   (salvo las líneas de 1px/2px que el plan permite).
+   Transiciones solo de color/opacidad; respeta prefers-reduced-motion.
+   Breakpoints por convención (no tokens): 640 / 900 / 1150px.
+   ========================================================================== */
+
+/* -- Utilidades ---------------------------------------------------------- */
+.ui-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -- Botón --------------------------------------------------------------- */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-h);
+  padding-inline: var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    opacity var(--motion-fast) ease;
+}
+
+.ui-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ui-btn-primary {
+  background: var(--brand);
+  color: var(--on-brand);
+}
+
+.ui-btn-primary:hover:enabled {
+  background: var(--brand-hover);
+}
+
+.ui-btn-primary:active:enabled {
+  background: var(--brand-pressed);
+}
+
+.ui-btn-quiet {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line-control);
+}
+
+.ui-btn-quiet:hover:enabled {
+  background: var(--bg);
+}
+
+.ui-btn-danger {
+  background: var(--accent);
+  color: var(--on-brand);
+}
+
+.ui-btn-danger:hover:enabled {
+  background: var(--accent-hover);
+}
+
+.ui-btn-danger:active:enabled {
+  background: var(--accent-pressed);
+}
+
+.ui-btn-block {
+  display: flex;
+  width: 100%;
+}
+
+.ui-btn:focus-visible,
+.ui-control:focus-visible,
+.ui-checkbox input:focus-visible,
+.ui-search-clear:focus-visible,
+.ui-toast-close:focus-visible,
+.ui-alert-close:focus-visible,
+.ui-page-actions :focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* -- Spinner (también inline dentro del botón con busy) ------------------- */
+.ui-spinner {
+  display: inline-block;
+  width: var(--fs-16);
+  height: var(--fs-16);
+  border: 2px solid var(--line-control);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  vertical-align: middle;
+  animation: ui-spin 1.2s linear infinite;
+}
+
+.ui-spinner-inline {
+  width: var(--fs-13);
+  height: var(--fs-13);
+  border-top-color: currentColor;
+}
+
+@keyframes ui-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* -- Esqueleto (estático, sin animación de entrada) ----------------------- */
+.ui-skeleton {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ui-skeleton-line {
+  display: block;
+  width: 100%;
+  height: var(--lh-16);
+  background: var(--line);
+  border-radius: var(--radius-sm);
+}
+
+/* -- Avisos persistentes (Alert) ------------------------------------------ */
+.ui-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+}
+
+.ui-alert-content {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.ui-alert-body {
+  margin: 0;
+  flex: 1;
+}
+
+.ui-alert-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.ui-alert-info { background: var(--status-info-bg); color: var(--status-info-fg); }
+.ui-alert-success { background: var(--status-success-bg); color: var(--status-success-fg); }
+.ui-alert-warning { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+.ui-alert-danger { background: var(--status-danger-bg); color: var(--status-danger-fg); }
+.ui-alert-muted { background: var(--status-muted-bg); color: var(--status-muted-fg); }
+
+.ui-alert-close,
+.ui-toast-close {
+  flex: none;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: var(--fs-16);
+  line-height: 1;
+  padding: var(--space-1);
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity var(--motion-fast) ease;
+}
+
+.ui-alert-close:hover,
+.ui-toast-close:hover {
+  opacity: 1;
+}
+
+/* -- Avisos efímeros (Toast) ---------------------------------------------- */
+.ui-toasts {
+  position: fixed;
+  inset-inline: 0;
+  bottom: var(--space-4);
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  z-index: var(--z-modal);
+  pointer-events: none;
+  padding-inline: var(--space-4);
+}
+
+.ui-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: min(calc(var(--space-12) * 9), 100%);
+  max-width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  background: var(--surface);
+  color: var(--ink);
+  pointer-events: auto;
+}
+
+.ui-toast > span {
+  flex: 1;
+}
+
+.ui-toasts-group {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: center;
+}
+
+.ui-toast-danger { border-color: var(--status-danger-fg); }
+.ui-toast-success { border-color: var(--status-success-fg); }
+.ui-toast-warning { border-color: var(--status-warning-fg); }
+.ui-toast-info { border-color: var(--status-info-fg); }
+
+/* -- Insignia de estado (glifo + texto, nunca solo color) ------------------ */
+.ui-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  font-weight: 500;
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+}
+
+.ui-status-info { background: var(--status-info-bg); color: var(--status-info-fg); }
+.ui-status-success { background: var(--status-success-bg); color: var(--status-success-fg); }
+.ui-status-warning { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+.ui-status-danger { background: var(--status-danger-bg); color: var(--status-danger-fg); }
+.ui-status-muted { background: var(--status-muted-bg); color: var(--status-muted-fg); }
+
+.ui-status-glyph {
+  display: inline-block;
+  flex: none;
+  /* K3: glifo reducido a ~8px (var(--space-2)) para que no compita con el
+   * texto del estado. */
+  width: var(--space-2);
+  height: var(--space-2);
+  background: currentColor;
+}
+
+.ui-status-dot {
+  border-radius: 50%;
+}
+
+.ui-status-ring {
+  border-radius: 50%;
+  background: none;
+  border: 2px solid currentColor;
+}
+
+.ui-status-square {
+  border-radius: 1px;
+}
+
+.ui-status-diamond {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+.ui-status-triangle {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+/* Glifo aditivo (F2-3): check ✓ para FINALIZADA. El tick se dibuja con el
+ * border-trick (esquina de bordes right+bottom girada 45°): sin hex y sin
+ * px sueltos — el trazo usa las líneas de 2px que el plan permite y el
+ * tamaño sale de tokens (--space-*). El ::after vive dentro del glifo de
+ * --space-2 y no desborda (bounding ≈ 6px < 8px). */
+.ui-status-check {
+  background: none;
+  position: relative;
+}
+
+.ui-status-check::after {
+  content: "";
+  position: absolute;
+  inset: 30% 25% 12% 25%;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+/* -- Campos de formulario -------------------------------------------------- */
+.ui-field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.ui-field-label {
+  /* K1: display block (anula el `label { display: flex; column }` legacy de
+   * index.css) para que el texto y el asterisco queden EN LÍNEA dentro de la
+   * etiqueta; el texto accesible "obligatorio" va oculto (ui-visually-hidden
+   * en Field.jsx). */
+  display: block;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.ui-field-required {
+  color: var(--accent);
+}
+
+.ui-field-help {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--ink-3);
+}
+
+.ui-field-error {
+  margin: 0;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--status-danger-fg);
+}
+
+.ui-control {
+  width: 100%;
+  min-width: 0;
+  height: var(--control-h);
+  /* K2/K4: padding en los DOS ejes de forma explícita (anula el
+   * `input, select { padding: 10px }` legacy de index.css) y fuente completa
+   * de la escala del kit (Input y Select comparten .ui-control → mismo
+   * tamaño y altura). */
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  transition:
+    border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease;
+}
+
+/* K4: Select igualado a Input — font explícito (evita el `font: inherit` de
+ * `select` heredado del body legacy, Arial): mismos family/size/line-height y
+ * la misma altura de control que ya comparte .ui-control. */
+select.ui-control {
+  font: var(--fs-14)/var(--lh-14) var(--font-ui);
+  height: var(--control-h);
+}
+
+.ui-control:hover {
+  border-color: var(--ink-2);
+}
+
+.ui-control-invalid {
+  border-color: var(--accent);
+}
+
+.ui-control:disabled {
+  background: var(--bg);
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+textarea.ui-control {
+  height: auto;
+  min-height: calc(var(--lh-14) * var(--fs-14) * 3);
+  padding-block: var(--space-2);
+  resize: vertical;
+}
+
+/* -- Checkbox (etiqueta a la derecha del control) --------------------------- */
+/* Ronda F2-6b: `flex-direction: row` explícito — index.css cascada DESPUÉS
+ * de ui.css (main.jsx) y su regla legada `label { flex-direction: column }`
+ * (index.css:104) no la anulaba ninguna declaración del kit: las casillas
+ * quedaban en columna (control arriba, etiqueta debajo) y centradas por
+ * `align-items: center` (visto en la captura del modal de empleados). */
+.ui-checkbox {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* Selector ">" con especificidad (0,2,1): gana los empates contra la regla
+ * legada `input[type=checkbox] { width/height: 20px }` de index.css:119
+ * (misma causa de cascada de arriba; índice 20px vs el 16px del kit). */
+.ui-checkbox > input {
+  width: var(--space-4);
+  height: var(--space-4);
+  flex: none;
+  accent-color: var(--brand);
+  margin: 0;
+}
+
+.ui-checkbox:has(input:disabled) {
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+/* -- Buscador ---------------------------------------------------------------- */
+.ui-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-search input {
+  flex: 1;
+}
+
+.ui-search-clear {
+  border: 0;
+  background: none;
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--fs-12);
+  color: var(--ink-2);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color var(--motion-fast) ease;
+}
+
+.ui-search-clear:hover {
+  color: var(--ink);
+}
+
+/* -- Estados vacío y de error ------------------------------------------------ */
+.ui-empty {
+  text-align: center;
+  padding-block: var(--space-8);
+  color: var(--ink-3);
+}
+
+.ui-empty-title {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.ui-empty-description {
+  margin: var(--space-2) auto 0;
+  max-width: calc(var(--space-12) * 10);
+  font-size: var(--fs-13);
+}
+
+.ui-empty > :last-child {
+  margin-top: var(--space-4);
+}
+
+.ui-error {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+}
+
+.ui-error-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.ui-error-description {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-13);
+}
+
+.ui-error > :last-child {
+  margin-top: var(--space-3);
+}
+
+/* -- Cabecera de página -------------------------------------------------------- */
+.ui-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.ui-page-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-28);
+  line-height: var(--lh-28);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ui-page-meta {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+}
+
+.ui-page-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .ui-page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* =====================================================================
+   Compuestos (CP4). Breakpoints convención: 640 / 900 / 1150 px.
+   ===================================================================== */
+
+/* -- Sección tipo "ficha" (título izquierda, contenido derecha) ------------ */
+.ui-section {
+  display: grid;
+  grid-template-columns: minmax(auto, calc(var(--space-12) * 5)) 1fr;
+  gap: var(--space-4) var(--space-8);
+  padding-block: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--line);
+}
+
+.ui-section-title {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ui-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.ui-section-body {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (max-width: 640px) {
+  .ui-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ui-section > :last-child {
+  margin-bottom: 0;
+}
+
+.ui-section-body > :first-child {
+  margin-top: 0;
+}
+
+/* -- Lista de definiciones -------------------------------------------------- */
+.ui-dl {
+  margin: 0;
+  display: grid;
+}
+
+.ui-dl-2 {
+  grid-template-columns: 1fr 1fr;
+  column-gap: var(--space-6);
+}
+
+.ui-dl-row {
+  display: grid;
+  grid-template-columns: minmax(auto, calc(var(--space-12) * 4)) 1fr;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.ui-dl-2 .ui-dl-row:last-child {
+  border-bottom: 0;
+}
+
+.ui-dl dt {
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+  padding-top: 0;
+}
+
+.ui-dl dd {
+  margin: 0;
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .ui-dl-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .ui-dl-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+}
+
+/* -- Timeline "bitácora" ------------------------------------------------------ */
+.ui-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-timeline-entry {
+  position: relative;
+  padding-left: var(--space-5);
+  padding-block: var(--space-3);
+}
+
+.ui-timeline-entry::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--space-2) / 2 - 0.5px);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+
+.ui-timeline-entry:first-child::before {
+  top: var(--space-3);
+}
+
+.ui-timeline-entry:last-child::before {
+  bottom: calc(100% - var(--space-4));
+}
+
+.ui-timeline-dot {
+  position: absolute;
+  left: 0;
+  top: var(--space-3);
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 50%;
+  background: var(--line-control);
+}
+
+.ui-timeline-dot-info { background: var(--status-info-fg); }
+.ui-timeline-dot-success { background: var(--status-success-fg); }
+.ui-timeline-dot-warning { background: var(--status-warning-fg); }
+.ui-timeline-dot-danger { background: var(--status-danger-fg); }
+.ui-timeline-dot-brand { background: var(--brand); }
+
+.ui-timeline-time {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-timeline-title {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.ui-timeline-meta {
+  margin: 0;
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+}
+
+.ui-timeline-detail {
+  margin-top: var(--space-2);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink-2);
+}
+
+/* -- K2: aislamiento del CSS legado ---------------------------------------------
+ * index.css tiene selectores "desnudos" (button, input, select, th, td, label)
+ * que se filtran en los componentes del kit. Reparado: th/td de .ui-table
+ * (fondo, padding y alineación explícitos), .ui-control (padding y fuente
+ * explícitos) y los botones de cierre/clear, que no definían border-radius.
+ * Auditado sin cambios: .ui-btn (define todo), .ui-alert y sus tonos
+ * (bg+color explícitos), .ui-modal (bg/color/borde explícitos).
+ * -------------------------------------------------------------------------- */
+.ui-alert-close,
+.ui-toast-close,
+.ui-search-clear {
+  border-radius: var(--radius-sm);
+}
+
+/* -- Menú de acciones de fila (K6: disparador compacto de tres puntos) ------- */
+.ui-row-actions {
+  position: relative;
+  display: inline-flex;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.ui-row-actions-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+
+.ui-row-actions-trigger:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.ui-menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: var(--z-modal);
+  min-width: calc(var(--space-12) * 4);
+  padding: var(--space-1);
+  display: grid;
+  background: var(--surface);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-md);
+}
+
+.ui-menuitem {
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+
+.ui-menuitem:hover:not([aria-disabled="true"]) {
+  background: var(--bg);
+}
+
+.ui-menuitem-danger {
+  color: var(--status-danger-fg);
+}
+
+.ui-menuitem[aria-disabled="true"] {
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+/* Fila de acciones con BOTONES visibles (ajuste F2-3, columna Acciones):
+ * sustituye al disparador compacto de tres puntos (a diferencia de
+ * .ui-row-actions que solo usa RowActionsMenu). Alineada a la IZQUIERDA con
+ * la cabecera: th y td comparten el mismo relleno (--space-3, .ui-table);
+ * el primer control cede SU relleno propio (el del tamaño compacto "sm")
+ * con un margen negativo de token para que su texto arranque en la misma
+ * x que el texto de la cabecera (misma alineación y relleno izquierdos). */
+.ui-actions-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-actions-inline > :first-child {
+  margin-inline-start: calc(var(--space-3) * -1);
+}
+
+/* -- Modal ampliado (sobre <dialog> nativo; clases ui-* aplican solo cuando
+      ui.css está cargado — las pantallas legacy solo usan mg-modal) --------- */
+.ui-modal {
+  padding: 0;
+  width: min(calc(var(--space-11) * 15), calc(100vw - var(--space-8)));
+  max-height: calc(100dvh - var(--space-10));
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+.ui-modal::backdrop {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.ui-modal[data-backdrop="true"]::backdrop {
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+.ui-modal .ui-modal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.ui-modal .ui-modal-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-20);
+  line-height: var(--lh-20);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ui-modal .ui-modal-desc {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+.ui-modal .ui-modal-close {
+  border: 0;
+  background: none;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease;
+}
+
+.ui-modal .ui-modal-close:hover {
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.ui-modal-body {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+}
+
+.ui-modal .ui-btn {
+  font-family: var(--font-ui);
+  font-weight: 500;
+}
+
+.mg-modal.ui-modal :focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ui-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: 0;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--line);
+}
+
+.ui-confirm-message {
+  margin: 0;
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--ink-2);
+}
+
+/* -- Tabla de datos ----------------------------------------------------------- */
+/* Marco cerrado (aditivo, F2-3): la tabla queda dentro de un panel con borde
+ * de 1px (token de línea) y radio de panel; overflow hidden para que la
+ * cabecera tintada y las filas se recorten dentro del marco. Sin sombras.
+ * La última fila pierde su borde inferior para no doblar la línea con el
+ * borde del marco. */
+.ui-table-shell {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.ui-table-shell .ui-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* La celda de cabecera SIN borde superior propio: el borde superior del
+ * thead lo dibuja solo el marco (.ui-table-shell); con border-collapse:
+ * collapse cualquier línea de la celda se apila junto a él y queda doble.
+ * La delimitación del encabezado sigue siendo su border-bottom. */
+.ui-table-shell .ui-table th {
+  border-top: 0;
+}
+
+/* Ajuste F2-3 (línea doble sobre el thead): origen verificado en el CSS real —
+ * ninguna regla legada (index.css th/td solo border-bottom; users-ui.css .mg-table
+ * th, scoped) ni ninguna regla del kit da borde superior al th. La doble real es
+ * la ADYACENCIA: en las pantallas del kit la cabecera de página subrayada
+ * (.ui-page-header, border-bottom con --line, arriba en este archivo) va
+ * seguida DIRECTAMENTE del marco (.ui-table-shell, border --line), con 0px
+ * entre ambas: dos líneas de 1px del mismo color se leen como una línea doble
+ * encima del thead. Separación aditiva SOLO en esa adyacencia (la guía #/ui,
+ * que no apila la tabla junto al PageHeader, no cambia). Resultado: una
+ * sola línea exterior del panel (el marco) y la delimitación inferior del
+ * encabezado (th border-bottom). */
+.ui-page-header + .ui-table-shell {
+  margin-top: var(--space-4);
+}
+
+/* F2-1b ronda 1: el mismo caso de adyacencia con la barra de filtros
+   (.ui-filterbar) como hermana directa del marco de la tabla: sin regla
+   quedan a 0px y la barra se pega a la línea del thead. Aditivo y acotado
+   a esa adjacencia (usos verificados con grep: la guía #/ui y CrudPageUi
+   — en la guía la demo obtiene la misma separación, sin romperse). */
+.ui-filterbar + .ui-table-shell {
+  margin-top: var(--space-4);
+}
+
+.ui-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink);
+}
+
+/* K2, actualizado por el ajuste F2-3 (5a): cabecera de tabla con MÁS PESO —
+ * 13px (--fs-13/--lh-13), 600, --ink (antes --ink-2) y tracking normal
+ * (antes 0.02em) sobre un tinte más marcado ya existente
+ * (--status-neutral-bg, antes --bg); mayúsculas y border-bottom
+ * (delimitador de la cabecera) intactos. Contraste --ink sobre
+ * --status-neutral-bg ≈ 13.5:1 (AA holgado). Cambio de KIT: afecta a todas
+ * las tablas (usos verificados: Mis reservas y la guía #/ui). En la pila
+ * móvil (<640px) thead está display:none y las etiquetas de las tarjetas
+ * apiladas (td::before) mantienen sus propios pesos/colores: sin riesgo. */
+.ui-table th {
+  text-align: left;
+  background: var(--status-neutral-bg);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: uppercase;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line-control);
+}
+
+.ui-table td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  height: var(--row-h);
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.ui-table tbody tr {
+  transition: background-color var(--motion-fast) ease;
+}
+
+.ui-table tbody tr:hover {
+  background: var(--bg);
+}
+
+.ui-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* K5: columna alineada a la derecha (números/códigos): th y td comparten la
+ * clase `.ui-num` (la aplica DataTable cuando la columna trae
+ * `align: "right"`); tabular-nums para que las cifras no "bailen". En <640px
+ * la pila mantiene el valor a la derecha vía `td > :only-child`. */
+.ui-table .ui-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .ui-table thead {
+    display: none;
+  }
+
+  /* En la pila móvil el marco cerrado se retira: las filas ya son tarjetas
+   * propias (borde + radio) y el shell no debe doblar bordes ni encerrarlas. */
+  .ui-table-shell {
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .ui-table-shell .ui-table tbody tr:last-child td {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .ui-table,
+  .ui-table tbody,
+  .ui-table tr,
+  .ui-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .ui-table tbody tr {
+    border: 1px solid var(--line-control);
+    border-radius: var(--radius-md);
+    margin-block: var(--space-2);
+    padding-block: var(--space-2);
+    background: var(--surface);
+  }
+
+  .ui-table td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    height: auto;
+    min-height: 0;
+    border-bottom: 1px solid var(--line);
+    padding-inline: var(--space-3);
+  }
+
+  .ui-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .ui-table td::before {
+    content: attr(data-label);
+    flex: none;
+    font-size: var(--fs-12);
+    line-height: var(--lh-12);
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  .ui-table td > :only-child {
+    text-align: right;
+  }
+}
+
+/* -- Barra de filtros (K7) ------------------------------------------------------
+ * Las celdas se alinean por la BASE del control (flex-end): la etiqueta va
+ * arriba (altura uniforme de fila: fs-12 + gap = var(--space-5)) y los
+ * controles/clic comparten la línea inferior, sin espacio reservado para
+ * mensajes; si un Field muestra error el Field crece hacia abajo. ------- */
+.ui-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-3);
+  padding-block: var(--space-3) 0;
+}
+
+/* -- Movimiento reducido --------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .ui-btn,
+  .ui-control,
+  .ui-search-clear,
+  .ui-alert-close,
+  .ui-toast-close,
+  .ui-row-actions-trigger,
+  .ui-menuitem,
+  .ui-table tbody tr,
+  .ui-modal .ui-modal-close {
+    transition: none;
+  }
+
+  .ui-spinner {
+    animation: none;
+  }
+}
+
+/* -- Variantes aditivas de Button (ajuste visual F2-3) ----------------------
+ * .ui-btn-link: acción tipo ENLACE de texto (sin fondo/borde, sin negrita,
+ * alto de la fila de tabla). Aditivo: no toca las variantes previas.
+ * Solo tokens del kit. ----------------------------------------------------- */
+.ui-btn-link {
+  height: var(--row-h);
+  padding-inline: var(--space-2);
+  border-color: transparent;
+  background: none;
+  color: var(--brand);
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: var(--space-1);
+}
+
+.ui-btn-link:hover:enabled {
+  background: none;
+  color: var(--brand-hover);
+}
+
+.ui-btn-link:active:enabled {
+  background: none;
+  color: var(--brand-pressed);
+}
+
+/* Tamaño compacto de fila: combinable con cualquier variante (p. ej. link). */
+.ui-btn-sm {
+  height: var(--row-h);
+  padding-inline: var(--space-3);
+}
+
+/* Variante aditiva (ajuste F2-3): acción destructiva secundaria GHOST —
+ * texto rojo con --accent, sin borde ni fondo; hover/active con el tinte
+ * danger existente y el tono oscurecido del propio acento. Contraste
+ * verificado: --accent ≥ 5.8:1 sobre surface y ≥ 4.7:1 sobre
+ * --status-danger-bg (AA con texto normal). Combinable con size="sm". */
+.ui-btn-danger-ghost {
+  border-color: transparent;
+  background: none;
+  color: var(--accent);
+}
+
+.ui-btn-danger-ghost:hover:enabled {
+  background: var(--status-danger-bg);
+  color: var(--accent-hover);
+}
+
+.ui-btn-danger-ghost:active:enabled {
+  background: var(--status-danger-bg);
+  color: var(--accent-pressed);
+}
+
+/* Hueco reservado del menú de fila (K6): mantiene "Detalle" en la misma
+ * posición horizontal en todas las filas (con o sin menú). Ancho igual al
+ * disparador compacto: 2 × padding (--space-2) + icono de 16px. */
+.ui-row-actions-slot {
+  display: inline-block;
+  width: var(--space-8);
+}
+
+/* =====================================================================
+   Aditivo (ajuste visual F2-4, ronda 1): formularios INLINE del perfil y
+   lista de especialidades. Clases NUEVAS (verificado con grep que no
+   existían); no modifica Field, ni controles, ni estilos previos. Solo
+   tokens.
+   ===================================================================== */
+
+/* Pila vertical de los campos de un formulario inline: separa cada Field
+ * del siguiente (gap) y limita su ancho para que los inputs no corran a
+ * todo lo ancho de la columna (≈480px; bajo 640px ocupa el 100% porque el
+ * contenedor es más angosto). */
+.ui-form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: calc(var(--space-12) * 10);
+}
+
+/* Fila de acciones del formulario (alineada con los campos, que comparten
+ * el mismo tope de ancho): margen superior de un paso y medio respecto de
+ * la pila. */
+.ui-form-actions {
+  max-width: calc(var(--space-12) * 10);
+  margin-top: var(--space-6);
+}
+
+/* Nota de ayuda de una sección (p. ej. "Las especialidades son gestionadas
+ * por administración."): un punto más legible que .ui-field-help (fs-13 e
+ * --ink-2 vs fs-12 e --ink-3) para texto informativo a nivel sección.
+ * Ronda 2: mismo tope de ancho que .ui-form-stack/.ui-specialty-list para
+ * que el bloque entero quede alineado con el formulario. */
+.ui-specialty-note {
+  margin: 0 0 var(--space-3);
+  max-width: calc(var(--space-12) * 10);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink-2);
+}
+
+/* Lista simple de solo lectura (especialidades del técnico): sin viñetas,
+ * nombre a la izquierda y su estado (StatusBadge) a la derecha. Ronda 2:
+ * limitada al mismo ancho del formulario (≈480px; sin el tope el badge
+ * quedaba pegado al borde derecho de la columna, a ~1200px del nombre) y
+ * con separador de 1px entre ítems (el último lo suelta). */
+.ui-specialty-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: calc(var(--space-12) * 10);
+  width: 100%;
+}
+
+.ui-specialty-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--ink);
+}
+
+.ui-specialty-list li:last-child {
+  border-bottom: 0;
+}
+
+.ui-specialty-list li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Nota de campos obligatorios del FormModal (F2-2, ronda 1; aditivo):
+ * una línea fs-13/ink-2 sobre los campos cuando el padre activa
+ * showRequiredNote (CrudPageUi la activa si algún field es required);
+ * el <form> la referencia vía aria-describedby. Solo tokens. */
+.ui-form-required {
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink-2);
+}

@@ -1,5 +1,5 @@
 /* Base de navegación y pantallas de personas. Los estilos de los otros módulos se conservan. */
-.app-shell { --ui-accent: #186553; --ui-text: #182b31; --ui-muted: #65767d; --ui-border: #e3e9e8; color: var(--ui-text); font-family: "Segoe UI", Arial, sans-serif; background: #f5f7f7; min-height: 100vh; }
+.app-shell { --ui-accent: #186553; --ui-text: #182b31; --ui-muted: #65767d; --ui-border: #e3e9e8; color: var(--ui-text); background: #f5f7f7; min-height: 100vh; } /* fuentes heredan de base.css (tokens) */
 .app-shell button, .mg-modal button { font-family: inherit; font-weight: 600; }
 .shell-sidebar { width: 246px; position: fixed; inset: 0 auto 0 0; background: white; border-right: 1px solid var(--ui-border); display: flex; flex-direction: column; z-index: 30; }
 .shell-brand { display: flex; align-items: center; gap: 12px; padding: 33px 25px 29px; }
@@ -109,7 +109,7 @@ button.mg-icon-button:disabled { opacity: .3; }
 .mg-spinner { width: 24px; height: 24px; border: 2px solid #d4e4dc; border-top-color: #408c68; border-radius: 50%; animation: mg-spin 1s linear infinite; }
 @keyframes mg-spin { to { transform: rotate(360deg); } }
 .mg-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-.mg-modal { --ui-text: #182b31; padding: 0; width: min(660px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); border: 1px solid #dce7e1; border-radius: 16px; background: white; color: var(--ui-text); font-family: "Segoe UI", Arial, sans-serif; box-shadow: 0 25px 90px #10271a33; }
+.mg-modal { --ui-text: #182b31; padding: 0; width: min(660px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); border: 1px solid #dce7e1; border-radius: 16px; background: white; color: var(--ui-text); box-shadow: 0 25px 90px #10271a33; }
 .mg-modal::backdrop { background: #162e2b66; backdrop-filter: blur(3px); }
 .mg-modal-heading { display: flex; align-items: flex-start; justify-content: space-between; padding: 25px 28px 21px; border-bottom: 1px solid #edf1ef; gap: 12px; }
 .mg-modal-heading h2 { font-size: 21px; letter-spacing: -.3px; margin: 0 0 8px; font-weight: 650; }

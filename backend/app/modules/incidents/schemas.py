@@ -1,6 +1,14 @@
 from marshmallow import (ValidationError, fields, validate, validates_schema)
 
-from app.core.validation import BaseSchema
+from app.core.validation import BaseSchema, required_text
+
+class IncidentTypeCreateSchema(BaseSchema):
+    nombre = required_text(100)
+    descripcion = fields.Str(allow_none=True, validate=validate.Length(max=500))
+    activo = fields.Boolean(load_default=True, truthy={True}, falsy={False})
+
+class IncidentTypeUpdateSchema(IncidentTypeCreateSchema):
+    pass
 
 class IncidentCreateSchema(BaseSchema):
     titulo = fields.Str(required=True, validate=validate.Length(min=5, max=150))

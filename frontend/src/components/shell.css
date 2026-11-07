@@ -1,0 +1,16 @@
+/* ==========================================================================
+   shell.css — ajustes "Bitácora" sobre la navegación del shell.
+   Solo consume tokens de styles/tokens.css; las líneas de 1px/2px son la
+   excepción permitida. El resto de los estilos del shell sigue en el CSS
+   legado (users-ui.css) hasta la limpieza final.
+   ========================================================================== */
+
+/* Ítem activo: línea de 2px a la izquierda + peso 600. Sin píldora, sin
+ * punto (el span .shell-active-dot ya no se renderiza). */
+.shell-nav-group > button.is-current {
+  border-left: 2px solid var(--brand);
+  padding-left: var(--space-3); /* = 12px: compensa los 2px de la línea */
+  color: var(--brand);
+  background: var(--status-success-bg);
+  font-weight: 600;
+}

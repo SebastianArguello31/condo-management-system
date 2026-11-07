@@ -1,57 +1,260 @@
-import CreateAccount from "./CreateAccount";
-import { useCallback, useEffect, useMemo, useState } from "react";
+/* ResidentsPage — F2-6b: Residentes al kit (ADMIN). Reemplaza al shell
+ * legado (mg-* / residents) y RETIRA los consumidores de CreateAccount y
+ * ResidentUnits (ambos archivos se eliminan; B2/B3 cierran en el crear del
+ * kit, B5 en el modal de unidades).
+ * Paridad con el legado:
+ * - Listado GET /residents (una fila POR UNIDAD vinculada): fila por
+ *   residente con deduplicado conservando la PRIMERA (el backend ordena
+ *   por apellido, nombre y código de unidad); columnas Residente, Email,
+ *   Teléfono, Unidades (conteo calculado del grupo), Estado y Acciones.
+ * - Búsqueda en cliente por nombre, apellido, email y teléfono Y por
+ *   unidad/edificio (evaluada contra TODAS las filas del residente; el
+ *   placeholder lo promete), con botón "Actualizar" como la FilterBar de
+ *   CrudPageUi.
+ * - Crear con "Unidad inicial" (POST /residents con id_unidad Number;
+ *   409 de vínculo duplicado mostrado DENTRO del modal) →
+ *   ResidentCreateModal; "Ver unidades" → ResidentUnitsModal (:id/units).
+ * - Activar/Desactivar: PATCH /residents/:id {activo} (mismo endpoint y
+ *   payload del legado) con useConfirm (danger SOLO al desactivar),
+ *   useMutation con dedupe y Toast; error por Toast danger.
+ * Cambios por convención (§8-bis): PageHeader con meta de conteo,
+ * useQuery con signal (Skeleton/ErrorState/EmptyState sin parpadeo),
+ * DataTable sin columna ID, estado con StatusBadge override ACTIVA/
+ * INACTIVA (estadoCuenta, única fuente de F2-6a), acciones con RowActions
+ * y botón de crear solo texto. EmptyState DISTINTO para búsqueda sin
+ * resultados y para sin residentes (cero window.confirm; español neutro).
+ */
+import { useMemo, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
-import Icon from "../../components/ui/Icon";
-import Modal from "../../components/ui/Modal";
-import ResidentUnits from "./ResidentUnits";
+import { useQuery } from "../../hooks/useQuery";
+import { useMutation } from "../../hooks/useMutation";
+import { useConfirm } from "../../hooks/useConfirm";
+import {
+  Button,
+  DataTable,
+  FilterBar,
+  PageHeader,
+  RowActions,
+  SearchInput,
+  StatusBadge,
+  useToast,
+} from "../../components/ui";
+import { estadoCuenta } from "./AccountDetailModal";
+import ResidentCreateModal from "./ResidentCreateModal";
+import ResidentUnitsModal from "./ResidentUnitsModal";
 
-function groupResidents(rows) {
-  const grouped = new Map();
-  rows.forEach((row) => {
-    if (!grouped.has(row.id_usuario)) grouped.set(row.id_usuario, row);
-  });
-  return [...grouped.values()];
-}
+const DESCRIPCION =
+  "Administra las cuentas y unidades vinculadas de cada residente.";
+
+const nombreCompleto = (registro) =>
+  [registro?.nombre, registro?.apellido].filter(Boolean).join(" ") || "—";
+
+/* Búsqueda en cliente por nombre/apellido/email/teléfono + la unidad y el
+ * edificio de TODAS las filas del residente (paridad del placeholder del
+ * legado). */
+const coincide = (grupo, aguja) =>
+  [
+    grupo.fila.nombre,
+    grupo.fila.apellido,
+    grupo.fila.email,
+    grupo.fila.telefono,
+    grupo.unidadesTexto,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLocaleLowerCase()
+    .includes(aguja);
 
 export default function ResidentsPage() {
-  const [rows, setRows] = useState([]);
-  const [selected, setSelected] = useState(null);
+  /* Una sola consulta con signal: el dedupe y el conteo se calculan en
+   * cliente; reload() conserva datos (sin titilar). */
+  const { data, loading, error, reload } = useQuery(
+    (signal) => api(routes.residents, { signal }),
+    []
+  );
+  const filas = data ?? [];
+
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [nuevo, setNuevo] = useState(false);
+  const [verUnidades, setVerUnidades] = useState(null);
+  const notify = useToast();
+  const confirm = useConfirm();
 
-  const load = useCallback(async () => {
-    setRows(groupResidents(await api(routes.residents)));
-  }, []);
+  const alternarCuenta = useMutation((fila) =>
+    api(`${routes.residents}/${fila.id_usuario}`, {
+      method: "PATCH",
+      body: { activo: !fila.activo },
+    })
+  );
 
-  useEffect(() => { load().catch((e) => setError(e.message)).finally(() => setLoading(false)); }, [load]);
-
-  const filtered = useMemo(() => {
-    const needle = search.trim().toLocaleLowerCase();
-    return rows.filter((row) => [row.nombre, row.apellido, row.email, row.telefono].join(" ").toLocaleLowerCase().includes(needle));
-  }, [rows, search]);
-
-  async function toggleStatus(row) {
+  async function alternar(fila) {
+    if (alternarCuenta.busy) return;
+    const ok = await confirm({
+      title: fila.activo ? "Desactivar cuenta" : "Activar cuenta",
+      message: `Se ${
+        fila.activo ? "desactivará" : "activará"
+      } la cuenta de ${nombreCompleto(fila)}.${
+        fila.activo ? " No podrá iniciar sesión mientras esté inactiva." : ""
+      }`,
+      confirmLabel: fila.activo ? "Desactivar" : "Activar",
+      danger: Boolean(fila.activo),
+    });
+    if (!ok) return;
     try {
-      await api(`${routes.residents}/${row.id_usuario}`, { method: "PATCH", body: { activo: !row.activo } });
-      setNotice(`Cuenta ${row.activo ? "desactivada" : "activada"}.`); await load();
-    } catch (e) { setError(e.message); }
+      await alternarCuenta.run(fila);
+      notify(fila.activo ? "Cuenta desactivada." : "Cuenta activada.");
+      await reload();
+    } catch (err) {
+      notify(err.message || "No se pudo actualizar la cuenta.", {
+        tone: "danger",
+      });
+    }
   }
 
-  return <section className="management-page">
-    <div className="mg-page-heading">
-      <div><p className="mg-eyebrow">GESTIÓN HABITACIONAL</p><h1>Residentes</h1><p>Administra las cuentas y unidades vinculadas de cada residente.</p></div>
-      <div className="mg-row-actions">
-        <button className="mg-icon-button" title="Actualizar" aria-label="Actualizar" onClick={() => load().catch((e) => setError(e.message))}><Icon name="refresh" size={18} /></button>
-        <CreateAccount kind="residents" onCreated={load} />
-      </div>
-    </div>
-    {error && <div className="mg-alert mg-alert-error" role="alert">{error}</div>}{notice && <div className="mg-alert mg-alert-success" role="status">{notice}</div>}
-    <div className="mg-panel"><div className="mg-toolbar"><input className="mg-search" type="search" placeholder="Buscar residente o unidad..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
-      {loading ? <div className="mg-empty">Cargando residentes...</div> : <div className="mg-table-scroll"><table className="mg-table residents-table"><thead><tr><th>Residente</th><th>Email</th><th>Teléfono</th><th>Estado</th><th className="mg-actions-heading">Acciones</th></tr></thead><tbody>{filtered.map((row) => <tr key={row.id_usuario}><td><strong>{row.nombre} {row.apellido}</strong></td><td>{row.email}</td><td>{row.telefono}</td><td>{row.activo ? "Activo" : "Inactivo"}</td><td><div className="mg-row-actions"><button className="mg-secondary" onClick={() => setSelected(row)}>Ver unidades</button><button className="mg-secondary" onClick={() => toggleStatus(row)}>{row.activo ? "Desactivar" : "Activar"}</button></div></td></tr>)}</tbody></table>{!filtered.length && <div className="mg-empty">No hay residentes que coincidan.</div>}</div>}
-    </div>
-    {selected && <Modal title="Unidades del residente" description={`${selected.nombre} ${selected.apellido}`} onClose={() => setSelected(null)}><ResidentUnits user={selected} /></Modal>}
-  </section>;
+  /* Fila por RESIDENTE (el API trae una por unidad): primera fila del
+   * grupo + conteo de unidades + texto de búsqueda con TODAS las filas
+   * del grupo (unidad/edificio de cada una). */
+  const residentes = useMemo(() => {
+    const grupos = new Map();
+    filas.forEach((fila) => {
+      const texto = [fila.unidad, fila.edificio].filter(Boolean).join(" ");
+      const grupo = grupos.get(fila.id_usuario);
+      if (grupo) {
+        grupo.cantidad += 1;
+        if (texto) grupo.unidadesTexto = `${grupo.unidadesTexto} ${texto}`;
+      } else {
+        grupos.set(fila.id_usuario, { fila, cantidad: 1, unidadesTexto: texto });
+      }
+    });
+    return [...grupos.values()];
+  }, [filas]);
+
+  const coincidencia = search.trim().toLocaleLowerCase();
+  const visibles = useMemo(() => {
+    if (!coincidencia) return residentes;
+    return residentes.filter((grupo) => coincide(grupo, coincidencia));
+  }, [residentes, coincidencia]);
+  const sinCoincidencia =
+    !loading && !error && filas.length > 0 && visibles.length === 0;
+
+  const conteo = loading
+    ? undefined
+    : `${residentes.length} residente${residentes.length === 1 ? "" : "s"}`;
+  const meta = [DESCRIPCION, conteo].filter(Boolean).join(" · ") || undefined;
+
+  const triggerNuevo = (
+    <Button disabled={loading || alternarCuenta.busy} onClick={() => setNuevo(true)}>
+      Nuevo residente
+    </Button>
+  );
+
+  const columns = [
+    {
+      key: "residente",
+      header: "Residente",
+      render: (grupo) => nombreCompleto(grupo.fila),
+    },
+    { key: "email", header: "Email", render: (grupo) => grupo.fila.email ?? "—" },
+    {
+      key: "telefono",
+      header: "Teléfono",
+      render: (grupo) => grupo.fila.telefono || "—",
+    },
+    {
+      key: "unidades",
+      header: "Unidades",
+      /* Conteo calculado del grupo de filas del residente. */
+      render: (grupo) => grupo.cantidad,
+    },
+    {
+      /* "estado" no existe en la fila (el flag real es `activo` booleano):
+       * presentación con el override compartido de F2-6a. */
+      key: "estado",
+      header: "Estado",
+      render: (grupo) => (
+        <StatusBadge {...estadoCuenta(Boolean(grupo.fila.activo))} />
+      ),
+    },
+    {
+      key: "acciones",
+      header: "Acciones",
+      width: "calc(var(--space-12) * 4)",
+      render: (grupo) => (
+        <RowActions
+          actions={[
+            {
+              label: "Ver unidades",
+              ariaLabel: `Unidades de ${nombreCompleto(grupo.fila)}`,
+              onSelect: () => setVerUnidades(grupo),
+            },
+            {
+              label: grupo.fila.activo ? "Desactivar" : "Activar",
+              danger: Boolean(grupo.fila.activo),
+              disabled: alternarCuenta.busy,
+              ariaLabel: `${grupo.fila.activo ? "Desactivar" : "Activar"} la cuenta de ${nombreCompleto(grupo.fila)}`,
+              onSelect: () => alternar(grupo.fila),
+            },
+          ]}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <section>
+      <PageHeader
+        title="Residentes"
+        meta={meta}
+        /* Única instancia del trigger: en PageHeader con datos y, si no hay
+         * residentes, dentro del EmptyState (como Mis reservas/CrudPageUi). */
+        actions={!loading && filas.length === 0 ? null : triggerNuevo}
+      />
+
+      <FilterBar>
+        <SearchInput
+          label="Buscar en residentes"
+          value={search}
+          onChange={setSearch}
+          onClear={() => setSearch("")}
+          placeholder="Buscar residente o unidad..."
+        />
+        <Button variant="quiet" disabled={loading} onClick={reload}>
+          Actualizar
+        </Button>
+      </FilterBar>
+
+      <DataTable
+        columns={columns}
+        rows={visibles}
+        rowKey={(grupo) => grupo.fila.id_usuario}
+        caption="Listado de residentes"
+        loading={loading}
+        error={error}
+        onRetry={reload}
+        emptyTitle={sinCoincidencia ? "No hay residentes que coincidan." : "No hay residentes"}
+        emptyDescription={
+          sinCoincidencia
+            ? "Ajusta la búsqueda para ver resultados."
+            : "Crea la primera cuenta de residente."
+        }
+        emptyAction={sinCoincidencia ? undefined : triggerNuevo}
+      />
+
+      {nuevo && (
+        <ResidentCreateModal
+          onClose={() => setNuevo(false)}
+          onCreated={reload}
+        />
+      )}
+
+      {verUnidades && (
+        <ResidentUnitsModal
+          user={verUnidades.fila}
+          onClose={() => setVerUnidades(null)}
+          onChanged={reload}
+        />
+      )}
+    </section>
+  );
 }

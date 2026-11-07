@@ -20,7 +20,6 @@ const fields = [
 ];
 
 const columns = [
-  { name: "id_edificio", label: "ID" },
   { name: "nombre", label: "Nombre" },
   { name: "direccion", label: "Dirección" },
   { name: "tipo_edificio", label: "Tipo" },
@@ -33,6 +32,7 @@ const lookups = [
 export default function BuildingsPage() {
   return (
     <CrudPage
+      variant="ui"
       description="Administra los edificios, direcciones y tipos del condominio."
       title="Edificios"
       endpoint={`${routes.buildings}`}
@@ -40,6 +40,9 @@ export default function BuildingsPage() {
       fields={fields}
       columns={columns}
       lookups={lookups}
+      createLabel="Nuevo edificio"
+      editLabel="Editar edificio"
+      getRecordLabel={(row) => `edificio ${row.nombre}`}
     />
   );
 }
