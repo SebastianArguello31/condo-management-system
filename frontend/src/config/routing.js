@@ -21,6 +21,7 @@ import EmployeeProfile from "../features/users/EmployeeProfile";
 import BuildingsPage from "../features/units/BuildingsPage";
 import BuildingTypesPage from "../features/units/BuildingTypesPage";
 import UnitsPage from "../features/units/UnitsPage";
+import UnitTypesPage from "../features/units/UnitTypesPage";
 import IncidentsPage from "../features/incidents/IncidentsPage";
 import IncidentTypesPage from "../features/incidents/IncidentTypesPage";
 import EspaciosPage from "../features/espacios-comunes/EspaciosPage";
@@ -125,6 +126,13 @@ const ITEMS = {
     component: BuildingTypesPage,
     roles: [ADMIN],
   },
+  tiposUnidad: {
+    path: "/tipos-unidad",
+    label: "Tipos de unidad",
+    icon: "units",
+    component: UnitTypesPage,
+    roles: [ADMIN],
+  },
   unidades: {
     path: "/unidades",
     label: "Unidades",
@@ -181,6 +189,7 @@ const GRUPOS = {
         "insumos",
         "tiposEdificio",
         "edificios",
+        "tiposUnidad",
         "unidades",
         "espacios",
         "gestionReservas",
