@@ -8,10 +8,39 @@ from app.modules.incidents.schemas import (
     IncidentCreateSchema,
     IncidentPriorityUpdateSchema,
     IncidentStatusUpdateSchema,
+    IncidentTypeCreateSchema,
+    IncidentTypeUpdateSchema,
 )
 from app.modules.incidents import services
 
 incidents_bp = Blueprint("incidents", __name__, url_prefix="/condominio/incidents")
+
+@incidents_bp.get("/types")
+@token_required
+@role_required("ADMIN")
+def list_incident_types():
+    return jsonify(services.list_incident_types())
+
+@incidents_bp.post("/types")
+@token_required
+@role_required("ADMIN")
+def create_incident_type():
+    data = read_json(IncidentTypeCreateSchema())
+    return jsonify(services.create_incident_type(data)), 201
+
+@incidents_bp.patch("/types/<int:type_id>")
+@token_required
+@role_required("ADMIN")
+def update_incident_type(type_id):
+    data = read_json(IncidentTypeUpdateSchema(), partial=True)
+    return jsonify(services.update_incident_type(type_id, data))
+
+@incidents_bp.delete("/types/<int:type_id>")
+@token_required
+@role_required("ADMIN")
+def delete_incident_type(type_id):
+    services.delete_incident_type(type_id)
+    return "", 204
 
 @incidents_bp.get("/metadata")
 @token_required

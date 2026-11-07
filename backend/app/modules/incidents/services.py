@@ -2,7 +2,8 @@ from pathlib import Path
 from uuid import uuid4
 
 from flask import current_app
-from werkzeug.exceptions import BadRequest, Forbidden, NotFound
+from psycopg2.errors import ForeignKeyViolation
+from werkzeug.exceptions import BadRequest, Conflict, Forbidden, NotFound
 from werkzeug.utils import secure_filename
 
 from app.core.db_helpers import query, transaction
@@ -100,6 +101,53 @@ def list_priorities():
         WHERE activo = TRUE
         ORDER BY nivel ASC;
     """, many=True)
+
+def list_incident_types():
+    return query("""
+        SELECT id_tipo_incidencia, nombre, descripcion, activo
+        FROM tipos_incidencia
+        ORDER BY nombre, id_tipo_incidencia;
+    """, many=True)
+
+def create_incident_type(data):
+    return query("""
+        INSERT INTO tipos_incidencia (nombre, descripcion, activo)
+        VALUES (%s, %s, %s)
+        RETURNING id_tipo_incidencia, nombre, descripcion, activo;
+    """, (data["nombre"], data.get("descripcion"), data.get("activo", True)))
+
+def update_incident_type(type_id, data):
+    if not data or not set(data).issubset({"nombre", "descripcion", "activo"}):
+        raise BadRequest("Campos de actualización inválidos")
+
+    assignments = ", ".join(f"{field} = %s" for field in data)
+    row = query(f"""
+        UPDATE tipos_incidencia
+        SET {assignments}
+        WHERE id_tipo_incidencia = %s
+        RETURNING id_tipo_incidencia, nombre, descripcion, activo;
+    """, (*data.values(), type_id))
+
+    if row is None:
+        raise NotFound("Tipo de incidencia no encontrado")
+
+    return row
+
+def delete_incident_type(type_id):
+    try:
+        deleted = query("""
+            DELETE FROM tipos_incidencia
+            WHERE id_tipo_incidencia = %s
+            RETURNING id_tipo_incidencia;
+        """, (type_id,))
+    except ForeignKeyViolation:
+        raise Conflict(
+            "El tipo de incidencia tiene incidencias relacionadas. "
+            "Desactívalo para impedir que se use en nuevos reportes."
+        ) from None
+
+    if deleted is None:
+        raise NotFound("Tipo de incidencia no encontrado")
 
 def list_statuses():
     return query("""
