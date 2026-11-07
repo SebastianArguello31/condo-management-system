@@ -1,4 +1,4 @@
-# Plan de refactorización del frontend — Dev 1 (Sprint 4, Grupo 6 IS2 FP-UNA)
+﻿# Plan de refactorización del frontend — Dev 1 (Sprint 4, Grupo 6 IS2 FP-UNA)
 
 Documento de persistencia del plan. La próxima sesión debe retomar desde aquí
 y de `STATUS.md` (ver también la sección "Prompt de arranque" al final).
@@ -2583,6 +2583,130 @@ commiteada `0301846`); los cambios no commiteados se conservan al
 cambiar de rama. Commit sugerido: `style(ui): DefinitionList alineado
 por línea base, Modal por convención y rol legible (F2-12b)`.
 
+## Sesión F2-12a: shell por tokens, marca tipográfica, menú compacto y rol legible en tablas (2026-11-07)
+
+Rama indicada: `feature/refactor-shell` (sobre
+`feature/refactor-modales-detalle` con F2-12b commiteada `bfb3834`).
+Alcance RESPETADO: `components/AppShell.jsx`, `components/shell.css`,
+`styles/users-ui.css` (solo bloques del shell y muertos PROBADOS),
+`features/users/{UsersPage,EmployeesPage,AdminsPage}.jsx` (SOLO el render
+de la columna de rol) + docs. NO tocados: App.jsx, routing.js, api.js,
+backend, components/ui (JSX y CSS), validations/, DashboardPage/
+dashboard.css, InterventionMaterials, index.css, kit, breakpoint del
+drawer (760px, deuda F2-11, decisión 10).
+
+**PASO 0 (verificación, solo lectura) — resultado:**
+
+- (a) `AppShell.jsx` (100 líneas): contrato `{ user, groups, activePath,
+  onNavigate, onLogout, children}`; grupos por rol desde routing; botón
+  activo con `is-current` + `aria-current="page"`; drawer con `inert`
+  cuando cerrado, foco al primer control al abrir y de vuelta al botón de
+   menú (overlay, Esc, toggle); `ROLE_LABELS` local en :14 (mapa
+   duplicado con TECNICO = "Empleado"); botón "Cerrar sesión"
+  en :86; avatar de iniciales en :83; píldora de rol en :94; breakpoint
+  760 (`matchMedia`) en :12; skip link a `#main-content` en :58.
+- (b) Variables `--ui-*` de `users-ui.css:2` y consumidores con grep en
+  `frontend/src` completo: `--ui-accent` CERO consumidores; `--ui-text`
+  lo consume `.app-shell` (color, :2) y `.mg-modal` (:117) pero esta se
+  define el PROPIO valor local (autosuficiente); `--ui-muted` CERO;
+  `--ui-border` solo las reglas del shell (:4/:16/:23) que se
+  reemplazan. NINGUNA variable es consumida por `.mg-*` externos ni por
+  features/JSX y style inline → se conservan (no se borran, decisión 11) pero
+  apuntan a tokens (`--brand/--ink/--ink-2/--line`) desde shell.css.
+- (c) `.mg-avatar`: único consumidor JSX `AppShell.jsx:83`
+  (`.mg-avatar-square` solo CSS) → muerte probada al retirar el avatar.
+  `.shell-breadcrumb` y `.shell-active-dot`: CERO consumidores JSX (lo
+  decía §8; borradas junto con la regla móvil del breadcrumb).
+- (d) Consumidores de `.app-shell`/`.shell-content` fuera de AppShell:
+  CERO (Dashboard de Dev 3 usa sus propias clases `dash-*`;
+  `dashboard.css` sin `app-shell`; `dev/ui-guide.jsx` tampoco). La regla
+  de foco `.app-shell :focus-visible` solo la definía users-ui.css:143.
+- (e) Rol en tablas: las 3 columnas son `{ name: "rol", label: "Rol" }`
+  con CERO `render` (UsersPage.jsx:32, EmployeesPage.jsx:56,
+  AdminsPage.jsx:44); la búsqueda de `CrudPageUi.jsx:329-335` filtra con
+   `String(row[column.name])` — valor CRUDO, no el render → agregar
+   `render` NO afecta la búsqueda (el kit no tiene ordenamiento de tabla).
+- (f) Altura estimada del menú ADMIN a 1280×720 (tokens: barra
+  44px + margen 4px = 52px por ítem; encabezado de grupo ~40px; marca
+  ~88px; bloque de usuario ~129px): contenido del nav ≈ 740-780px vs
+  ~500px disponibles → scroll interno necesario a 720 (también
+  lo era con los valores legados ~800px+). "Gestión de reservas" queda
+  COMPLETO al final del scroll (nunca cortado a medias); sin flechas
+  nativas (thumb `thin` + `--line-control`).
+
+**Cambios:**
+
+1. `components/shell.css` reescrito y ahora ÚNICO CSS del shell (antes
+   solo el ítem activo): la regla `.app-shell` y TODOS los bloques
+   `.shell-*` salieron de `users-ui.css` hacia tokens — fondos `--bg`
+   (workspace) / `--surface` (sidebar), bordes 1px `--line`, tinta
+   `--ink/--ink-2/--ink-3`; marca tipográfica sin cuadro de color (glifo
+   `buildings` en `--brand` + "Condominio" font-display `--fs-20`/600 +
+   "Gestión de comunidad" `--fs-12` `--ink-3`; envuelve a 375px con
+   `flex-wrap`); ítem de navegación sin tinte verde ni 650 (hover
+   `--bg`; activo = color `--brand`, borde izquierdo 2px `--brand`,
+   peso 600, radio `--radius-sm`, `aria-current="page"` preservado);
+   menú compacto por tokens (`--row-h`, `--space-1/2/3/4`,
+   `--fs-12/--fs-13`) con scroll fino (`scrollbar-width: thin`,
+   `scrollbar-color: var(--line-control) transparent`); bloque de
+   usuario sin avatar (nombre `--fs-14` `--ink`, rol `--fs-12`
+   `--ink-3`) y "Cerrar sesión" = `Button kit quiet/sm/block` con solo
+   regla local de gap del icono; topbar SOLO móvil (desaparece la franja
+   vacía de escritorio; el botón de menú conserva
+   `aria-controls`/`aria-expanded` y mide 24px de glifo + 2×8px de
+   padding del `.mg-icon-button` heredado = objetivo 40px); sin
+   avatar/píldora/breadcrumb; pie `--fs-12` `--ink-3` (contraste del
+   token ≥ 4.6:1 sobre `--bg`); skip link `--surface`/`--brand`;
+   overlay del drawer por tokens (`color-mix(ink 45%)`, igual que los
+   modales del kit); `.shell-content` max-width 1560 INTACTO y padding
+   tokenizado `--space-10 --space-9` (38px 36px antes; +2px arriba,
+   repórtese visual).
+2. `AppShell.jsx`: sin `ROLE_LABELS` local — `roleLabel(user.rol)`
+   importado de `utils/roles.js` (TECNICO pasa de "Empleado" a "Técnico",
+   corrigiendo el mapa duplicado); sin avatar de iniciales ni
+   píldora de rol; el `<header>` (topbar) SOLO se renderiza en móvil
+   (`isMobile`, mismo `matchMedia(:12)`), el escritorio se queda sin
+   franja; "Cerrar sesión" es el `Button` del kit; contrato intacto.
+4. `users-ui.css`: borradas las reglas del shell reemplazadas
+   (`shell-*` incluida la píldora, el breadcrumb y el `.app-shell` de
+   hex) y las MUERTAS probadas por el PASO 0 + rediseño:
+   `.shell-active-dot`, `.shell-breadcrumb` (+ regla móvil),
+   `.shell-role` (+"span interno"), `.mg-avatar`/`.mg-avatar-square`
+   (cero consumidores). La regla de foco quedó SOLO con
+   `.mg-modal :focus-visible` (3px legacy; lo gana `ui.css:904` y se
+   revisa en F2-11 — decisión 8). `.mg-modal button { font-weight: 600 }`
+     quedó intacto y sin la parte `.app-shell button` (dejarla habría
+     puesto peso 600 sobre los Button del kit del shell por orden de
+     carga: users-ui.css es el ÚLTIMO stylesheet). Media queries:
+   solo quedan las reglas `.mg-*` de pantalla.
+5. Roles en tablas (decisión 12): en las 3 pantallas la columna "Rol"
+   usa `render: (row) => roleLabel(row.rol)` con el `name: "rol"`
+   intacto: la búsqueda sigue leyendo el valor crudo (el kit no tiene
+   ordenamiento de tabla) → "Administrador/Técnico/Residente" en
+   pantalla, sin cambios de comportamiento.
+
+**Paridad (conserva):** grupos por rol, navegación por hash,
+`aria-current`, drawer con `inert`/foco de vuelta/skip link ("Ir al
+contenido"), cerrar sesión, aterrizaje por rol (routing sin cambios).
+**Cambia (decidido):** fondos y todos los valores por tokens; marca
+tipográfica (sin cuadro verde ni radio 12); ítem activo sin tinte ni
+peso 650; menú compacto con scroll fino; topbar solo móvil; usuario sin
+avatar ni píldora de rol y rol "Técnico" correcto; "Cerrar sesión" con
+aspecto exacto del kit; pie legible (`--fs-12 --ink-3`); foco por anillo
+2px del kit desde el skip link; rol legible en las 3 tablas.
+
+**Nota de rama:** el dueño crea `feature/refactor-shell` (ya con F2-12b
+commiteada `bfb3834`); trabajo SIN commit al cierre de esta sesión.
+Commit sugerido: `style(shell): shell por tokens, marca tipográfica,
+menú compacto y rol legible en tablas (F2-12a)`. NO se declara nada
+cerrado sin verificación del dueño.
+
+Reportes a §8-bis añadidos: anchuras px heredadas del sidebar
+(246/220/250) y el `top: -100px` del skip link sin token (posición,
+excepción documentada en shell.css). El pulido del hover verde de
+`mg-icon-button` (F2-12b) NO se activa aquí: el shell sigue consumiendo
+`mg-icon-button` en el botón de menú móvil (queda para F2-11).
+
 ## 8. Pendientes y hallazgos abiertos
 **Producto de Dev 1:**
 - [x] Verificación final de CP6b: guía `#/ui` — completada por el dueño y
@@ -2631,16 +2755,19 @@ real a medida que se migren pantallas):
       `.timeline*` (header, item, body), `.priority-badge`, `.status-*`
       (ASIGNADA, CANCELADA, CERRADA, EN_ESPERA, EN_PROCESO, EN_REVISION,
       RECHAZADA, RECIBIDA, RESUELTA), `.login-container`, `.login-form`;
-      de `users-ui.css`: `.shell-breadcrumb`, `.shell-active-dot`,
-      `.mg-stats`, `.mg-stat-icon`, `.mg-identity`, `.mg-you`, `.mg-tag`,
+      de `users-ui.css`: `.mg-stats`, `.mg-stat-icon`, `.mg-identity`,
+      `.mg-you`, `.mg-tag`,
       `.mg-tags`, `.mg-description`, `.mg-required`,
       `.mg-specialty-picker` (+ `is-selected`), `.mg-delete-button`,
       `.mg-delete-summary`, `.mg-pagination`, `.mg-bottom-note`,
-      `.mg-spinner`, `.mg-avatar-square`; **nuevo tras F2-4** (el perfil ya
+      `.mg-spinner`; **nuevo tras F2-4** (el perfil ya
       no consume ninguna): `.resident-dashboard-grid`,
       `.resident-profile-card`, `.resident-units-card`,
       `.resident-history-card`, `.resident-card-heading`,
-      `.resident-empty-note`, `.resident-form-actions`. (`.tabular-nums` de
+      `.resident-empty-note`, `.resident-form-actions`. *(F2-12a ya
+      eliminó del CSS: `.shell-breadcrumb`, `.shell-active-dot`,
+      `.shell-role`, `.mg-avatar`, `.mg-avatar-square` — muerte probada
+      con grep y rediseño.)* (`.tabular-nums` de
       base.css no
       tiene consumidores como CLASE, pero el valor CSS
       `font-variant-numeric: tabular-nums` sí se usa en ui.css: decidir en la
@@ -2845,15 +2972,17 @@ agenda cuando el dueño lo ordene.
    "tubería"/"TUBERIA" en la verificación y reportar si el backend es
    sensible a tildes/caso — alcance: backend (solo reporte).
 
-- [Usuarios/Empleados/Administradores (F2-12b)] — el ROL sigue crudo en
-  la COLUMNA de tabla (`UsersPage.jsx:32` `{ name: "rol" }`; ídem
-  Employees/Admins): `utils/roles.js` ya existe, agregar `render` con
-  `roleLabel` a las 3 columnas — alcance: pantalla.
+- [Usuarios/Empleados/Administradores (F2-12b)] — el ROL crudo en la
+  COLUMNA de tabla (`UsersPage.jsx:32` `{ name: "rol" }`; ídem
+  Employees/Admins): `utils/roles.js` → `render` con `roleLabel` en las
+  3 columnas — alcance: pantalla. — **RESUELTO en F2-12a** (búsqueda/la
+  lectura de datos sigue sobre el valor crudo; sin orden de tabla).
 - [Kit/Modal (F2-12b)] — el HOVER del botón de cierre del modal usa los
   verdes legacy (`users-ui.css:83` gana el empate (0,3,0) sobre
-  `.ui-modal .ui-modal-close:hover`): se corrige cuando el shell deje de
-  consumir `mg-icon-button` (F2-12a) o subiendo especificidad del hover
-  del kit — alcance: kit/futuro (F2-12a/F2-11).
+  `.ui-modal .ui-modal-close:hover`): se corregía si el shell dejaba de
+  consumir `mg-icon-button`, pero F2-12a lo sigue usando en el botón de
+  menú móvil → queda para F2-11 (o subiendo especificidad del hover
+  del kit) — alcance: kit/limpieza (F2-11).
 - [Kit (F2-12b)] — `.mg-modal-actions` (users-ui.css) sin CERO
   consumidores JSX (re-verificado con grep; ya lo reportaba el cierre de
   F2-10c) → borrar el bloque en la limpieza F2-11 — alcance: limpieza.

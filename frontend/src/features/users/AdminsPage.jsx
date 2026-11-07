@@ -21,6 +21,7 @@ import CrudPage from "../../components/CrudPage";
 import { StatusBadge } from "../../components/ui";
 import { cuenta } from "../../validations";
 import { formatDate } from "../../utils/format";
+import { roleLabel } from "../../utils/roles";
 import AccountDetailModal, {
   estadoCuenta,
   useCuentaAcceso,
@@ -42,7 +43,14 @@ const columns = [
       [row.nombre, row.apellido].filter(Boolean).join(" ") || "—",
   },
   { name: "email", label: "Email" },
-  { name: "rol", label: "Rol" },
+  {
+    /* F2-12a: rol legible (roleLabel, §8-bis convenciones); la BÚSQUEDA
+     * sigue usando el valor crudo de row.rol (el filtro de CrudPageUi
+     * lee row[column.name], no el render). */
+    name: "rol",
+    label: "Rol",
+    render: (row) => roleLabel(row.rol),
+  },
   {
     /* name "estado": el flag real es `activo` booleano; por fuera de la
      * búsqueda intencional (ver UsersPage). */

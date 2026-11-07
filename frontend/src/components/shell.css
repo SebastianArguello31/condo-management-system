@@ -1,16 +1,227 @@
 /* ==========================================================================
-   shell.css — ajustes "Bitácora" sobre la navegación del shell.
-   Solo consume tokens de styles/tokens.css; las líneas de 1px/2px son la
-   excepción permitida. El resto de los estilos del shell sigue en el CSS
-   legado (users-ui.css) hasta la limpieza final.
-   ========================================================================== */
+ * shell.css — estructura del shell AppShell (F2-12a: 100 % tokens).
+ * Única fuente visual: styles/tokens.css. Sin hex ni px sueltos; excepciones
+ * del plan documentadas: líneas de 1px/2px, el breakpoint del drawer
+ * (760px, deuda F2-11 — convenciones §3) y las anchuras fijas del sidebar
+ * heredadas (246/220/250px, sin token equivalente en la escala de espaciado).
+ * El CSS de las pantallas sigue en styles/users-ui.css (limpieza en F2-11).
+ * ========================================================================== */
 
-/* Ítem activo: línea de 2px a la izquierda + peso 600. Sin píldora, sin
- * punto (el span .shell-active-dot ya no se renderiza). */
+/* Tokens de compatibilidad heredados del CSS legado (el shell ya no les
+ * pone hex): los declaraba users-ui.css y los consumía solo el propio
+ * shell. F2-12a PASO 0: cero consumidores .mg-* externos (--ui-text se
+ * define el propio .mg-modal), así que pasan de hex a tokens sin borrar
+ * las variables (decisión 11). */
+.app-shell {
+  --ui-accent: var(--brand);
+  --ui-text: var(--ink);
+  --ui-muted: var(--ink-2);
+  --ui-border: var(--line);
+  color: var(--ink);
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+/* -- Sidebar ------------------------------------------------------------- */
+.shell-sidebar {
+  width: 246px; /* anchura heredada del shell (sin token; ver cabecera) */
+  position: fixed;
+  inset: 0 auto 0 0;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  z-index: 30;
+}
+
+/* -- Marca tipográfica (F2-12a): glifo directo en --brand, sin cuadro de --- */
+/* -- color, de la mano del título de modal del kit (font-display 20/600) -- */
+.shell-brand {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap; /* envuelve bien en el drawer de 375px */
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4);
+}
+.shell-brand-glyph {
+  color: var(--brand);
+  display: inline-flex;
+}
+.shell-brand-text { min-width: 0; }
+.shell-brand strong {
+  font-family: var(--font-display);
+  font-size: var(--fs-20);
+  line-height: var(--lh-20);
+  font-weight: 600;
+  color: var(--ink);
+}
+.shell-brand small {
+  display: block;
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+  margin-top: var(--space-1);
+}
+
+/* -- Navegación ----------------------------------------------------------- */
+/* El menú ADMIN tiene 12 ítems: a 720px de alto no entra todo — scroll
+ * interno con scrollbar fina por tokens (los ítems conservan --row-h y
+ * separación mínima; ÍTEM "Gestión de reservas" se lee completo al final
+ * del scroll; estimación en el informe F2-12a). */
+nav.shell-navigation {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  flex: 1;
+  overflow-y: auto;
+  margin: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-control) transparent;
+}
+.shell-nav-group { margin-bottom: var(--space-4); }
+.shell-nav-group:last-child { margin-bottom: 0; }
+.shell-nav-group > p {
+  color: var(--ink-3);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  font-weight: 600;
+  margin: var(--space-3);
+}
+.shell-nav-group > button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--row-h);
+  gap: var(--space-3);
+  margin: var(--space-1) 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--ink-2);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  font-weight: 500;
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease;
+}
+.shell-nav-group > button:hover { background: var(--bg); }
+
+/* Ítem activo (convenciones §3): sin tinte ni punto; aria-current="page" +
+ * línea de 2px a la izquierda (--brand), color --brand y peso 600. La
+ * izquierda compensa la línea para que el texto no se corra. */
 .shell-nav-group > button.is-current {
   border-left: 2px solid var(--brand);
-  padding-left: var(--space-3); /* = 12px: compensa los 2px de la línea */
+  padding-left: calc(var(--space-3) - 2px); /* compensa la línea de 2px */
   color: var(--brand);
-  background: var(--status-success-bg);
   font-weight: 600;
+}
+
+/* -- Bloque de usuario (F2-12a): sin avatar; nombre y rol legibles; --------- */
+/* -- "Cerrar sesión" es el Button del kit (quiet sm block). ---------------- */
+.shell-account {
+  padding: var(--space-4);
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--space-3);
+}
+.shell-account-info > div { min-width: 0; }
+.shell-account-info strong {
+  display: block;
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.shell-account-info small {
+  display: block;
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--ink-3);
+  margin-top: var(--space-1);
+}
+/* Alineación del glifo de logout con el texto dentro del Button del kit. */
+.shell-account .ui-btn > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* -- Workspace (sin topbar en escritorio: cada pantalla tiene su h1; en ---- */
+/* -- móvil la cabecera solo lleva el botón de menú, target ≥ 40px) --------- */
+.shell-workspace {
+  margin-left: 246px; /* igual a .shell-sidebar (sin token) */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.shell-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.shell-content {
+  width: 100%;
+  max-width: 1560px; /* heredado: sin cambio (decisión F2-12a, párrafo 9) */
+  padding: var(--space-10) var(--space-9); /* antes 38px 36px (decisión 9) */
+  margin: 0 auto;
+  flex: 1;
+  min-width: 0;
+}
+/* Pie legible: --fs-12 y --ink-3 (contraste del token: ≥ 4.6:1 sobre
+ * --bg/--surface, tokens.css). */
+.shell-footer {
+  padding: 0 var(--space-9) var(--space-5);
+  color: var(--ink-3);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Skip link: el anillo de foco lo pinta base.css (2px --focus-ring, 0,1,0
+ * global: F2-12a retiró el outline de 3px heredado de users-ui.css). */
+.shell-skip {
+  position: fixed;
+  top: -100px; /* fuera de pantalla hasta el foco (posición, sin token) */
+  left: var(--space-5);
+  z-index: 100;
+  padding: var(--space-3);
+  background: var(--surface);
+  color: var(--brand);
+}
+.shell-skip:focus { top: var(--space-2); }
+
+/* Overlay del drawer: hasta que el drawer abre, oculto. */
+.shell-overlay { display: none; }
+
+/* -- Responsive ------------------------------------------------------------- */
+/* Anchuras heredadas del legado (sin token equivalente; ver cabecera). */
+@media (max-width: 1150px) {
+  .shell-sidebar { width: 220px; }
+  .shell-workspace { margin-left: 220px; }
+  .shell-content { padding: var(--space-7) var(--space-6); }
+}
+
+/* Drawer (breakpoint 760px leyenda del legado, deuda F2-11 — convenciones
+ * §3). En móvil la cabecera existe (AppShell la renderiza bajo el estado)
+ * y el botón de menú mide 24px de glifo + padding del .mg-icon-button
+ * heredado (8px) = 40px de objetivo táctil. */
+@media (max-width: 760px) {
+  .shell-sidebar { transform: translateX(-100%); visibility: hidden; width: 250px; }
+  .shell-sidebar.is-open { transform: none; visibility: visible; }
+  .shell-workspace { margin-left: 0; }
+  .shell-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    /* mismo dim del kit (ui.css, modales con backdrop) */
+    background: color-mix(in srgb, var(--ink) 45%, transparent);
+    z-index: 25;
+    border-radius: 0;
+  }
+  .shell-content { padding: var(--space-5) var(--space-4); }
+  .shell-footer { padding: 0 var(--space-4) var(--space-5); }
 }

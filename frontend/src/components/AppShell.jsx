@@ -1,17 +1,23 @@
 /* AppShell "Bitácora": recibe los grupos ya resueltos para el rol
  * (config/routing.js) — sin claves de módulos ni grupos hardcodeados.
  * Ítem activo = aria-current="page" + línea de 2px a la izquierda (CSS).
- * Drawer móvil (≤760px, breakpoint legado): `inert` cuando está cerrado,
- * foco al primer ítem al abrir y de vuelta al botón de menú al cerrar
- * (overlay, Esc o toggle). Sin breadcrumb duplicado.
+ * Drawer móvil (≤760px, breakpoint legado, deuda F2-11): `inert` cuando
+ * está cerrado, foco al primer ítem al abrir y de vuelta al botón de menú
+ * al cerrar (overlay, Esc o toggle). Sin breadcrumb duplicado.
+ * F2-12a: estilos por tokens en shell.css; marca tipográfica sin cuadro de
+ * color; topbar SOLO móvil (cada pantalla tiene su h1); bloque de usuario
+ * sin avatar ni píldora; "Cerrar sesión" es el Button del kit; el rol
+ * viene de utils/roles.js (fuente única, compartida con el detalle de
+ * cuenta). Contrato intacto: { user, groups, activePath, onNavigate,
+ * onLogout, children }.
  */
 import { useEffect, useRef, useState } from "react";
 import Icon from "./ui/Icon";
+import Button from "./ui/Button";
+import { roleLabel } from "../utils/roles";
 import "./shell.css";
 
 const drawerQuery = window.matchMedia("(max-width: 760px)");
-
-const ROLE_LABELS = { ADMIN: "Administrador", TECNICO: "Empleado", RESIDENTE: "Residente" };
 
 export default function AppShell({ user, groups, activePath, onNavigate, onLogout, children }) {
   const [open, setOpen] = useState(false);
@@ -51,8 +57,6 @@ export default function AppShell({ user, groups, activePath, onNavigate, onLogou
   }
 
   const drawerClosed = isMobile && !open;
-  const roleLabel = ROLE_LABELS[user.rol] || user.rol;
-  const initials = `${user.nombre?.[0] || ""}${user.apellido?.[0] || ""}`.toUpperCase();
 
   return <div className="app-shell">
     <a className="shell-skip" href="#main-content">Ir al contenido</a>
@@ -60,8 +64,12 @@ export default function AppShell({ user, groups, activePath, onNavigate, onLogou
     <aside ref={sidebarRef} className={`shell-sidebar ${open ? "is-open" : ""}`} id="main-navigation"
       inert={drawerClosed}
       onKeyDown={(event) => { if (event.key === "Escape") closeDrawer(); }}>
-      <div className="shell-brand"><span className="shell-brand-icon"><Icon name="buildings" size={24} /></span>
-        <div><strong>Condominio</strong><small>Gestión de comunidad</small></div>
+      <div className="shell-brand">
+        <span className="shell-brand-glyph"><Icon name="buildings" size={22} /></span>
+        <div className="shell-brand-text">
+          <strong>Condominio</strong>
+          <small>Gestión de comunidad</small>
+        </div>
       </div>
       <nav className="shell-navigation" aria-label="Navegación principal">
         {groups.map((group) => (
@@ -80,19 +88,27 @@ export default function AppShell({ user, groups, activePath, onNavigate, onLogou
         ))}
       </nav>
       <div className="shell-account">
-        <div className="shell-account-info"><span className="mg-avatar">{initials}</span>
-          <div><strong>{user.nombre} {user.apellido}</strong><small>{roleLabel}</small></div>
+        <div className="shell-account-info">
+          <div>
+            <strong>{user.nombre} {user.apellido}</strong>
+            <small>{roleLabel(user.rol)}</small>
+          </div>
         </div>
-        <button type="button" onClick={onLogout}><Icon name="logout" size={17} />Cerrar sesión</button>
+        <Button variant="quiet" size="sm" block onClick={onLogout}>
+          <Icon name="logout" size={17} />Cerrar sesión
+        </Button>
       </div>
     </aside>
     <div className="shell-workspace">
-      <header className="shell-header">
-        <button ref={menuButtonRef} type="button" className="shell-menu mg-icon-button" aria-label="Abrir navegación"
-          aria-controls="main-navigation" aria-expanded={open}
-          onClick={() => { if (open) closeDrawer(); else setOpen(true); }}><Icon name="menu" /></button>
-        <span className="shell-role"><span />{roleLabel}</span>
-      </header>
+      {isMobile && (
+        <header className="shell-header">
+          <button ref={menuButtonRef} type="button" className="shell-menu mg-icon-button"
+            aria-label="Abrir navegación" aria-controls="main-navigation" aria-expanded={open}
+            onClick={() => { if (open) closeDrawer(); else setOpen(true); }}>
+            <Icon name="menu" size={24} />
+          </button>
+        </header>
+      )}
       <main ref={mainRef} className="shell-content" id="main-content" tabIndex={-1}>{children}</main>
       <footer className="shell-footer">Condominio <span>Administración de la comunidad</span></footer>
     </div>

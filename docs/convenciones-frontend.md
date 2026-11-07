@@ -13,7 +13,10 @@ frontend/src/
 ├── main.jsx                Fuentes @fontsource + tokens/base
 ├── config/routing.js       ÚNICA config de rutas/roles/grupos (ver §7)
 ├── components/
-│   ├── AppShell.jsx        Shell Bitácora
+│   ├── AppShell.jsx        Shell Bitácora (F2-12a: estilos por tokens
+│   │                       en `components/shell.css`; topbar solo móvil;
+│   │                       rol de `utils/roles.js`)
+│   ├── shell.css           Único CSS del shell (100 % tokens)
 │   ├── CrudPage.jsx        CRUD genérico legacy (pantallas pendientes)
 │   └── ui/                 Kit: componentes + ui.css (único CSS del kit)
 ├── hooks/                  useHashRoute, useQuery, useMutation, useConfirm
@@ -87,6 +90,11 @@ Referencia completa por componente (props/ejemplos/a11y):
 - Un solo `h1` por pantalla (PageHeader); secciones con `Section` (`h2`).
 - Anillo de foco 2px (`--focus-ring`); navegación por teclado en todos los
   menús/modales (Esc cierra y devuelve el foco).
+- Shell del AppShell: skip link "Ir al contenido" (`#main-content`);
+  drawer ≤760px (deuda F2-11: convención sería 640px) con `inert`,
+  overlay, foco al primer ítem al abrir y de vuelta al botón de menú al
+  cerrar; ningún estilo de foco propio del shell (todo el anillo es
+  función del kit y de base.css; F2-12a retiró el 3px verde heredado).
 - Contraste WCAG AA estricto: 4.5:1 texto, 3:1 bordes de controles y
   glifos — verificación con `frontend/scripts/check-contrast.mjs`.
 - `role="alert"` solo en errores (Alert danger / ErrorState); avisos
@@ -151,6 +159,19 @@ solo si su clave no coincide con el id.
   `Toast` (sin `notice` de página).
 
 ## 9. Registro por pantalla migrada (una línea cada una)
+
+- **Shell (`AppShell` + `shell.css`)** — F2-12a: estilos 100 % tokens
+  (fondos `--bg`/`--surface`, bordes `--line`, tinta `--ink-*`); marca
+  tipográfica SIN cuadro de color (glifo `buildings` en `--brand`);
+  ítem activo sin tinte (color `--brand` + borde izq. 2px + peso 600);
+  topbar SOLO móvil (solo botón de menú de 40px); bloque de usuario sin
+  avatar/píldora y "Cerrar sesión" como `Button quiet sm block` del
+  kit; pie legible (`--fs-12 --ink-3`); foco 2px del kit (retirado el
+  3px heredado); rol legible vía `roleLabel` de `utils/roles.js` en el
+  shell y en las columnas de Usuarios/Empleados/Administradores (la
+  búsqueda sigue sobre el valor crudo); CSS del shell consolidado en
+  `shell.css` (users-ui.css solo conserva `.mg-*` de pantalla);
+  breakpoint 760 del drawer queda como deuda F2-11.
 
 (ninguna todavía — se agrega una línea al cerrar cada migración:
 
