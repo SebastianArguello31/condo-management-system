@@ -11,7 +11,7 @@ def get_employee_detail(user_id, *, cursor=None):
     rows = employees_repo.find_employees(user_id, cursor=cursor)
 
     if not rows:
-        raise NotFound("Empleado no encontrado")
+        raise NotFound("Técnico no encontrado")
 
     return rows[0]
 
