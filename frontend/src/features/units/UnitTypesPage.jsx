@@ -12,10 +12,10 @@ const fields = [
 ];
 
 const columns = [
-  { key: "nombre", header: "Nombre" },
+  { name: "nombre", label: "Nombre" },
   {
-    key: "descripcion",
-    header: "Descripción",
+    name: "descripcion",
+    label: "Descripción",
     render: (row) => row.descripcion || "Sin descripción",
   },
 ];

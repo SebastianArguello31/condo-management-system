@@ -77,7 +77,7 @@ def link_specialty(user_id, specialty_id, actor_id):
         employee = lock_management(cursor, actor_id, user_id, "TECNICO")
 
         if not employee["activo"]:
-            raise BadRequest("Debes activar al empleado antes de asignar especialidades")
+            raise BadRequest("Debes activar al técnico  antes de asignar especialidades")
 
         specialties = specialties_repo.lock_specialties([specialty_id], cursor=cursor)
 
@@ -103,9 +103,9 @@ def unlink_specialty(user_id, specialty_id, actor_id):
         }
 
         if specialty_id not in assigned_ids:
-            raise NotFound("El empleado no tiene esa especialidad")
+            raise NotFound("El técnico  no tiene esa especialidad")
 
         if len(assigned_ids) == 1:
-            raise BadRequest("El empleado debe conservar al menos una especialidad")
+            raise BadRequest("El técnico  debe conservar al menos una especialidad")
 
         specialties_repo.remove_user_specialty(user_id, specialty_id, cursor=cursor)

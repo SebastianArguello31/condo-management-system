@@ -1,56 +1,24 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, } from "react";
+
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
+import { formatDate, formatDateTime } from "../../utils/format";
 import Icon from "../../components/ui/Icon";
 import Modal from "../../components/ui/Modal";
+import DateInput from "../../components/ui/DateInput";
 import "./dashboard.css";
 
 const ALL_STATES = [
-  "RECIBIDA", "EN_REVISION", "ASIGNADA", "EN_PROCESO", "EN_ESPERA",
-  "RESUELTA", "CERRADA", "RECHAZADA", "CANCELADA",
+  "RECIBIDA",
+  "EN_REVISION",
+  "ASIGNADA",
+  "EN_PROCESO",
+  "EN_ESPERA",
+  "RESUELTA",
+  "CERRADA",
+  "RECHAZADA",
+  "CANCELADA",
 ];
-const SLOTS = 4;
-
-const EMPTY_DATA = {
-  kpis: {},
-  incidencias: { por_estado: [], evolucion_temporal: [], tiempos_por_prioridad: [] },
-  intervenciones: { por_tecnico: [] },
-  inventario: { top_insumos: [], insumos_bajo_stock: [] },
-};
-const EMPTY_OPTIONS = { edificios: [], tipos_incidencia: [], prioridades: [], tecnicos: [] };
-
-function toDateInput(date) {
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function defaultFilters() {
-  const hasta = new Date();
-  const desde = new Date();
-  desde.setDate(desde.getDate() - 30);
-  return {
-    desde: toDateInput(desde),
-    hasta: toDateInput(hasta),
-    id_edificio: "",
-    id_tipo_incidencia: "",
-    id_prioridad: "",
-    id_tecnico: "",
-  };
-}
-
-function formatDateTime(value) {
-  if (!value) return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString("es", { dateStyle: "short", timeStyle: "short" });
-}
-
-function buildQuery(filters, extra = {}) {
-  const params = new URLSearchParams();
-  Object.entries({ ...filters, ...extra }).forEach(([key, value]) => {
-    if (value !== "" && value !== null && value !== undefined) params.append(key, value);
-  });
-  return params.toString();
-}
 
 const STATUS_COLORS = {
   RECIBIDA: "#64748b",
@@ -64,81 +32,484 @@ const STATUS_COLORS = {
   CANCELADA: "#94a3b8",
 };
 
+const EMPTY_DATA = {
+  kpis: {},
+  incidencias: {
+    por_estado: [],
+    evolucion_temporal: [],
+    tiempos_por_prioridad: [],
+  },
+  intervenciones: {
+    por_tecnico: [],
+  },
+  inventario: {
+    top_insumos: [],
+    insumos_bajo_stock: [],
+  },
+};
+
+const EMPTY_OPTIONS = {
+  edificios: [],
+  tipos_incidencia: [],
+  prioridades: [],
+  tecnicos: [],
+};
+
+const EMPTY_DRILLDOWN = {
+  open: false,
+  title: "",
+  type: "",
+  rows: [],
+  searchTerm: "",
+};
+
+const PRESETS = [
+  ["7d", "Últimos 7 días"],
+  ["30d", "Últimos 30 días"],
+  ["month", "Este mes"],
+  ["all", "Histórico"],
+];
+
+const SLOTS = 4;
+const percent = (value) =>
+  Math.max(0, Math.min(Number(value) || 0, 100));
+
+const money = (value) =>
+  `$${Number(value || 0).toLocaleString()}`;
+
+function toDateInput(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+
+  return (
+    `${date.getFullYear()}-` +
+    `${pad(date.getMonth() + 1)}-` +
+    pad(date.getDate())
+  );
+}
+
+function defaultFilters() {
+  const hasta = new Date();
+  const desde = new Date();
+  desde.setDate(desde.getDate() - 30);
+
+  return {
+    desde: toDateInput(desde),
+    hasta: toDateInput(hasta),
+    id_edificio: "",
+    id_tipo_incidencia: "",
+    id_prioridad: "",
+    id_tecnico: "",
+  };
+}
+
+function buildQuery(filters, extra = {}) {
+  const params = new URLSearchParams();
+
+  Object.entries({ ...filters, ...extra }).forEach(([key, value]) => {
+    if (value !== "" && value !== null && value !== undefined) {
+      params.append(key, value);
+    }
+  });
+
+  return params.toString();
+}
+
+function normalizeData(result = {}) {
+  return {
+    kpis: result.kpis ?? {},
+    incidencias: {
+      ...EMPTY_DATA.incidencias,
+      ...result.incidencias,
+    },
+    intervenciones: {
+      ...EMPTY_DATA.intervenciones,
+      ...result.intervenciones,
+    },
+    inventario: {
+      ...EMPTY_DATA.inventario,
+      ...result.inventario,
+    },
+  };
+}
+
+function KpiCard({
+  color,
+  icon,
+  title,
+  value,
+  unit,
+  progress,
+  footer,
+  hint = "Detalle →",
+  onOpen,
+}) {
+  return (
+    <article
+      className={`dash-kpi-card kpi-${color}`}
+      onClick={onOpen}
+    >
+      <div className="dash-kpi-header">
+        <span className="dash-kpi-label">{title}</span>
+        <span className="dash-kpi-icon-wrap">
+          <Icon name={icon} size={18} />
+        </span>
+      </div>
+
+      <div className="dash-kpi-value-row">
+        <span className="dash-kpi-value">{value}</span>
+        <span className="dash-kpi-unit">{unit}</span>
+      </div>
+
+      <div className="dash-progress-track">
+        <div
+          className={`dash-progress-fill fill-${color}`}
+          style={{ width: `${percent(progress)}%` }}
+        />
+      </div>
+
+      <div className="dash-kpi-footer">
+        <span>{footer}</span>
+        <button
+          type="button"
+          className="dash-header-action-btn"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+        >
+          {hint}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function Panel({ icon, title, subtitle, extra, children }) {
+  return (
+    <div className="dash-col-6">
+      <div className="dash-card">
+        <div className="dash-card-header">
+          <div className="dash-card-header-text">
+            <h3>
+              <Icon name={icon} size={18} />
+              {title}
+            </h3>
+            <span className="dash-card-subtitle">
+              {subtitle}
+            </span>
+          </div>
+          {extra}
+        </div>
+
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SelectFilter({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  options,
+  idField,
+  renderLabel = (item) => item.nombre,
+}) {
+  return (
+    <div className="dash-filter-item">
+      <label htmlFor={id}>{label}</label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">{placeholder}</option>
+        {options.map((item) => (
+          <option key={item[idField]} value={item[idField]}>
+            {renderLabel(item)}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function DetailTable({ type, rows, onNavigate }) {
+  const isStock = type === "insumos_bajo_stock";
+  const isInterventions = type === "intervenciones_realizadas";
+
+  const columnCount = isStock
+    ? 6
+    : isInterventions
+      ? 5 + Number(Boolean(onNavigate))
+      : 8 + Number(Boolean(onNavigate));
+
+  return (
+    <div className="dash-modal-table-wrap">
+      <table className="dash-table">
+        <thead>
+          {isStock ? (
+            <tr>
+              <th>Insumo</th>
+              <th>Categoría</th>
+              <th className="text-right">Stock actual</th>
+              <th className="text-right">Stock mínimo</th>
+              <th className="text-right">Faltante</th>
+              <th className="text-right">Costo unitario</th>
+            </tr>
+          ) : isInterventions ? (
+            <tr>
+              <th>#</th>
+              <th>Fecha de inicio</th>
+              <th>Incidencia asociada</th>
+              <th>Personal técnico</th>
+              <th>Resultado / Acción</th>
+              {onNavigate && <th>Acción</th>}
+            </tr>
+          ) : (
+            <tr>
+              <th>#</th>
+              <th>Título</th>
+              <th>Ubicación</th>
+              <th>Categoría</th>
+              <th>Prioridad</th>
+              <th>Estado</th>
+              <th>Técnico</th>
+              <th>Reporte</th>
+              {onNavigate && <th>Acción</th>}
+            </tr>
+          )}
+        </thead>
+
+        <tbody>
+          {!rows.length ? (
+            <tr>
+              <td colSpan={columnCount}>
+                No se encontraron registros que coincidan con la búsqueda.
+              </td>
+            </tr>
+          ) : rows.map((row, index) => {
+            if (isStock) {
+              return (
+                <tr key={row.id_insumo ?? index}>
+                  <td><strong>{row.nombre}</strong></td>
+                  <td>{row.categoria}</td>
+                  <td className="text-right">{row.stock}</td>
+                  <td className="text-right">{row.stock_minimo}</td>
+                  <td className="text-right">+{row.faltante}</td>
+                  <td className="text-right">
+                    {money(row.costo_unitario)}
+                  </td>
+                </tr>
+              );
+            }
+
+            if (isInterventions) {
+              return (
+                <tr key={row.id_intervencion ?? index}>
+                  <td>#{row.id_intervencion}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>
+                    {formatDateTime(row.fecha_inicio) || "—"}
+                  </td>
+                  <td>{row.incidencia_titulo}</td>
+                  <td>
+                    {row.tecnico_nombre} {row.tecnico_apellido}
+                  </td>
+                  <td>{row.resultado}</td>
+                  {onNavigate && (
+                    <td>
+                      <button
+                        type="button"
+                        className="dash-table-btn"
+                        onClick={onNavigate}
+                      >
+                        Ver incidencia ↗
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              );
+            }
+
+            return (
+              <tr key={row.id_incidencia ?? index}>
+                <td>#{row.id_incidencia}</td>
+                <td><strong>{row.titulo}</strong></td>
+                <td>
+                  {[row.edificio, row.unidad || row.espacio_comun]
+                    .filter(Boolean)
+                    .join(" - ") || "—"}
+                </td>
+                <td>{row.tipo_incidencia}</td>
+                <td>
+                  <span
+                    className={`dash-badge badge-${(
+                      row.prioridad || "normal"
+                    ).toLowerCase()}`}
+                  >
+                    {row.prioridad}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    className="dash-status-dot"
+                    style={{
+                      display: "inline-block",
+                      marginRight: 6,
+                      background:
+                        STATUS_COLORS[row.estado] || "#94a3b8",
+                    }}
+                  />
+                  {row.estado}
+                </td>
+                <td>
+                  {row.tecnico_nombre
+                    ? `${row.tecnico_nombre} ${row.tecnico_apellido}`
+                    : "Sin asignar"}
+                </td>
+                <td style={{ whiteSpace: "nowrap" }}>
+                  {formatDateTime(row.fecha_reporte) || "—"}
+                </td>
+                {onNavigate && (
+                  <td>
+                    <button
+                      type="button"
+                      className="dash-table-btn"
+                      onClick={onNavigate}
+                    >
+                      Gestionar ↗
+                    </button>
+                  </td>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function DashboardPage({ user, onNavigate }) {
   const isAdmin = user?.rol === "ADMIN";
+  const canFilterTechnicians =
+    ["ADMIN", "GESTOR"].includes(user?.rol);
+
   const [filters, setFilters] = useState(defaultFilters);
   const [data, setData] = useState(EMPTY_DATA);
   const [options, setOptions] = useState(EMPTY_OPTIONS);
   const [activePreset, setActivePreset] = useState("30d");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [drilldown, setDrilldown] = useState({
-    open: false,
-    title: "",
-    type: "",
-    rows: [],
-    searchTerm: "",
-  });
+  const [drilldown, setDrilldown] = useState(EMPTY_DRILLDOWN);
+  const [dateReset, setDateReset] = useState(0);
+
+  const requestRef = useRef(null);
+  const requestId = useRef(0);
 
   const loadData = useCallback(async (currentFilters) => {
+    requestRef.current?.abort();
+
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const currentRequest = ++requestId.current;
+
     setLoading(true);
     setError("");
+
     try {
-      const result = await api(`${routes.analytics}/dashboard?${buildQuery(currentFilters)}`);
-      setData({ ...EMPTY_DATA, ...result });
+      const result = await api(
+        `${routes.analytics}/dashboard?${buildQuery(currentFilters)}`,
+        { signal: controller.signal }
+      );
+
+      if (
+        !controller.signal.aborted &&
+        currentRequest === requestId.current
+      ) {
+        setData(normalizeData(result));
+      }
     } catch (err) {
+      if (
+        controller.signal.aborted ||
+        currentRequest !== requestId.current
+      ) return;
+
       setData(EMPTY_DATA);
-      setError(err.message || "No se pudieron cargar los indicadores.");
+      setError(
+        err.message || "No se pudieron cargar los indicadores."
+      );
     } finally {
-      setLoading(false);
+      if (
+        !controller.signal.aborted &&
+        currentRequest === requestId.current
+      ) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     loadData(filters);
+    return () => requestRef.current?.abort();
   }, [loadData, filters]);
 
   useEffect(() => {
-    let active = true;
-    api(`${routes.analytics}/filtros`)
-      .then((result) => { if (active && result) setOptions({ ...EMPTY_OPTIONS, ...result }); })
-      .catch(() => { /* los filtros quedan vacíos; el error principal lo informa el dashboard */ });
-    return () => { active = false; };
+    const controller = new AbortController();
+
+    api(`${routes.analytics}/filtros`, {
+      signal: controller.signal,
+    })
+      .then((result) => {
+        if (!controller.signal.aborted && result) {
+          setOptions({ ...EMPTY_OPTIONS, ...result });
+        }
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          setError(
+            err.message || "No se pudieron cargar los filtros."
+          );
+        }
+      });
+
+    return () => controller.abort();
   }, []);
 
   function handleFilterChange(key, value) {
     setActivePreset(null);
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function removeFilter(key) {
-    handleFilterChange(key, "");
+    setFilters((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
   }
 
   function applyPreset(preset) {
-    setActivePreset(preset);
     const today = new Date();
-    const pad = (n) => String(n).padStart(2, "0");
-    const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
     let desde = "";
-    const hasta = fmt(today);
 
-    if (preset === "7d") {
-      const d = new Date();
-      d.setDate(d.getDate() - 7);
-      desde = fmt(d);
-    } else if (preset === "30d") {
-      const d = new Date();
-      d.setDate(d.getDate() - 30);
-      desde = fmt(d);
+    if (preset === "7d" || preset === "30d") {
+      const start = new Date();
+      start.setDate(start.getDate() - (preset === "7d" ? 7 : 30));
+      desde = toDateInput(start);
     } else if (preset === "month") {
-      desde = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`;
-    } else if (preset === "all") {
-      desde = "";
+      const start = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        1
+      );
+      desde = toDateInput(start);
     }
 
-    setFilters((prev) => ({ ...prev, desde, hasta }));
+    setActivePreset(preset);
+    setFilters((previous) => ({
+      ...previous,
+      desde,
+      hasta: toDateInput(today),
+    }));
+    setDateReset((current) => current + 1);
   }
 
   function resetFilters() {
@@ -151,97 +522,181 @@ export default function DashboardPage({ user, onNavigate }) {
       id_prioridad: "",
       id_tecnico: "",
     });
+    setDateReset((current) => current + 1);
   }
 
   async function openDrilldown(type, title) {
     try {
       const records = await api(
-        `${routes.analytics}/registros?${buildQuery(filters, { tipo_registro: type, limit: 500 })}`
+        `${routes.analytics}/registros?${buildQuery(filters, {
+          tipo_registro: type,
+          limit: 500,
+        })}`
       );
-      setDrilldown({ open: true, title, type, rows: records || [], searchTerm: "" });
+
+      setDrilldown({
+        open: true,
+        title,
+        type,
+        rows: records || [],
+        searchTerm: "",
+      });
     } catch (err) {
-      setError(err.message || "No se pudo cargar el detalle.");
+      setError(
+        err.message || "No se pudo cargar el detalle."
+      );
     }
+  }
+
+  function closeDrilldown() {
+    setDrilldown(EMPTY_DRILLDOWN);
+  }
+
+  function goToIncidents() {
+    closeDrilldown();
+    onNavigate?.("incidents");
   }
 
   const { kpis, incidencias, intervenciones, inventario } = data;
 
-  // Filas fijas (4 cupos) para mantener la simetría aunque falten datos.
-  const priorityRows = Array.from({ length: Math.max(SLOTS, options.prioridades.length) }, (_, index) => {
-    const base = options.prioridades[index];
-    const found = base
-      ? incidencias.tiempos_por_prioridad.find((p) => p.id_prioridad === base.id_prioridad)
-      : incidencias.tiempos_por_prioridad[index];
-    if (found) return found;
-    return base ? { id_prioridad: base.id_prioridad, prioridad: base.nombre, objetivo_horas: null, horas_promedio: null, total_resueltas: 0 } : null;
-  });
+  const priorityRows = Array.from(
+    { length: Math.max(SLOTS, options.prioridades.length) },
+    (_, index) => {
+      const base = options.prioridades[index];
+      const found = base
+        ? incidencias.tiempos_por_prioridad.find(
+            (item) => item.id_prioridad === base.id_prioridad
+          )
+        : incidencias.tiempos_por_prioridad[index];
 
-  const technicianBase = options.tecnicos.length > 0
-    ? options.tecnicos.map((t) => ({ id_tecnico: t.id_usuario, tecnico_nombre: t.nombre, tecnico_apellido: t.apellido }))
+      return found || (
+        base
+          ? {
+              id_prioridad: base.id_prioridad,
+              prioridad: base.nombre,
+              objetivo_horas: null,
+              horas_promedio: null,
+              total_resueltas: 0,
+            }
+          : null
+      );
+    }
+  );
+
+  const technicianBase = options.tecnicos.length
+    ? options.tecnicos.map((item) => ({
+        id_tecnico: item.id_usuario,
+        tecnico_nombre: item.nombre,
+        tecnico_apellido: item.apellido,
+      }))
     : intervenciones.por_tecnico;
-  const technicianRows = Array.from({ length: Math.max(SLOTS, technicianBase.length) }, (_, index) => {
-    const base = technicianBase[index];
-    if (!base) return null;
-    const found = intervenciones.por_tecnico.find((t) => t.id_tecnico === base.id_tecnico);
-    return found || { ...base, total_intervenciones: 0, porcentaje: 0 };
-  });
 
-  // Filtrado de filas dentro del modal de Drilldown por buscador
-  const filteredDrilldownRows = drilldown.rows.filter((r) => {
-    if (!drilldown.searchTerm) return true;
-    const term = drilldown.searchTerm.toLowerCase();
-    return (
-      (r.titulo && r.titulo.toLowerCase().includes(term)) ||
-      (r.incidencia_titulo && r.incidencia_titulo.toLowerCase().includes(term)) ||
-      (r.resultado && r.resultado.toLowerCase().includes(term)) ||
-      (r.nombre && r.nombre.toLowerCase().includes(term)) ||
-      (r.edificio && r.edificio.toLowerCase().includes(term)) ||
-      (r.tecnico_nombre && `${r.tecnico_nombre} ${r.tecnico_apellido}`.toLowerCase().includes(term)) ||
-      (r.estado && r.estado.toLowerCase().includes(term))
+  const technicianRows = Array.from(
+    { length: Math.max(SLOTS, technicianBase.length) },
+    (_, index) => {
+      const base = technicianBase[index];
+      if (!base) return null;
+
+      return intervenciones.por_tecnico.find(
+        (item) => item.id_tecnico === base.id_tecnico
+      ) || {
+        ...base,
+        total_intervenciones: 0,
+        porcentaje: 0,
+      };
+    }
+  );
+
+  const filteredDrilldownRows = drilldown.rows.filter((row) => {
+    const term = drilldown.searchTerm.trim().toLowerCase();
+    if (!term) return true;
+
+    return [
+      row.titulo,
+      row.incidencia_titulo,
+      row.resultado,
+      row.nombre,
+      row.edificio,
+      row.tecnico_nombre,
+      row.tecnico_apellido,
+      row.estado,
+    ].some((value) =>
+      String(value ?? "").toLowerCase().includes(term)
     );
   });
 
-  // Filtros activos para chips
   const activeChips = [];
+
   if (filters.desde || filters.hasta) {
     activeChips.push({
       key: "fechas",
-      label: `Período: ${filters.desde || "Inicio"} a ${filters.hasta || "Hoy"}`,
-      onRemove: () => setFilters((p) => ({ ...p, desde: "", hasta: "" })),
+      label:
+        `Período: ${formatDate(filters.desde) || "Inicio"} a ` +
+        `${formatDate(filters.hasta) || "Hoy"}`,
+      onRemove: () => {
+        setActivePreset(null);
+        setFilters((previous) => ({
+          ...previous,
+          desde: "",
+          hasta: "",
+        }));
+        setDateReset((current) => current + 1);
+      },
     });
   }
-  if (filters.id_edificio) {
-    const ed = options.edificios.find((e) => e.id_edificio === Number(filters.id_edificio));
-    if (ed) activeChips.push({ key: "id_edificio", label: `Edificio: ${ed.nombre}`, onRemove: () => removeFilter("id_edificio") });
+
+  const chipDefinitions = [
+    ["id_edificio", options.edificios, "id_edificio", "Edificio"],
+    [
+      "id_tipo_incidencia",
+      options.tipos_incidencia,
+      "id_tipo_incidencia",
+      "Tipo",
+    ],
+    ["id_prioridad", options.prioridades, "id_prioridad", "Prioridad"],
+    ["id_tecnico", options.tecnicos, "id_usuario", "Técnico"],
+  ];
+
+  for (const [key, entries, idField, label] of chipDefinitions) {
+    if (!filters[key]) continue;
+
+    const entry = entries.find(
+      (item) => Number(item[idField]) === Number(filters[key])
+    );
+    if (!entry) continue;
+
+    activeChips.push({
+      key,
+      label: `${label}: ${
+        key === "id_tecnico"
+          ? `${entry.nombre} ${entry.apellido}`
+          : entry.nombre
+      }`,
+      onRemove: () => handleFilterChange(key, ""),
+    });
   }
-  if (filters.id_tipo_incidencia) {
-    const tp = options.tipos_incidencia.find((t) => t.id_tipo_incidencia === Number(filters.id_tipo_incidencia));
-    if (tp) activeChips.push({ key: "id_tipo_incidencia", label: `Tipo: ${tp.nombre}`, onRemove: () => removeFilter("id_tipo_incidencia") });
-  }
-  if (filters.id_prioridad) {
-    const pr = options.prioridades.find((p) => p.id_prioridad === Number(filters.id_prioridad));
-    if (pr) activeChips.push({ key: "id_prioridad", label: `Prioridad: ${pr.nombre}`, onRemove: () => removeFilter("id_prioridad") });
-  }
-  if (filters.id_tecnico) {
-    const tc = options.tecnicos.find((t) => t.id_usuario === Number(filters.id_tecnico));
-    if (tc) activeChips.push({ key: "id_tecnico", label: `Técnico: ${tc.nombre} ${tc.apellido}`, onRemove: () => removeFilter("id_tecnico") });
-  }
+
+  const maxTimeline = Math.max(
+    1,
+    ...incidencias.evolucion_temporal.map((item) =>
+      Math.max(item.reportadas, item.resueltas)
+    )
+  );
 
   return (
     <div className="dash-container">
-      {/* --------------------------------------------------------------------
-          Header & Acciones de Redirección Rápida
-          -------------------------------------------------------------------- */}
       <section className="dash-header">
         <div className="dash-title-group">
           <h1>
             <Icon name="dashboard" size={26} />
-            Dashboard & Indicadores del Sistema
+            Dashboard e indicadores del sistema
           </h1>
           <p>
-            Monitoreo en tiempo real de operaciones, resolución de incidencias, SLA e inventario de insumos.
+            Operaciones, resolución de incidencias, cumplimiento
+            de plazos e inventario de insumos.
           </p>
         </div>
+
         <div className="dash-header-actions">
           {onNavigate && (
             <>
@@ -249,35 +704,29 @@ export default function DashboardPage({ user, onNavigate }) {
                 type="button"
                 className="secondary"
                 onClick={() => onNavigate("incidents")}
-                title="Ir al módulo de incidencias para ver y editar registros"
               >
                 <Icon name="incidents" size={16} />
-                Gestionar Incidencias
+                Gestionar incidencias
               </button>
+
               {isAdmin && (
                 <button
                   type="button"
                   className="secondary"
                   onClick={() => onNavigate("employees")}
-                  title="Ir al listado de empleados y técnicos"
                 >
                   <Icon name="employees" size={16} />
-                  Personal Técnico
+                  Personal técnico
                 </button>
               )}
             </>
           )}
-          {error && (
-            <div className="dash-demo-badge" role="alert" style={{ background: "#fef2f2", color: "#b91c1c", borderColor: "#fecaca" }}>
-              <span className="badge-dot" style={{ background: "#ef4444" }} />
-              {error}
-            </div>
-          )}
+
           <button
             type="button"
             className="secondary"
+            disabled={loading}
             onClick={() => loadData(filters)}
-            title="Refrescar métricas"
           >
             <Icon name="refresh" size={16} />
             {loading ? "Calculando…" : "Actualizar"}
@@ -285,132 +734,122 @@ export default function DashboardPage({ user, onNavigate }) {
         </div>
       </section>
 
-      {/* --------------------------------------------------------------------
-          Barra de Filtros Dinámicos
-          -------------------------------------------------------------------- */}
-      <section className="dash-filters-card" aria-label="Filtros del panel">
+      {error && (
+        <div
+          className="dash-demo-badge"
+          role="alert"
+          style={{
+            background: "#fef2f2",
+            color: "#b91c1c",
+            borderColor: "#fecaca",
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      <section
+        className="dash-filters-card"
+        aria-label="Filtros del panel"
+      >
         <div className="dash-filters-top">
           <h2>
             <Icon name="calendar" size={18} />
-            Filtros y Período de Análisis
+            Filtros y período de análisis
           </h2>
+
           <div className="dash-presets">
-            <button
-              type="button"
-              className={`dash-preset-btn ${activePreset === "7d" ? "is-active" : ""}`}
-              onClick={() => applyPreset("7d")}
-            >
-              Últimos 7 días
-            </button>
-            <button
-              type="button"
-              className={`dash-preset-btn ${activePreset === "30d" ? "is-active" : ""}`}
-              onClick={() => applyPreset("30d")}
-            >
-              Últimos 30 días
-            </button>
-            <button
-              type="button"
-              className={`dash-preset-btn ${activePreset === "month" ? "is-active" : ""}`}
-              onClick={() => applyPreset("month")}
-            >
-              Este mes
-            </button>
-            <button
-              type="button"
-              className={`dash-preset-btn ${activePreset === "all" ? "is-active" : ""}`}
-              onClick={() => applyPreset("all")}
-            >
-              Histórico
-            </button>
+            {PRESETS.map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={
+                  `dash-preset-btn ${activePreset === key ? "is-active" : ""}`
+                }
+                onClick={() => applyPreset(key)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
         <div className="dash-filters-grid">
           <div className="dash-filter-item">
             <label htmlFor="filter-desde">Desde</label>
-            <input
+            <DateInput
               id="filter-desde"
-              type="date"
               value={filters.desde}
-              onChange={(e) => handleFilterChange("desde", e.target.value)}
+              resetKey={dateReset}
+              onChange={(event) =>
+                handleFilterChange("desde", event.target.value)
+              }
             />
           </div>
 
           <div className="dash-filter-item">
             <label htmlFor="filter-hasta">Hasta</label>
-            <input
+            <DateInput
               id="filter-hasta"
-              type="date"
               value={filters.hasta}
-              onChange={(e) => handleFilterChange("hasta", e.target.value)}
+              resetKey={dateReset}
+              onChange={(event) =>
+                handleFilterChange("hasta", event.target.value)
+              }
             />
           </div>
 
-          <div className="dash-filter-item">
-            <label htmlFor="filter-edificio">Edificio</label>
-            <select
-              id="filter-edificio"
-              value={filters.id_edificio}
-              onChange={(e) => handleFilterChange("id_edificio", e.target.value)}
-            >
-              <option value="">Todos los edificios</option>
-              {options.edificios.map((ed) => (
-                <option key={ed.id_edificio} value={ed.id_edificio}>
-                  {ed.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SelectFilter
+            id="filter-edificio"
+            label="Edificio"
+            value={filters.id_edificio}
+            onChange={(value) =>
+              handleFilterChange("id_edificio", value)
+            }
+            placeholder="Todos los edificios"
+            options={options.edificios}
+            idField="id_edificio"
+          />
 
-          <div className="dash-filter-item">
-            <label htmlFor="filter-tipo">Tipo Incidencia</label>
-            <select
-              id="filter-tipo"
-              value={filters.id_tipo_incidencia}
-              onChange={(e) => handleFilterChange("id_tipo_incidencia", e.target.value)}
-            >
-              <option value="">Todas las categorías</option>
-              {options.tipos_incidencia.map((t) => (
-                <option key={t.id_tipo_incidencia} value={t.id_tipo_incidencia}>
-                  {t.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SelectFilter
+            id="filter-tipo"
+            label="Tipo de incidencia"
+            value={filters.id_tipo_incidencia}
+            onChange={(value) =>
+              handleFilterChange("id_tipo_incidencia", value)
+            }
+            placeholder="Todas las categorías"
+            options={options.tipos_incidencia}
+            idField="id_tipo_incidencia"
+          />
 
-          <div className="dash-filter-item">
-            <label htmlFor="filter-prioridad">Prioridad</label>
-            <select
-              id="filter-prioridad"
-              value={filters.id_prioridad}
-              onChange={(e) => handleFilterChange("id_prioridad", e.target.value)}
-            >
-              <option value="">Todas las prioridades</option>
-              {options.prioridades.map((p) => (
-                <option key={p.id_prioridad} value={p.id_prioridad}>
-                  {p.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SelectFilter
+            id="filter-prioridad"
+            label="Prioridad"
+            value={filters.id_prioridad}
+            onChange={(value) =>
+              handleFilterChange("id_prioridad", value)
+            }
+            placeholder="Todas las prioridades"
+            options={options.prioridades}
+            idField="id_prioridad"
+          />
 
-          {isAdmin && options.tecnicos.length > 0 && (
-            <div className="dash-filter-item">
-              <label htmlFor="filter-tecnico">Técnico Asignado</label>
-              <select
-                id="filter-tecnico"
-                value={filters.id_tecnico}
-                onChange={(e) => handleFilterChange("id_tecnico", e.target.value)}
-              >
-                <option value="">Todos los técnicos</option>
-                {options.tecnicos.map((tec) => (
-                  <option key={tec.id_usuario} value={tec.id_usuario}>
-                    {tec.nombre} {tec.apellido}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {canFilterTechnicians && options.tecnicos.length > 0 && (
+            <SelectFilter
+              id="filter-tecnico"
+              label="Técnico asignado"
+              value={filters.id_tecnico}
+              onChange={(value) =>
+                handleFilterChange("id_tecnico", value)
+              }
+              placeholder="Todos los técnicos"
+              options={options.tecnicos}
+              idField="id_usuario"
+              renderLabel={(item) =>
+                `${item.nombre} ${item.apellido}`
+              }
+            />
           )}
 
           <div className="dash-filter-actions">
@@ -418,17 +857,18 @@ export default function DashboardPage({ user, onNavigate }) {
               type="button"
               className="secondary"
               onClick={resetFilters}
-              title="Restablecer todos los filtros"
             >
               Restablecer
             </button>
           </div>
         </div>
 
-        {/* Chips de filtros activos y resumen de coincidencia */}
         {activeChips.length > 0 && (
           <div className="dash-active-filters-bar">
-            <span className="dash-active-filters-label">Filtros aplicados:</span>
+            <span className="dash-active-filters-label">
+              Filtros aplicados:
+            </span>
+
             {activeChips.map((chip) => (
               <span className="dash-filter-chip" key={chip.key}>
                 {chip.label}
@@ -436,720 +876,540 @@ export default function DashboardPage({ user, onNavigate }) {
                   type="button"
                   className="dash-chip-remove"
                   onClick={chip.onRemove}
-                  title="Eliminar este filtro"
+                  aria-label={`Eliminar filtro ${chip.label}`}
                 >
                   ✕
                 </button>
               </span>
             ))}
+
             <span className="dash-filter-results-summary">
-              Coincidencias: {kpis?.total_incidencias ?? 0} incidencias | {kpis?.total_intervenciones ?? 0} intervenciones
+              Coincidencias: {kpis.total_incidencias ?? 0} incidencias
+              {" | "}
+              {kpis.total_intervenciones ?? 0} intervenciones
             </span>
           </div>
         )}
       </section>
 
-      {/* --------------------------------------------------------------------
-          KPI Cards Grid (Tarjetas simétricas 3 arriba y 3 abajo)
-          -------------------------------------------------------------------- */}
-      <section className="dash-kpis-grid" aria-label="Tarjetas principales de indicadores">
-        {/* Card 1: Total Incidencias */}
-        <article
-          className="dash-kpi-card kpi-blue"
-          onClick={() => openDrilldown("incidencias", "Todas las Incidencias Filtradas")}
-        >
-          <div className="dash-kpi-header">
-            <span className="dash-kpi-label">Total Incidencias</span>
-            <span className="dash-kpi-icon-wrap"><Icon name="incidents" size={18} /></span>
-          </div>
-          <div className="dash-kpi-value-row">
-            <span className="dash-kpi-value">{kpis?.total_incidencias ?? 0}</span>
-            <span className="dash-kpi-unit">reportes</span>
-          </div>
-          <div className="dash-progress-track">
-            <div
-              className="dash-progress-fill fill-blue"
-              style={{ width: `${Math.min(kpis?.tasa_resolucion_porcentaje ?? 0, 100)}%` }}
-            />
-          </div>
-          <div className="dash-kpi-footer">
-            <span>{kpis?.incidencias_pendientes ?? 0} pendientes de cierre</span>
-            <span className="dash-kpi-drilldown-hint">Ver todas ({kpis?.total_incidencias ?? 0}) →</span>
-          </div>
-        </article>
+      <section
+        className="dash-kpis-grid"
+        aria-label="Indicadores principales"
+      >
+        <KpiCard
+          color="blue"
+          icon="incidents"
+          title="Total incidencias"
+          value={kpis.total_incidencias ?? 0}
+          unit="reportes"
+          progress={kpis.tasa_resolucion_porcentaje}
+          footer={`${kpis.incidencias_pendientes ?? 0} pendientes de cierre`}
+          hint={`Ver todas (${kpis.total_incidencias ?? 0}) →`}
+          onOpen={() =>
+            openDrilldown("incidencias", "Todas las incidencias filtradas")
+          }
+        />
 
-        {/* Card 2: Tasa de Resolución */}
-        <article
-          className="dash-kpi-card kpi-green"
-          onClick={() => openDrilldown("incidencias_resueltas", "Incidencias Resueltas")}
-        >
-          <div className="dash-kpi-header">
-            <span className="dash-kpi-label">Tasa de Resolución</span>
-            <span className="dash-kpi-icon-wrap"><Icon name="check" size={18} /></span>
-          </div>
-          <div className="dash-kpi-value-row">
-            <span className="dash-kpi-value">{kpis?.tasa_resolucion_porcentaje ?? 0}%</span>
-            <span className="dash-kpi-unit">({kpis?.incidencias_resueltas ?? 0} resueltas)</span>
-          </div>
-          <div className="dash-progress-track">
-            <div
-              className="dash-progress-fill fill-green"
-              style={{ width: `${Math.min(kpis?.tasa_resolucion_porcentaje ?? 0, 100)}%` }}
-            />
-          </div>
-          <div className="dash-kpi-footer">
-            <span>{kpis?.incidencias_resueltas ?? 0} de {kpis?.total_incidencias ?? 0} incidencias</span>
-            <span className="dash-kpi-drilldown-hint">Ver resueltas ({kpis?.incidencias_resueltas ?? 0}) →</span>
-          </div>
-        </article>
+        <KpiCard
+          color="green"
+          icon="check"
+          title="Tasa de resolución"
+          value={`${kpis.tasa_resolucion_porcentaje ?? 0}%`}
+          unit={`(${kpis.incidencias_resueltas ?? 0} resueltas)`}
+          progress={kpis.tasa_resolucion_porcentaje}
+          footer={`${kpis.incidencias_resueltas ?? 0} de ${kpis.total_incidencias ?? 0} incidencias`}
+          hint="Ver resueltas →"
+          onOpen={() =>
+            openDrilldown("incidencias_resueltas", "Incidencias resueltas")
+          }
+        />
 
-        {/* Card 3: Cumplimiento SLA */}
-        <article
-          className="dash-kpi-card kpi-purple"
-          onClick={() => openDrilldown("incidencias_resueltas", "Cumplimiento de Plazo SLA")}
-        >
-          <div className="dash-kpi-header">
-            <span className="dash-kpi-label">Cumplimiento SLA</span>
-            <span className="dash-kpi-icon-wrap"><Icon name="clock" size={18} /></span>
-          </div>
-          <div className="dash-kpi-value-row">
-            <span className="dash-kpi-value">
-              {kpis?.tasa_cumplimiento_sla_porcentaje != null
-                ? `${kpis.tasa_cumplimiento_sla_porcentaje}%`
-                : "N/A"}
-            </span>
-            <span className="dash-kpi-unit">en tiempo límite</span>
-          </div>
-          <div className="dash-progress-track">
-            <div
-              className="dash-progress-fill fill-purple"
-              style={{ width: `${Math.min(kpis?.tasa_cumplimiento_sla_porcentaje ?? 0, 100)}%` }}
-            />
-          </div>
-          <div className="dash-kpi-footer">
-            <span>Metas fijadas por prioridad</span>
-            <span className="dash-kpi-drilldown-hint">Detalle →</span>
-          </div>
-        </article>
+        <KpiCard
+          color="purple"
+          icon="clock"
+          title="Cumplimiento SLA"
+          value={
+            kpis.tasa_cumplimiento_sla_porcentaje != null
+              ? `${kpis.tasa_cumplimiento_sla_porcentaje}%`
+              : "N/A"
+          }
+          unit="en tiempo límite"
+          progress={kpis.tasa_cumplimiento_sla_porcentaje}
+          footer="Metas fijadas por prioridad"
+          onOpen={() =>
+            openDrilldown(
+              "incidencias_resueltas",
+              "Cumplimiento de plazo SLA"
+            )
+          }
+        />
 
-        {/* Card 4: Tiempo Medio de Resolución (Sin 'MTTR') */}
-        <article
-          className="dash-kpi-card kpi-amber"
-          onClick={() => openDrilldown("incidencias_resueltas", "Incidencias Resueltas y Tiempos de Cierre")}
-        >
-          <div className="dash-kpi-header">
-            <span className="dash-kpi-label">Tiempo Medio de Resolución</span>
-            <span className="dash-kpi-icon-wrap"><Icon name="trendUp" size={18} /></span>
-          </div>
-          <div className="dash-kpi-value-row">
-            <span className="dash-kpi-value">
-              {kpis?.tiempo_promedio_resolucion_horas != null
-                ? kpis.tiempo_promedio_resolucion_horas
-                : "—"}
-            </span>
-            <span className="dash-kpi-unit">horas promedio</span>
-          </div>
-          <div className="dash-progress-track">
-            <div
-              className="dash-progress-fill fill-amber"
-              style={{
-                width: `${Math.min(((kpis?.tiempo_promedio_resolucion_horas || 0) / 24) * 100, 100)}%`,
-              }}
-            />
-          </div>
-          <div className="dash-kpi-footer">
-            <span>
-              {kpis?.tiempo_promedio_resolucion_horas
-                ? `Equivale a ${(kpis.tiempo_promedio_resolucion_horas / 24).toFixed(1)} días por cierre`
-                : "Sin incidencias resueltas"}
-            </span>
-            <span className="dash-kpi-drilldown-hint">Detalle →</span>
-          </div>
-        </article>
+        <KpiCard
+          color="amber"
+          icon="trendUp"
+          title="Tiempo medio de resolución"
+          value={kpis.tiempo_promedio_resolucion_horas ?? "—"}
+          unit="horas promedio"
+          progress={
+            ((kpis.tiempo_promedio_resolucion_horas || 0) / 24) * 100
+          }
+          footer={
+            kpis.tiempo_promedio_resolucion_horas != null
+              ? `Equivale a ${(kpis.tiempo_promedio_resolucion_horas / 24).toFixed(1)} días por cierre`
+              : "Sin incidencias resueltas"
+          }
+          onOpen={() =>
+            openDrilldown(
+              "incidencias_resueltas",
+              "Incidencias resueltas y tiempos de cierre"
+            )
+          }
+        />
 
-        {/* Card 5: Intervenciones Técnicas */}
-        <article
-          className="dash-kpi-card kpi-blue"
-          onClick={() => openDrilldown("intervenciones_realizadas", `Intervenciones Ejecutadas (Total: ${kpis?.total_intervenciones ?? 0})`)}
-        >
-          <div className="dash-kpi-header">
-            <span className="dash-kpi-label">Intervenciones</span>
-            <span className="dash-kpi-icon-wrap"><Icon name="tool" size={18} /></span>
-          </div>
-          <div className="dash-kpi-value-row">
-            <span className="dash-kpi-value">{kpis?.total_intervenciones ?? 0}</span>
-            <span className="dash-kpi-unit">ejecutadas</span>
-          </div>
-          <div className="dash-progress-track">
-            <div
-              className="dash-progress-fill fill-blue"
-              style={{
-                width: `${Math.min(
-                  ((kpis?.total_intervenciones || 0) / (kpis?.total_incidencias || 1)) * 100,
-                  100
-                )}%`,
-              }}
-            />
-          </div>
-          <div className="dash-kpi-footer">
+        <KpiCard
+          color="blue"
+          icon="tool"
+          title="Intervenciones"
+          value={kpis.total_intervenciones ?? 0}
+          unit="ejecutadas"
+          progress={
+            ((kpis.total_intervenciones || 0) /
+              (kpis.total_incidencias || 1)) * 100
+          }
+          footer={
             <button
               type="button"
-              style={{
-                background: "none",
-                border: "none",
-                padding: 0,
-                color: kpis?.pendientes_intervencion > 0 ? "#dc2626" : "inherit",
-                fontWeight: 600,
-                cursor: "pointer",
-                textDecoration: "underline",
+              className="dash-header-action-btn"
+              onClick={(event) => {
+                event.stopPropagation();
+                openDrilldown(
+                  "pendientes_intervencion",
+                  "Incidencias pendientes de intervención"
+                );
               }}
-              onClick={(e) => {
-                e.stopPropagation();
-                openDrilldown("pendientes_intervencion", `Incidencias Pendientes de Intervención (${kpis?.pendientes_intervencion ?? 0})`);
-              }}
-              title="Clic para ver las incidencias que no tienen intervención técnica"
             >
-              {kpis?.pendientes_intervencion ?? 0} pendientes de atención
+              {kpis.pendientes_intervencion ?? 0} pendientes de atención
             </button>
-            <span className="dash-kpi-drilldown-hint">Ver todas ({kpis?.total_intervenciones ?? 0}) →</span>
-          </div>
-        </article>
+          }
+          hint="Ver todas →"
+          onOpen={() =>
+            openDrilldown(
+              "intervenciones_realizadas",
+              "Intervenciones ejecutadas"
+            )
+          }
+        />
 
-        {/* Card 6: Alerta de Insumos y Costo */}
-        <article
-          className="dash-kpi-card kpi-red"
-          onClick={() => openDrilldown("insumos_bajo_stock", "Insumos con Stock Bajo Mínimo")}
-        >
-          <div className="dash-kpi-header">
-            <span className="dash-kpi-label">Alerta Stock Bajo</span>
-            <span className="dash-kpi-icon-wrap"><Icon name="alertTriangle" size={18} /></span>
-          </div>
-          <div className="dash-kpi-value-row">
-            <span className="dash-kpi-value">{kpis?.insumos_bajo_stock ?? 0}</span>
-            <span className="dash-kpi-unit">artículos críticos</span>
-          </div>
-          <div className="dash-progress-track">
-            <div
-              className="dash-progress-fill fill-red"
-              style={{
-                width: kpis?.insumos_bajo_stock > 0 ? "100%" : "0%",
-              }}
-            />
-          </div>
-          <div className="dash-kpi-footer">
-            <span>Costo neto: ${Number(kpis?.costo_insumos_consumidos || 0).toLocaleString()}</span>
-            <span className="dash-kpi-drilldown-hint">Ver faltantes →</span>
-          </div>
-        </article>
+        <KpiCard
+          color="red"
+          icon="alertTriangle"
+          title="Alerta de stock bajo"
+          value={kpis.insumos_bajo_stock ?? 0}
+          unit="artículos críticos"
+          progress={kpis.insumos_bajo_stock > 0 ? 100 : 0}
+          footer={`Costo neto: ${money(kpis.costo_insumos_consumidos)}`}
+          hint="Ver faltantes →"
+          onOpen={() =>
+            openDrilldown(
+              "insumos_bajo_stock",
+              "Insumos con stock bajo mínimo"
+            )
+          }
+        />
       </section>
 
-      {/* --------------------------------------------------------------------
-          Gráficos y Visualizaciones Principales — Cuadros Simétricos
-          -------------------------------------------------------------------- */}
       <section className="dash-section-grid">
-        {/* FILA 1 - Panel Izquierdo (50%): Evolución Temporal */}
-        <div className="dash-col-6">
-          <div className="dash-card">
-            <div className="dash-card-header">
-              <div className="dash-card-header-text">
-                <h3>
-                  <Icon name="chart" size={18} />
-                  Evolución Temporal: Reportadas vs Resueltas
-                </h3>
-                <span className="dash-card-subtitle">
-                  Tendencia diaria del volumen según los filtros actuales
-                </span>
+        <Panel
+          icon="chart"
+          title="Evolución temporal: reportadas vs resueltas"
+          subtitle="Tendencia diaria según los filtros actuales"
+          extra={
+            <div className="dash-chart-legend">
+              <div className="dash-legend-item">
+                <span
+                  className="dash-legend-color"
+                  style={{ background: "#3b82f6" }}
+                />
+                <span>Reportadas</span>
               </div>
-              <div className="dash-chart-legend">
-                <div className="dash-legend-item">
-                  <span className="dash-legend-color" style={{ background: "#3b82f6" }} />
-                  <span>Reportadas</span>
-                </div>
-                <div className="dash-legend-item">
-                  <span className="dash-legend-color" style={{ background: "#10b981" }} />
-                  <span>Resueltas</span>
-                </div>
+              <div className="dash-legend-item">
+                <span
+                  className="dash-legend-color"
+                  style={{ background: "#10b981" }}
+                />
+                <span>Resueltas</span>
               </div>
             </div>
-
-            <div className="dash-chart-container">
-              {incidencias?.evolucion_temporal?.length > 0 ? (
-                <div className="dash-timeline-bars">
-                  {incidencias.evolucion_temporal.map((d) => {
-                    const maxVal = Math.max(
-                      ...incidencias.evolucion_temporal.map((x) => Math.max(x.reportadas, x.resueltas)),
-                      1
-                    );
-                    const hReport = Math.round((d.reportadas / maxVal) * 100);
-                    const hResolve = Math.round((d.resueltas / maxVal) * 100);
-                    const label = d.fecha.slice(5);
-
-                    return (
+          }
+        >
+          <div className="dash-chart-container">
+            {incidencias.evolucion_temporal.length ? (
+              <div className="dash-timeline-bars">
+                {incidencias.evolucion_temporal.map((item) => (
+                  <div
+                    className="dash-bar-group"
+                    key={item.fecha}
+                    title={`${formatDate(item.fecha)}: ${item.reportadas} reportadas, ${item.resueltas} resueltas`}
+                  >
+                    <div className="dash-bar-pair">
                       <div
-                        className="dash-bar-group"
-                        key={d.fecha}
-                        title={`${d.fecha}: ${d.reportadas} reportadas, ${d.resueltas} resueltas`}
-                      >
-                        <div className="dash-bar-pair">
-                          <div className="dash-bar bar-reported" style={{ height: `${Math.max(hReport, 6)}%` }} />
-                          <div className="dash-bar bar-resolved" style={{ height: `${Math.max(hResolve, 6)}%` }} />
-                        </div>
-                        <span className="dash-bar-label">{label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p style={{ textAlign: "center", color: "#94a3b8", padding: "60px 0" }}>
-                  No hay datos cronológicos para el período o filtros seleccionados.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* FILA 1 - Panel Derecho (50%): Distribución por Estado (9 estados fijos con espacio preparado) */}
-        <div className="dash-col-6">
-          <div className="dash-card">
-            <div className="dash-card-header">
-              <div className="dash-card-header-text">
-                <h3>
-                  <Icon name="incidents" size={18} />
-                  Distribución por Estado de Incidencia
-                </h3>
-                <span className="dash-card-subtitle">
-                  Ciclo de vida operativo completo (espacio preparado para los 9 estados)
-                </span>
-              </div>
-              <div className="dash-card-header-badge">
-                <span className="dash-header-pill">9 Estados</span>
-              </div>
-            </div>
-            <div className="dash-breakdown-list-9">
-              {ALL_STATES.map((estadoKey) => {
-                const item = incidencias?.por_estado?.find((st) => st.estado === estadoKey) || {
-                  estado: estadoKey,
-                  total: 0,
-                  porcentaje: 0,
-                };
-                return (
-                  <div className="dash-breakdown-row" key={estadoKey}>
-                    <div className="dash-breakdown-meta">
-                      <span className="dash-breakdown-name">
-                        <span
-                          className="dash-status-dot"
-                          style={{ background: STATUS_COLORS[estadoKey] || "#94a3b8" }}
-                        />
-                        {estadoKey}
-                      </span>
-                      <span className="dash-breakdown-stat">
-                        {item.total}
-                        <span className="dash-breakdown-pct">({item.porcentaje}%)</span>
-                      </span>
-                    </div>
-                    <div className="dash-progress-track">
-                      <div
-                        className="dash-progress-fill"
+                        className="dash-bar bar-reported"
                         style={{
-                          width: `${item.porcentaje}%`,
-                          background: STATUS_COLORS[estadoKey] || "#94a3b8",
+                          height: `${Math.max(
+                            Math.round(item.reportadas / maxTimeline * 100),
+                            item.reportadas > 0 ? 6 : 0
+                          )}%`,
+                        }}
+                      />
+                      <div
+                        className="dash-bar bar-resolved"
+                        style={{
+                          height: `${Math.max(
+                            Math.round(item.resueltas / maxTimeline * 100),
+                            item.resueltas > 0 ? 6 : 0
+                          )}%`,
                         }}
                       />
                     </div>
+                    <span className="dash-bar-label">
+                      {formatDate(item.fecha)}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p>No hay datos para el período o filtros seleccionados.</p>
+            )}
           </div>
-        </div>
+        </Panel>
 
-        {/* FILA 2 - Panel Izquierdo (50%): Carga por Prioridad y Metas SLA (4 prioridades) */}
-        <div className="dash-col-6">
-          <div className="dash-card">
-            <div className="dash-card-header">
-              <div className="dash-card-header-text">
-                <h3>
-                  <Icon name="clock" size={18} />
-                  Carga por Prioridad y Metas SLA
-                </h3>
-                <span className="dash-card-subtitle">
-                  Horas promedio de resolución vs tiempo objetivo fijado (4 niveles)
-                </span>
-              </div>
-              <div className="dash-card-header-badge">
-                <span className="dash-header-pill">4 Prioridades</span>
-              </div>
-            </div>
-            <div className="dash-breakdown-equal-grid">
-              {priorityRows.map((pr, index) => {
-                if (!pr) {
-                  return (
-                    <div className="dash-breakdown-row" key={`slot-${index}`}>
-                      <div className="dash-breakdown-meta">
-                        <span className="dash-breakdown-name" style={{ color: "#94a3b8" }}>Sin prioridad</span>
-                        <span className="dash-breakdown-stat">—</span>
-                      </div>
-                      <div className="dash-progress-track" />
-                    </div>
-                  );
-                }
+        <Panel
+          icon="incidents"
+          title="Distribución por estado de incidencia"
+          subtitle="Ciclo de vida operativo completo"
+          extra={
+            <span className="dash-header-pill">
+              {ALL_STATES.length} estados
+            </span>
+          }
+        >
+          <div className="dash-breakdown-list-9">
+            {ALL_STATES.map((estado) => {
+              const item = incidencias.por_estado.find(
+                (row) => row.estado === estado
+              ) || { total: 0, porcentaje: 0 };
 
-                const badgeClass = `badge-${String(pr.prioridad).toLowerCase()}`;
-                const hasData = pr.horas_promedio !== null && pr.horas_promedio !== undefined;
-                const hasTarget = pr.objetivo_horas !== null && pr.objetivo_horas !== undefined;
-                const isWithinSla = hasData && hasTarget && pr.horas_promedio <= pr.objetivo_horas;
-                const width = hasData && hasTarget && pr.objetivo_horas > 0
-                  ? Math.min((pr.horas_promedio / pr.objetivo_horas) * 100, 100)
-                  : 0;
-
-                return (
-                  <div className="dash-breakdown-row" key={pr.id_prioridad}>
-                    <div className="dash-breakdown-meta">
-                      <span className="dash-breakdown-name">
-                        <span className={`dash-badge ${badgeClass}`}>{pr.prioridad}</span>
-                        <span className="dash-meta-sub">Meta: {hasTarget ? `${pr.objetivo_horas}h` : "—"}</span>
-                      </span>
-                      <span className="dash-breakdown-stat" style={{ color: hasData ? (isWithinSla ? "#059669" : "#dc2626") : "#94a3b8" }}>
-                        {hasData ? `${pr.horas_promedio}h prom.` : "Sin resueltas"}
-                        <span className="dash-breakdown-pct">({pr.total_resueltas} resueltas)</span>
-                      </span>
-                    </div>
-                    <div className="dash-progress-track">
-                      <div
-                        className="dash-progress-fill"
-                        style={{ width: `${width}%`, background: isWithinSla ? "#10b981" : "#ef4444" }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* FILA 2 - Panel Derecho (50%): Intervenciones por Personal Técnico (4 técnicos alineados a la par) */}
-        <div className="dash-col-6">
-          <div className="dash-card">
-            <div className="dash-card-header">
-              <div className="dash-card-header-text">
-                <h3>
-                  <Icon name="tool" size={18} />
-                  Intervenciones por Personal Técnico
-                </h3>
-                <span className="dash-card-subtitle">
-                  Distribución operativa entre el equipo técnico (4 especialistas)
-                </span>
-              </div>
-              <div className="dash-card-header-badge">
-                <span className="dash-header-pill">4 Técnicos</span>
-              </div>
-            </div>
-            <div className="dash-breakdown-equal-grid">
-              {technicianRows.map((tec, index) => (
-                <div className="dash-breakdown-row" key={tec?.id_tecnico ?? `slot-${index}`}>
+              return (
+                <div className="dash-breakdown-row" key={estado}>
                   <div className="dash-breakdown-meta">
                     <span className="dash-breakdown-name">
-                      <span className="dash-tec-avatar">{tec?.tecnico_nombre ? tec.tecnico_nombre[0] : "–"}</span>
-                      <strong className="dash-tec-name" style={tec ? undefined : { color: "#94a3b8" }}>
-                        {tec ? `${tec.tecnico_nombre} ${tec.tecnico_apellido}` : "Sin técnico"}
-                      </strong>
+                      <span
+                        className="dash-status-dot"
+                        style={{ background: STATUS_COLORS[estado] }}
+                      />
+                      {estado}
                     </span>
                     <span className="dash-breakdown-stat">
-                      {tec ? tec.total_intervenciones : 0} intervenciones
-                      <span className="dash-breakdown-pct">({tec?.porcentaje ?? 0}%)</span>
+                      {item.total}
+                      <span className="dash-breakdown-pct">
+                        ({item.porcentaje}%)
+                      </span>
                     </span>
                   </div>
                   <div className="dash-progress-track">
                     <div
-                      className="dash-progress-fill fill-purple"
-                      style={{ width: `${tec?.porcentaje ?? 0}%` }}
+                      className="dash-progress-fill"
+                      style={{
+                        width: `${percent(item.porcentaje)}%`,
+                        background: STATUS_COLORS[estado],
+                      }}
                     />
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        </div>
+        </Panel>
 
-        {/* FILA 3 - Panel Izquierdo (50%): Top Insumos Consumidos (5 items) */}
-        <div className="dash-col-6">
-          <div className="dash-card">
-            <div className="dash-card-header">
-              <div className="dash-card-header-text">
-                <h3>
-                  <Icon name="box" size={18} />
-                  Top Insumos Más Utilizados en Mantenimiento
-                </h3>
-                <span className="dash-card-subtitle">
-                  Rotación y costo acumulado neto (descontando devoluciones)
-                </span>
-              </div>
-              <div className="dash-card-header-badge">
-                <span className="dash-header-pill">Mayor Rotación</span>
-              </div>
-            </div>
-            <div className="dash-table-wrap">
-              <table className="dash-table">
-                <thead>
-                  <tr>
-                    <th>Insumo</th>
-                    <th>Categoría</th>
-                    <th className="text-right">Consumo</th>
-                    <th className="text-right">Costo Total</th>
-                    <th className="text-center">Intervenciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {inventario?.top_insumos?.map((item) => (
-                    <tr key={item.id_insumo}>
-                      <td><strong>{item.insumo}</strong></td>
-                      <td><span className="dash-badge badge-normal">{item.categoria}</span></td>
-                      <td className="text-right">{item.total_consumido}</td>
-                      <td className="text-right">${Number(item.costo_total).toLocaleString()}</td>
-                      <td className="text-center">{item.intervenciones}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <Panel
+          icon="clock"
+          title="Carga por prioridad y metas SLA"
+          subtitle="Horas promedio de resolución frente al tiempo objetivo"
+          extra={
+            <span className="dash-header-pill">
+              {options.prioridades.length} prioridades
+            </span>
+          }
+        >
+          <div className="dash-breakdown-equal-grid">
+            {priorityRows.map((item, index) => {
+              if (!item) {
+                return (
+                  <div
+                    className="dash-breakdown-row"
+                    key={`priority-${index}`}
+                  >
+                    <div className="dash-breakdown-meta">
+                      <span>Sin prioridad</span>
+                      <span>—</span>
+                    </div>
+                    <div className="dash-progress-track" />
+                  </div>
+                );
+              }
 
-        {/* FILA 3 - Panel Derecho (50%): Insumos Bajo Stock Mínimo (5 items alineados) */}
-        <div className="dash-col-6">
-          <div className="dash-card">
-            <div className="dash-card-header">
-              <div className="dash-card-header-text">
-                <h3 style={{ color: "#b91c1c" }}>
-                  <Icon name="alertTriangle" size={18} />
-                  Insumos Bajo Stock Mínimo
-                </h3>
-                <span className="dash-card-subtitle">
-                  Artículos en umbral crítico que requieren reposición inmediata
-                </span>
-              </div>
-              <div className="dash-card-header-badge">
-                <button
-                  type="button"
-                  className="dash-header-action-btn"
-                  onClick={() => openDrilldown("insumos_bajo_stock", "Catálogo Bajo Stock Mínimo")}
-                  title="Abrir catálogo completo con detalle de insumos críticos"
+              const hasData = item.horas_promedio != null;
+              const hasTarget = item.objetivo_horas != null;
+              const withinSla =
+                hasData &&
+                hasTarget &&
+                item.horas_promedio <= item.objetivo_horas;
+
+              const width =
+                hasData && hasTarget && item.objetivo_horas > 0
+                  ? percent(item.horas_promedio / item.objetivo_horas * 100)
+                  : 0;
+
+              return (
+                <div
+                  className="dash-breakdown-row"
+                  key={item.id_prioridad}
                 >
-                  Ver catálogo ({inventario?.insumos_bajo_stock?.length || 0}) ↗
-                </button>
-              </div>
-            </div>
-            <div className="dash-table-wrap">
-              <table className="dash-table">
-                <thead>
-                  <tr>
-                    <th>Artículo</th>
-                    <th className="text-right">Stock Actual</th>
-                    <th className="text-right">Mínimo</th>
-                    <th className="text-right">Faltante</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {inventario?.insumos_bajo_stock?.map((ins) => (
-                    <tr key={ins.id_insumo}>
-                      <td>
-                        <strong>{ins.nombre}</strong>
-                        <div style={{ fontSize: "0.72rem", color: "#64748b" }}>{ins.categoria}</div>
-                      </td>
-                      <td className="text-right" style={{ color: "#dc2626", fontWeight: 700 }}>
-                        {ins.stock}
-                      </td>
-                      <td className="text-right">{ins.stock_minimo}</td>
-                      <td className="text-right" style={{ color: "#d97706", fontWeight: 600 }}>
-                        +{ins.faltante}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  <div className="dash-breakdown-meta">
+                    <span className="dash-breakdown-name">
+                      <span
+                        className={`dash-badge badge-${String(item.prioridad).toLowerCase()}`}
+                      >
+                        {item.prioridad}
+                      </span>
+                      <span className="dash-meta-sub">
+                        Meta: {hasTarget ? `${item.objetivo_horas}h` : "—"}
+                      </span>
+                    </span>
+                    <span
+                      className="dash-breakdown-stat"
+                      style={{
+                        color: hasData
+                          ? (withinSla ? "#059669" : "#dc2626")
+                          : "#94a3b8",
+                      }}
+                    >
+                      {hasData
+                        ? `${item.horas_promedio}h prom.`
+                        : "Sin resueltas"}
+                      <span className="dash-breakdown-pct">
+                        ({item.total_resueltas} resueltas)
+                      </span>
+                    </span>
+                  </div>
+                  <div className="dash-progress-track">
+                    <div
+                      className="dash-progress-fill"
+                      style={{
+                        width: `${width}%`,
+                        background: withinSla ? "#10b981" : "#ef4444",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        </Panel>
+
+        <Panel
+          icon="tool"
+          title="Intervenciones por personal técnico"
+          subtitle="Distribución operativa entre el equipo técnico"
+          extra={
+            <span className="dash-header-pill">
+              {technicianBase.length} técnicos
+            </span>
+          }
+        >
+          <div className="dash-breakdown-equal-grid">
+            {technicianRows.map((item, index) => (
+              <div
+                className="dash-breakdown-row"
+                key={item?.id_tecnico ?? `technician-${index}`}
+              >
+                <div className="dash-breakdown-meta">
+                  <span className="dash-breakdown-name">
+                    <span className="dash-tec-avatar">
+                      {item?.tecnico_nombre?.[0] || "–"}
+                    </span>
+                    <strong className="dash-tec-name">
+                      {item
+                        ? `${item.tecnico_nombre} ${item.tecnico_apellido}`
+                        : "Sin técnico"}
+                    </strong>
+                  </span>
+                  <span className="dash-breakdown-stat">
+                    {item?.total_intervenciones ?? 0} intervenciones
+                    <span className="dash-breakdown-pct">
+                      ({item?.porcentaje ?? 0}%)
+                    </span>
+                  </span>
+                </div>
+                <div className="dash-progress-track">
+                  <div
+                    className="dash-progress-fill fill-purple"
+                    style={{
+                      width: `${percent(item?.porcentaje)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel
+          icon="box"
+          title="Insumos más utilizados en mantenimiento"
+          subtitle="Rotación y costo neto, descontando devoluciones"
+          extra={<span className="dash-header-pill">Mayor rotación</span>}
+        >
+          <div className="dash-table-wrap">
+            <table className="dash-table">
+              <thead>
+                <tr>
+                  <th>Insumo</th>
+                  <th>Categoría</th>
+                  <th className="text-right">Consumo</th>
+                  <th className="text-right">Costo total</th>
+                  <th className="text-center">Intervenciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inventario.top_insumos.map((item) => (
+                  <tr key={item.id_insumo}>
+                    <td><strong>{item.insumo}</strong></td>
+                    <td>{item.categoria}</td>
+                    <td className="text-right">{item.total_consumido}</td>
+                    <td className="text-right">{money(item.costo_total)}</td>
+                    <td className="text-center">{item.intervenciones}</td>
+                  </tr>
+                ))}
+                {!inventario.top_insumos.length && (
+                  <tr>
+                    <td colSpan={5}>Sin consumos para estos filtros.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+
+        <Panel
+          icon="alertTriangle"
+          title="Insumos bajo stock mínimo"
+          subtitle="Artículos que requieren reposición"
+          extra={
+            <button
+              type="button"
+              className="dash-header-action-btn"
+              onClick={() =>
+                openDrilldown(
+                  "insumos_bajo_stock",
+                  "Catálogo bajo stock mínimo"
+                )
+              }
+            >
+              Ver catálogo ({kpis.insumos_bajo_stock ?? 0}) ↗
+            </button>
+          }
+        >
+          <div className="dash-table-wrap">
+            <table className="dash-table">
+              <thead>
+                <tr>
+                  <th>Artículo</th>
+                  <th className="text-right">Stock actual</th>
+                  <th className="text-right">Mínimo</th>
+                  <th className="text-right">Faltante</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inventario.insumos_bajo_stock.map((item) => (
+                  <tr key={item.id_insumo}>
+                    <td>
+                      <strong>{item.nombre}</strong>
+                      <div>{item.categoria}</div>
+                    </td>
+                    <td className="text-right">{item.stock}</td>
+                    <td className="text-right">{item.stock_minimo}</td>
+                    <td className="text-right">+{item.faltante}</td>
+                  </tr>
+                ))}
+                {!inventario.insumos_bajo_stock.length && (
+                  <tr>
+                    <td colSpan={4}>No hay insumos bajo stock mínimo.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
       </section>
 
-      {/* --------------------------------------------------------------------
-          Modal de Drilldown (Detalle, Búsqueda y Trazabilidad a otras pestañas)
-          -------------------------------------------------------------------- */}
       {drilldown.open && (
         <Modal
           title={drilldown.title}
-          description={`Visualizando ${filteredDrilldownRows.length} de ${drilldown.rows.length} registros`}
-          onClose={() => setDrilldown({ open: false, title: "", type: "", rows: [], searchTerm: "" })}
+          description={
+            `Visualizando ${filteredDrilldownRows.length} de ` +
+            `${drilldown.rows.length} registros`
+          }
+          onClose={closeDrilldown}
         >
           <div className="dash-modal-controls">
             <input
               type="search"
               className="dash-modal-search"
+              aria-label="Buscar en el detalle"
               placeholder="Buscar en estos registros…"
               value={drilldown.searchTerm}
-              onChange={(e) => setDrilldown((prev) => ({ ...prev, searchTerm: e.target.value }))}
+              onChange={(event) =>
+                setDrilldown((previous) => ({
+                  ...previous,
+                  searchTerm: event.target.value,
+                }))
+              }
             />
+
             {onNavigate && (
               <button
                 type="button"
                 className="secondary"
-                style={{ fontSize: "0.8rem", padding: "6px 12px" }}
-                onClick={() => {
-                  setDrilldown({ open: false, title: "", type: "", rows: [], searchTerm: "" });
-                  onNavigate("incidents");
-                }}
+                onClick={goToIncidents}
               >
-                Ir a la pantalla de Incidencias ↗
+                Ir a la pantalla de incidencias ↗
               </button>
             )}
           </div>
 
-          <div className="dash-modal-table-wrap">
-            <table className="dash-table">
-              <thead>
-                {drilldown.type === "insumos_bajo_stock" ? (
-                  <tr>
-                    <th>Insumo</th>
-                    <th>Categoría</th>
-                    <th className="text-right">Stock Actual</th>
-                    <th className="text-right">Stock Mínimo</th>
-                    <th className="text-right">Faltante</th>
-                    <th className="text-right">Costo Unitario</th>
-                  </tr>
-                ) : drilldown.type === "intervenciones_realizadas" ? (
-                  <tr>
-                    <th>#</th>
-                    <th>Fecha Inicio</th>
-                    <th>Incidencia Asociada</th>
-                    <th>Personal Técnico</th>
-                    <th>Resultado / Acción</th>
-                    {onNavigate && <th className="text-center">Acción</th>}
-                  </tr>
-                ) : (
-                  <tr>
-                    <th>#</th>
-                    <th>Título</th>
-                    <th>Ubicación</th>
-                    <th>Categoría</th>
-                    <th>Prioridad</th>
-                    <th>Estado</th>
-                    <th>Técnico</th>
-                    <th>Reporte</th>
-                    {onNavigate && <th className="text-center">Acción</th>}
-                  </tr>
-                )}
-              </thead>
-              <tbody>
-                {filteredDrilldownRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
-                      No se encontraron registros que coincidan con la búsqueda.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredDrilldownRows.map((r, i) => {
-                    if (drilldown.type === "insumos_bajo_stock") {
-                      return (
-                        <tr key={r.id_insumo || i}>
-                          <td><strong>{r.nombre}</strong></td>
-                          <td><span className="dash-badge badge-normal">{r.categoria}</span></td>
-                          <td className="text-right" style={{ color: "#dc2626", fontWeight: 700 }}>{r.stock}</td>
-                          <td className="text-right">{r.stock_minimo}</td>
-                          <td className="text-right" style={{ color: "#d97706", fontWeight: 600 }}>+{r.faltante}</td>
-                          <td className="text-right">${Number(r.costo_unitario).toLocaleString()}</td>
-                        </tr>
-                      );
-                    }
+          <DetailTable
+            type={drilldown.type}
+            rows={filteredDrilldownRows}
+            onNavigate={onNavigate ? goToIncidents : undefined}
+          />
 
-                    if (drilldown.type === "intervenciones_realizadas") {
-                      return (
-                        <tr key={r.id_intervencion || i}>
-                          <td><strong>#{r.id_intervencion}</strong></td>
-                          <td style={{ fontSize: "0.78rem", whiteSpace: "nowrap" }}>{formatDateTime(r.fecha_inicio)}</td>
-                          <td><strong>{r.incidencia_titulo}</strong></td>
-                          <td>{r.tecnico_nombre} {r.tecnico_apellido}</td>
-                          <td style={{ fontSize: "0.8rem", maxWidth: "260px" }}>{r.resultado}</td>
-                          {onNavigate && (
-                            <td className="text-center">
-                              <button
-                                type="button"
-                                className="dash-table-btn"
-                                onClick={() => {
-                                  setDrilldown({ open: false, title: "", type: "", rows: [], searchTerm: "" });
-                                  onNavigate("incidents");
-                                }}
-                                title="Abrir y editar en el módulo de incidencias"
-                              >
-                                Ver Incidencia ↗
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    }
-
-                    return (
-                      <tr key={r.id_incidencia || i}>
-                        <td><strong>#{r.id_incidencia}</strong></td>
-                        <td><strong>{r.titulo}</strong></td>
-                        <td>{[r.edificio, r.unidad || r.espacio_comun].filter(Boolean).join(" - ") || "—"}</td>
-                        <td>{r.tipo_incidencia}</td>
-                        <td>
-                          <span className={`dash-badge badge-${(r.prioridad || "normal").toLowerCase()}`}>
-                            {r.prioridad}
-                          </span>
-                        </td>
-                        <td>
-                          <span
-                            className="dash-status-dot"
-                            style={{
-                              display: "inline-block",
-                              marginRight: "6px",
-                              background: STATUS_COLORS[r.estado] || "#94a3b8",
-                            }}
-                          />
-                          {r.estado}
-                        </td>
-                        <td>
-                          {r.tecnico_nombre ? (
-                            `${r.tecnico_nombre} ${r.tecnico_apellido}`
-                          ) : (
-                            <em style={{ color: "#94a3b8" }}>Sin asignar</em>
-                          )}
-                        </td>
-                        <td style={{ fontSize: "0.78rem", color: "#64748b", whiteSpace: "nowrap" }}>
-                          {formatDateTime(r.fecha_reporte)}
-                        </td>
-                        {onNavigate && (
-                          <td className="text-center">
-                            <button
-                              type="button"
-                              className="dash-table-btn"
-                              onClick={() => {
-                                setDrilldown({ open: false, title: "", type: "", rows: [], searchTerm: "" });
-                                onNavigate("incidents");
-                              }}
-                              title="Abrir y editar en el módulo de incidencias"
-                            >
-                              Gestionar ↗
-                            </button>
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div style={{ marginTop: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
+          <div
+            style={{
+              marginTop: 16,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <span>
               Total en este indicador: {drilldown.rows.length} registros
             </span>
             <button
               type="button"
               className="secondary"
-              onClick={() => setDrilldown({ open: false, title: "", type: "", rows: [], searchTerm: "" })}
+              onClick={closeDrilldown}
             >
               Cerrar
             </button>

@@ -7,31 +7,69 @@ from app.core.rate_limit import limiter, recovery_email_key
 from app.core.validation import read_json
 from app.modules.auth.jobs import enqueue_password_reset
 from app.modules.auth.password_reset import reset_password
-from app.modules.auth.schemas import ForgotPasswordSchema, LoginSchema, ResetPasswordSchema
-from app.modules.auth.services import authenticate_user
+from app.modules.auth.schemas import ChangePasswordSchema, ForgotPasswordSchema, LoginSchema, MyProfileUpdateSchema, ResetPasswordSchema
+from app.modules.auth.services import authenticate_user, change_my_password, update_my_profile
 
-auth_bp = Blueprint("auth", __name__, url_prefix="/auth",)
-
-@auth_bp.post("/login")
-def login():
-    data = read_json(LoginSchema())
-
-    result = authenticate_user(data["email"], data["password"])
-
-    if result is None:
-        raise Unauthorized("Credenciales inválidas")
-
-    return jsonify(result)
-
-@auth_bp.get("/me")
-@token_required
-def get_session():
-    return jsonify(g.current_user)
+auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 RECOVERY_MESSAGE = (
     "Si existe una cuenta habilitada con ese correo, "
     "recibirás un enlace para restablecer tu contraseña."
 )
+
+@auth_bp.post("/login")
+def login():
+    data = read_json(LoginSchema())
+    result = authenticate_user(data["email"], data["password"])
+
+    if result is None:
+        raise Unauthorized("Credenciales inválidas")
+
+    response = jsonify(result)
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+@auth_bp.get("/me")
+@token_required
+def get_session():
+    response = jsonify(g.current_user)
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+@auth_bp.patch("/me")
+@token_required
+def update_session_profile():
+    data = read_json(MyProfileUpdateSchema(), partial=True)
+
+    response = jsonify(
+        update_my_profile(
+            g.current_user["id_usuario"],
+            data,
+        )
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+@auth_bp.post("/change-password")
+@token_required
+@limiter.limit(
+    "5 per minute",
+    error_message="Demasiados intentos. Inténtalo más tarde.",
+)
+def change_password():
+    data = read_json(ChangePasswordSchema())
+
+    change_my_password(
+        g.current_user["id_usuario"],
+        data["current_password"],
+        data["password"],
+    )
+
+    response = jsonify(
+        message="Contraseña actualizada. Inicia sesión nuevamente."
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 @auth_bp.post("/forgot-password")
 @limiter.limit(

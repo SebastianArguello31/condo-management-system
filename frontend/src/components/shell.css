@@ -1,16 +1,65 @@
-/* ==========================================================================
-   shell.css — ajustes "Bitácora" sobre la navegación del shell.
-   Solo consume tokens de styles/tokens.css; las líneas de 1px/2px son la
-   excepción permitida. El resto de los estilos del shell sigue en el CSS
-   legado (users-ui.css) hasta la limpieza final.
-   ========================================================================== */
+.app-shell .shell-sidebar {
+  height: 100dvh;
+  overflow: hidden;
+}
 
-/* Ítem activo: línea de 2px a la izquierda + peso 600. Sin píldora, sin
- * punto (el span .shell-active-dot ya no se renderiza). */
-.shell-nav-group > button.is-current {
-  border-left: 2px solid var(--brand);
-  padding-left: var(--space-3); /* = 12px: compensa los 2px de la línea */
+.app-shell .shell-brand {
+  flex-shrink: 0;
+  padding: var(--space-4);
+}
+
+.app-shell nav.shell-navigation {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-2) var(--space-3);
+  scrollbar-gutter: stable;
+}
+
+.app-shell .shell-nav-group {
+  margin-bottom: var(--space-4);
+}
+
+.app-shell .shell-nav-group:last-child {
+  margin-bottom: 0;
+}
+
+.app-shell .shell-nav-group > p {
+  margin: var(--space-3) var(--space-3) var(--space-2);
+  letter-spacing: 0.08em;
+}
+
+.app-shell .shell-nav-group > button {
+  min-height: 40px;
+  margin: var(--space-1) 0;
+  padding: var(--space-2) var(--space-3);
+  gap: var(--space-3);
+  border-left: 2px solid transparent;
+  border-radius: 0;
+}
+
+.app-shell .shell-nav-group > button.is-current {
+  border-left-color: var(--brand);
   color: var(--brand);
   background: var(--status-success-bg);
   font-weight: 600;
+}
+
+.app-shell .shell-nav-group > button > svg {
+  flex-shrink: 0;
+}
+
+.app-shell .shell-nav-group > button > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-shell .shell-account {
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+.app-shell .shell-account > button {
+  margin-top: var(--space-3);
 }
