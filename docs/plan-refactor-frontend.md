@@ -46,6 +46,9 @@ Entregables: frontend refactorizado con base compartida, navegación clara,
    ADMIN y el TECNICO aterrizaban en el dashboard).
 6. Token solo en memoria (sin persistencia): refresh cierra sesión. Igual que
    antes. 401 → evento "session-expired" → logout + hash limpio con replace.
+   *(Nota del merge con develop, 2026-11-08: el token de sesión ahora vive en
+   **sessionStorage** — así lo trae develop. Decisión 2.6 a actualizar; queda
+   como deuda de seguridad XSS, en estilo legado heredado del equipo.)*
 7. Copy en español neutro (tuteo) para todo lo nuevo.
 8. Contraste WCAG AA estricto: 4.5:1 texto, 3:1 bordes de controles y glifos;
    verificación con `frontend/scripts/check-contrast.mjs`.

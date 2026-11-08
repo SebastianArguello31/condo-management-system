@@ -16,7 +16,7 @@ import Icon from "../../components/ui/Icon";
 import { login, validate } from "../../validations";
 import "./login.css";
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, onForgotPassword, notice, }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
@@ -88,6 +88,11 @@ export default function Login({ onLogin }) {
         <h1 className="login-title" id="login-title">Iniciar sesión</h1>
         <p className="login-description">Accede al panel de gestión de tu comunidad.</p>
         <form className="ui-form-stack" onSubmit={handleSubmit} noValidate aria-busy={busy || undefined}>
+          {notice && (
+            <Alert tone="success">
+              {notice}
+            </Alert>
+          )}
           {error && (
             <div ref={alertaRef} tabIndex={-1}>
               <Alert tone="danger">{error}</Alert>
@@ -126,6 +131,15 @@ export default function Login({ onLogin }) {
               {busy ? "Ingresando…" : "Iniciar sesión"}
             </Button>
           </div>
+          <Button
+            type="button"
+            variant="link"
+            block
+            disabled={busy}
+            onClick={onForgotPassword}
+          >
+            ¿Olvidaste tu contraseña?
+          </Button>
         </form>
       </section>
     </main>

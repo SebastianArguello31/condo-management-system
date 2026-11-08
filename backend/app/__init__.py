@@ -4,6 +4,7 @@ from psycopg2.errors import ForeignKeyViolation, UniqueViolation
 from werkzeug.exceptions import HTTPException
 
 from app.core.config import Config
+from app.core.rate_limit import limiter
 from app.modules.auth.routes import auth_bp
 from app.modules.users.routes import user_bp
 from app.modules.units.routes import units_bp
@@ -17,6 +18,7 @@ def create_app(config=None):
     app = Flask(__name__)
 
     configure_app(app, config)
+    limiter.init_app(app)
     register_routes(app)
     register_errors(app)
 

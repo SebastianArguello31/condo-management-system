@@ -1,9 +1,9 @@
 /* InsumoFormModal — F2-10b (NUEVO): "Nuevo/Editar insumo" al kit en un
  * ÚNICO componente con dos modos (patrón EspacioFormModal de F2-7b /
  * ResidentCreateModal de F2-6b). Paridad del modal legado de
- * MaintenancePage: mismos campos (Nombre, Categoría TEXTO LIBRE con el
- * mismo maxLength 80 — se añade <datalist> con el catálogo ya cargado por
- * el listado, sin endpoint nuevo ni cambios de kit), Unidad de medida,
+ * MaintenancePage: mismos campos (Nombre, Categoría desde el catálogo
+ * activo de categorías de insumo; una categoría inactiva ya asignada se
+ * conserva al editar otros campos), Unidad de medida,
  * Stock mínimo, Costo unitario (opcional), Descripción (textarea);
  * mismos endpoints (POST /maintenance/insumos y PATCH
  * /maintenance/insumos/:id) y MISMO payload que el legado (trim de
@@ -38,6 +38,7 @@ import {
   Field,
   FormModal,
   Input,
+  Select,
   Textarea,
   useToast,
 } from "../../components/ui";
@@ -50,8 +51,6 @@ const EMPTY_FORM = {
   stock_minimo: "0",
   costo_unitario: "0",
 };
-
-const CATEGORIAS_LIST_ID = "insumo-categorias-opciones";
 
 /* "1.000" → "1"; "1500.00" → "1500"; ""/null → "" (el backend trae los
  * decimales como string por as_string=True). Sin NaN: si no parsea queda
@@ -72,7 +71,7 @@ function normalizarErrores(errors) {
   );
 }
 
-export default function InsumoFormModal({ insumo, categorias, onClose, onGuardado }) {
+export default function InsumoFormModal({ insumo, categorias = [], cargandoCategorias, onClose, onGuardado }) {
   const esEdicion = Boolean(insumo);
   const notify = useToast();
   const [form, setForm] = useState(() =>
@@ -102,6 +101,13 @@ export default function InsumoFormModal({ insumo, categorias, onClose, onGuardad
       : api(`${routes.maintenance}/insumos`, { method: "POST", body })
   );
   const busy = guardando.busy;
+  const nombresActivos = categorias
+    .filter((categoria) => categoria.activo)
+    .map((categoria) => categoria.nombre)
+    .sort();
+  const categoriaActualInactiva = Boolean(
+    esEdicion && insumo.categoria && !nombresActivos.includes(insumo.categoria)
+  );
 
   /* El error por campo se LIMPIA al editar ese campo. */
   const actualizar = (campo) => (event) => {
@@ -123,7 +129,7 @@ export default function InsumoFormModal({ insumo, categorias, onClose, onGuardad
    * numéricos), con los números como NÚMERO válido: costo vacío → 0
    * (el load_default del backend): "" llegaría como error de Decimal. */
   function armarPayload() {
-    return {
+    const payload = {
       nombre: form.nombre.trim(),
       descripcion: form.descripcion.trim() || null,
       categoria: form.categoria.trim(),
@@ -131,6 +137,11 @@ export default function InsumoFormModal({ insumo, categorias, onClose, onGuardad
       stock_minimo: form.stock_minimo === "" ? 0 : Number(form.stock_minimo),
       costo_unitario: form.costo_unitario === "" ? 0 : Number(form.costo_unitario),
     };
+    const categoria = categorias.find((item) => item.nombre === form.categoria);
+    if (esEdicion && form.categoria === insumo.categoria && categoria?.activo === false) {
+      delete payload.categoria;
+    }
+    return payload;
   }
 
   async function guardar() {
@@ -185,21 +196,24 @@ export default function InsumoFormModal({ insumo, categorias, onClose, onGuardad
           label="Categoría"
           required
           error={camposErr?.categoria}
-          help={
-            categorias?.length > 0
-              ? "Texto libre; puedes elegir una categoría existente del catálogo."
-              : undefined
-          }
+          help={categoriaActualInactiva
+            ? "La categoría actual está inactiva. Elige una activa para cambiarla."
+            : undefined}
         >
-          <Input
+          <Select
             name="categoria"
-            autoComplete="off"
-            maxLength={80}
-            list={categorias?.length > 0 ? CATEGORIAS_LIST_ID : undefined}
+            disabled={busy || cargandoCategorias}
             value={form.categoria}
             onChange={actualizar("categoria")}
-            disabled={busy}
-          />
+          >
+            <option value="">{cargandoCategorias ? "Cargando categorías..." : "Seleccionar..."}</option>
+            {categoriaActualInactiva && (
+              <option value={insumo.categoria}>{insumo.categoria} (inactiva)</option>
+            )}
+            {nombresActivos.map((nombre) => (
+              <option key={nombre} value={nombre}>{nombre}</option>
+            ))}
+          </Select>
         </Field>
         <Field label="Unidad de medida" required error={camposErr?.unidad_medida}>
           <Input
@@ -257,15 +271,6 @@ export default function InsumoFormModal({ insumo, categorias, onClose, onGuardad
           />
         </Field>
       </div>
-      {/* Catálogo de categorías YA cargado por el listado (sin endpoint
-       * nuevo): datalist nativo, el input sigue siendo texto libre. */}
-      {categorias?.length > 0 && (
-        <datalist id={CATEGORIAS_LIST_ID}>
-          {categorias.map((categoria) => (
-            <option key={categoria} value={categoria} />
-          ))}
-        </datalist>
-      )}
     </FormModal>
   );
 }

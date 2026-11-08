@@ -89,15 +89,15 @@ export default function EmployeesPage({ user }) {
     <>
       <CrudPage
         variant="ui"
-        title="Empleados"
-        description="Administra las cuentas del personal técnico y sus especialidades."
+        title="Técnicos"
+        description="Administra las cuentas de los técnicos y sus especialidades."
         endpoint={routes.employees}
         idField="id_usuario"
         schema={cuentaEmpleado}
         fields={fields}
         columns={columns}
         lookups={lookups}
-        createLabel="Nuevo empleado"
+        createLabel="Nuevo técnico"
         canEdit={false}
         canDelete={false}
         getRecordLabel={(row) => `cuenta de ${row.nombre} ${row.apellido}`}

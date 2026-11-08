@@ -1,4 +1,5 @@
-from werkzeug.exceptions import BadRequest, Forbidden, NotFound
+from psycopg2.errors import ForeignKeyViolation
+from werkzeug.exceptions import BadRequest, Conflict, Forbidden, NotFound
 
 from app.core.db_helpers import transaction
 from app.modules.incidents import attachments
@@ -11,6 +12,35 @@ from app.modules.incidents.rules import can_register_intervention
 
 def list_priorities():
     return catalogs.list_priorities()
+
+def list_incident_types():
+    return catalogs.list_all_types()
+
+def create_incident_type(data):
+    return catalogs.insert_type(data)
+
+def update_incident_type(type_id, data):
+    if not data or not set(data).issubset({"nombre", "descripcion", "activo"}):
+        raise BadRequest("Campos de actualización inválidos")
+
+    row = catalogs.update_type(type_id, data)
+
+    if row is None:
+        raise NotFound("Tipo de incidencia no encontrado")
+
+    return row
+
+def delete_incident_type(type_id):
+    try:
+        deleted = catalogs.delete_type(type_id)
+    except ForeignKeyViolation:
+        raise Conflict(
+            "El tipo de incidencia tiene incidencias relacionadas. "
+            "Desactívalo para impedir que se use en nuevos reportes."
+        ) from None
+
+    if deleted is None:
+        raise NotFound("Tipo de incidencia no encontrado")
 
 def list_statuses():
     return catalogs.list_statuses()
@@ -56,7 +86,7 @@ def _get_detail(incident_id, user, *, cursor):
     return incident
 
 def list_incidents(user):
-    require_role(user, "ADMIN", "RESIDENTE", "TECNICO")
+    require_role(user, "ADMIN", "GESTOR", "RESIDENTE", "TECNICO")
 
     if user["rol"] == "RESIDENTE":
         return incident_repo.list_incidents(reporter_id=user["id_usuario"],)
@@ -77,7 +107,7 @@ def get_history(incident_id, user):
         return activity_repo.list_history(incident_id, cursor=cursor)
 
 def get_assignments(incident_id, user):
-    require_role(user, "ADMIN", "TECNICO")
+    require_role(user, "ADMIN", "GESTOR", "TECNICO")
 
     with transaction() as cursor:
         _get_context(incident_id, user, cursor=cursor)
@@ -145,7 +175,7 @@ def create_incident(data, files, user):
         raise
 
 def assign_technician(incident_id, data, user):
-    require_role(user, "ADMIN")
+    require_role(user, "ADMIN", "GESTOR")
 
     with transaction() as cursor:
         incident = _get_context(incident_id, user, for_update=True, cursor=cursor)
@@ -195,7 +225,7 @@ def assign_technician(incident_id, data, user):
         return _get_detail(incident_id, user, cursor=cursor)
 
 def update_priority(incident_id, data, user):
-    require_role(user, "ADMIN")
+    require_role(user, "ADMIN", "GESTOR")
 
     with transaction() as cursor:
         _get_context(incident_id, user, for_update=True, cursor=cursor)

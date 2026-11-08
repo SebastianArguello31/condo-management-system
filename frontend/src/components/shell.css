@@ -67,13 +67,17 @@
 /* El menú ADMIN tiene 12 ítems: a 720px de alto no entra todo — scroll
  * interno con scrollbar fina por tokens (los ítems conservan --row-h y
  * separación mínima; ÍTEM "Gestión de reservas" se lee completo al final
- * del scroll; estimación en el informe F2-12a). */
+ * del scroll; estimación en el informe F2-12a). Del merge con develop:
+ * `overscroll-behavior: contain` (el scroll interno no arrastra la página)
+ * y `scrollbar-gutter: stable` (no salta el menú al aparecer/desaparecer). */
 nav.shell-navigation {
   display: block;
   padding: var(--space-2) var(--space-3);
   flex: 1;
   overflow-y: auto;
   margin: 0;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: var(--line-control) transparent;
 }
@@ -96,6 +100,10 @@ nav.shell-navigation {
   padding: var(--space-2) var(--space-3);
   color: var(--ink-2);
   background: transparent;
+  /* Del merge con develop: la línea de 2px a la izquierda EXISTE también
+   * en el ítem inactivo (transparente); el texto de todos los ítems
+   * arranca en la misma x y el is-current solo pinta el color. */
+  border-left: 2px solid transparent;
   border-radius: var(--radius-sm);
   text-align: left;
   font-size: var(--fs-13);
@@ -104,14 +112,19 @@ nav.shell-navigation {
   transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease,
     border-color var(--motion-fast) ease;
 }
+.shell-nav-group > button > svg { flex-shrink: 0; }
+.shell-nav-group > button > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .shell-nav-group > button:hover { background: var(--bg); }
 
 /* Ítem activo (convenciones §3): sin tinte ni punto; aria-current="page" +
- * línea de 2px a la izquierda (--brand), color --brand y peso 600. La
- * izquierda compensa la línea para que el texto no se corra. */
+ * línea de 2px a la izquierda (--brand), color --brand y peso 600. Sin
+ * compensación de padding: la línea de 2px ya existe (transparente) en
+ * todos los ítems, así que el texto no se corre. */
 .shell-nav-group > button.is-current {
-  border-left: 2px solid var(--brand);
-  padding-left: calc(var(--space-3) - 2px); /* compensa la línea de 2px */
+  border-left-color: var(--brand);
   color: var(--brand);
   font-weight: 600;
 }

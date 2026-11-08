@@ -5,9 +5,44 @@ from app.core.decorators import role_required, token_required
 from app.core.validation import read_json
 from app.modules.incidents import services
 from app.modules.incidents.attachments import get_upload_directory
-from app.modules.incidents.schemas import IncidentAssignSchema, IncidentCreateSchema, IncidentPriorityUpdateSchema, IncidentStatusUpdateSchema, InterventionCreateSchema
+from app.modules.incidents.schemas import (
+    IncidentAssignSchema,
+    IncidentCreateSchema,
+    IncidentPriorityUpdateSchema,
+    IncidentStatusUpdateSchema,
+    IncidentTypeCreateSchema,
+    IncidentTypeUpdateSchema,
+    InterventionCreateSchema,
+)
 
 incidents_bp = Blueprint("incidents", __name__, url_prefix="/incidents")
+
+@incidents_bp.get("/types")
+@token_required
+@role_required("ADMIN")
+def list_incident_types():
+    return jsonify(services.list_incident_types())
+
+@incidents_bp.post("/types")
+@token_required
+@role_required("ADMIN")
+def create_incident_type():
+    data = read_json(IncidentTypeCreateSchema())
+    return jsonify(services.create_incident_type(data)), 201
+
+@incidents_bp.patch("/types/<int:type_id>")
+@token_required
+@role_required("ADMIN")
+def update_incident_type(type_id):
+    data = read_json(IncidentTypeUpdateSchema(), partial=True)
+    return jsonify(services.update_incident_type(type_id, data))
+
+@incidents_bp.delete("/types/<int:type_id>")
+@token_required
+@role_required("ADMIN")
+def delete_incident_type(type_id):
+    services.delete_incident_type(type_id)
+    return "", 204
 
 @incidents_bp.get("/metadata")
 @token_required
@@ -27,7 +62,7 @@ def list_statuses():
 
 @incidents_bp.get("/technicians")
 @token_required
-@role_required("ADMIN")
+@role_required("ADMIN", "GESTOR")
 def list_technicians():
     return jsonify(services.list_technicians())
 
@@ -49,26 +84,26 @@ def create_incident():
 
 @incidents_bp.get("")
 @token_required
-@role_required("ADMIN", "RESIDENTE", "TECNICO")
+@role_required("ADMIN", "GESTOR", "RESIDENTE", "TECNICO")
 def list_incidents():
     return jsonify(services.list_incidents(g.current_user))
 
 @incidents_bp.get("/<int:incident_id>")
 @token_required
-@role_required("ADMIN", "RESIDENTE", "TECNICO")
+@role_required("ADMIN", "GESTOR", "RESIDENTE", "TECNICO")
 def get_incident(incident_id):
     return jsonify(services.get_incident(incident_id, g.current_user))
 
 @incidents_bp.patch("/<int:incident_id>/priority")
 @token_required
-@role_required("ADMIN")
+@role_required("ADMIN", "GESTOR")
 def update_priority(incident_id):
     data = read_json(IncidentPriorityUpdateSchema())
     return jsonify(services.update_priority(incident_id, data, g.current_user))
 
 @incidents_bp.post("/<int:incident_id>/assignments")
 @token_required
-@role_required("ADMIN")
+@role_required("ADMIN", "GESTOR")
 def assign_technician(incident_id):
     data = read_json(IncidentAssignSchema())
     return jsonify(services.assign_technician(incident_id, data, g.current_user))
@@ -82,19 +117,19 @@ def update_status(incident_id):
 
 @incidents_bp.get("/<int:incident_id>/history")
 @token_required
-@role_required("ADMIN", "RESIDENTE", "TECNICO")
+@role_required("ADMIN", "GESTOR", "RESIDENTE", "TECNICO")
 def get_history(incident_id):
     return jsonify(services.get_history(incident_id, g.current_user))
 
 @incidents_bp.get("/<int:incident_id>/assignments")
 @token_required
-@role_required("ADMIN", "TECNICO")
+@role_required("ADMIN", "GESTOR", "TECNICO")
 def get_assignments(incident_id):
     return jsonify(services.get_assignments(incident_id, g.current_user))
 
 @incidents_bp.get("/attachments/<int:attachment_id>")
 @token_required
-@role_required("ADMIN", "RESIDENTE", "TECNICO")
+@role_required("ADMIN", "GESTOR", "RESIDENTE", "TECNICO")
 def download_attachment(attachment_id):
     file = services.get_attachment(attachment_id, g.current_user)
 
@@ -114,7 +149,7 @@ def download_attachment(attachment_id):
 
 @incidents_bp.get("/<int:incident_id>/interventions")
 @token_required
-@role_required("ADMIN", "TECNICO", "RESIDENTE")
+@role_required("ADMIN", "GESTOR", "TECNICO", "RESIDENTE")
 def list_interventions(incident_id):
     return jsonify(services.list_interventions(incident_id, g.current_user))
 

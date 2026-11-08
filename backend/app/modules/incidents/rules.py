@@ -31,7 +31,7 @@ def require_role(user, *roles):
         raise Forbidden("No tienes permiso para realizar esta operación")
 
 def validate_access(incident, user):
-    require_role(user, "ADMIN", "RESIDENTE", "TECNICO")
+    require_role(user, "ADMIN", "GESTOR", "RESIDENTE", "TECNICO")
 
     if user["rol"] == "RESIDENTE" and incident["id_reportante"] != user["id_usuario"]:
         raise Forbidden("No tienes acceso a esta incidencia")
@@ -41,6 +41,9 @@ def validate_access(incident, user):
 
 def get_allowed_statuses(incident, user):
     validate_access(incident, user)
+
+    if user["rol"] == "GESTOR":
+        return []
 
     current_status = incident["estado"]
     allowed_statuses = set(ALLOWED_TRANSITIONS.get(current_status, set()))
@@ -60,6 +63,9 @@ def get_allowed_statuses(incident, user):
 
 def validate_transition(incident, new_status, user):
     validate_access(incident, user)
+
+    if user["rol"] == "GESTOR":
+        raise Forbidden("Los gestores no pueden cambiar manualmente el estado de una incidencia")
 
     if user["rol"] == "TECNICO" and new_status not in TECHNICIAN_STATUSES:
         raise Forbidden("Los técnicos no pueden establecer ese estado")

@@ -32,7 +32,13 @@ def token_required(function):
         if not user or not user["activo"]:
             raise Unauthorized("Usuario inexistente o desactivado")
 
-        g.current_user = user
+        if payload["ver"] != user["session_version"]:
+            raise Unauthorized("Tu sesión ya no es válida. Inicia sesión nuevamente.")
+
+        public_user = dict(user)
+        public_user.pop("session_version")
+
+        g.current_user = public_user
 
         return function(*args, **kwargs)
 

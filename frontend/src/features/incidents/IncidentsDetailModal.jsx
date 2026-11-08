@@ -92,6 +92,8 @@ export default function IncidentsDetailModal({
   const isResident = rol === "RESIDENTE";
   const isTechnician = rol === "TECNICO";
   const isAdmin = rol === "ADMIN";
+  const isManager = rol === "GESTOR";
+  const puedeCambiarPrioridad = isAdmin || isManager;
   const notify = useToast();
   const id = incidencia.id_incidencia;
 
@@ -328,7 +330,7 @@ export default function IncidentsDetailModal({
             </>
           )}
 
-          {!isResident && isAdmin && (
+          {puedeCambiarPrioridad && (
             <>
               <h3 style={TITULO_SECCION}>Prioridad</h3>
               <Alert
@@ -468,17 +470,25 @@ export default function IncidentsDetailModal({
                 <p style={{ margin: "var(--space-1) 0 0" }}>{intervention.resultado}</p>
                 {/* InterventionMaterials legado intacto: el margen va en
                  * ESTE contenedor (tokens), sin editar su archivo. */}
-                <div style={{ marginTop: "var(--space-4)" }}>
-                  <InterventionMaterials
-                    intervention={intervention}
-                    items={insumos}
-                    canConsume={Boolean(
-                      detail.puede_registrar_intervencion &&
-                        (isAdmin || (isTechnician && intervention.id_personal === idUsuario))
-                    )}
-                    onStockChanged={onChanged}
-                  />
-                </div>
+                  {!isManager && (
+                    <div style={{ marginTop: "var(--space-4)" }}>
+                      <InterventionMaterials
+                        intervention={intervention}
+                        items={insumos}
+                        canConsume={Boolean(
+                          detail.puede_registrar_intervencion &&
+                            (
+                              isAdmin ||
+                              (
+                                isTechnician &&
+                                intervention.id_personal === idUsuario
+                              )
+                            )
+                        )}
+                        onStockChanged={onChanged}
+                      />
+                    </div>
+                  )}
               </article>
             ))}
           </div>

@@ -9,7 +9,8 @@
  * sin avatar ni píldora; "Cerrar sesión" es el Button del kit; el rol
  * viene de utils/roles.js (fuente única, compartida con el detalle de
  * cuenta). Contrato intacto: { user, groups, activePath, onNavigate,
- * onLogout, children }.
+ * onLogout, children }. El rol GESTOR (nuevo del equipo, merge con
+ * develop) entra dinámicamente por routing: cero claves aquí.
  */
 import { useEffect, useRef, useState } from "react";
 import Icon from "./ui/Icon";

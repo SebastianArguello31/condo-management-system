@@ -2,54 +2,56 @@ from datetime import datetime, timedelta
 
 from werkzeug.exceptions import Conflict, Forbidden
 
-
 STATUS_TRANSITIONS = {
     "PENDIENTE": {"CONFIRMADA", "RECHAZADA", "CANCELADA"},
     "CONFIRMADA": {"CANCELADA"},
 }
 
-
 def require_role(user, *roles):
     if user.get("rol") not in roles:
         raise Forbidden("No tienes permiso para realizar esta operación")
 
-
 def get_user_filter(user, resident_id=None):
-    require_role(user, "ADMIN", "RESIDENTE")
+    require_role(user, "ADMIN", "GESTOR", "RESIDENTE")
 
-    if user["rol"] == "ADMIN":
+    if user["rol"] in {"ADMIN", "GESTOR"}:
         return resident_id
 
     return user["id_usuario"]
 
-
 def validate_access(reservation, user):
-    require_role(user, "ADMIN", "RESIDENTE")
+    require_role(user, "ADMIN", "GESTOR", "RESIDENTE")
 
-    if (user["rol"] != "ADMIN" and reservation["id_usuario"] != user["id_usuario"]):
+    if (user["rol"] == "RESIDENTE" and reservation["id_usuario"] != user["id_usuario"]):
         raise Forbidden("No tienes acceso a esta reserva")
-
 
 def is_transition_allowed(current_status, new_status):
     return new_status in STATUS_TRANSITIONS.get(current_status, set())
 
-
 def validate_status_change(reservation, new_status, user, now):
     validate_access(reservation, user)
 
-    if user["rol"] != "ADMIN" and new_status != "CANCELADA":
-        raise Forbidden("Solo administradores pueden aprobar o rechazar reservas")
+    if user["rol"] == "RESIDENTE" and new_status != "CANCELADA":
+        raise Forbidden("Los residentes solo pueden cancelar sus propias reservas")
 
-    if not is_transition_allowed(reservation["estado"], new_status):
-        raise Conflict(f"No se permite cambiar de {reservation['estado']} " f"a {new_status}")
+    if not is_transition_allowed(reservation["estado"], new_status,):
+        raise Conflict(
+            f"No se permite cambiar de "
+            f"{reservation['estado']} a {new_status}"
+        )
 
     if new_status == "CANCELADA":
-        end_at = datetime.combine(reservation["fecha"], reservation["hora_fin"])
-        current_time = datetime.combine(now["hoy"], now["hora_actual"])
+        end_at = datetime.combine(
+            reservation["fecha"],
+            reservation["hora_fin"],
+        )
+        current_time = datetime.combine(
+            now["hoy"],
+            now["hora_actual"],
+        )
 
         if end_at <= current_time:
             raise Conflict("No se puede cancelar una reserva pasada")
-
 
 def validate_creation(data, space, policy, now):
     if not space["activo"]:

@@ -3,6 +3,7 @@
  * módulo en F2-12a. */
 export const ROLE_LABELS = {
   ADMIN: "Administrador",
+  GESTOR: "Gestor",
   TECNICO: "Técnico",
   RESIDENTE: "Residente",
 };
