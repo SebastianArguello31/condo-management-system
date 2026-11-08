@@ -15,15 +15,15 @@ const fields = [
 ];
 
 const columns = [
-  { key: "nombre", header: "Nombre" },
+  { name: "nombre", label: "Nombre" },
   {
-    key: "descripcion",
-    header: "Descripción",
+    name: "descripcion",
+    label: "Descripción",
     render: (row) => row.descripcion || "Sin descripción",
   },
   {
-    key: "activo",
-    header: "Estado",
+    name: "activo",
+    label: "Estado",
     render: (row) => row.activo
       ? <StatusBadge estado="ACTIVA" tone="success" glyph="check" />
       : <StatusBadge estado="INACTIVA" tone="muted" />,
