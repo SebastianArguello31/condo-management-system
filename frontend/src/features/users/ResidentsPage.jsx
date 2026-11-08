@@ -30,11 +30,13 @@ import { routes } from "../../services/routes";
 import { useQuery } from "../../hooks/useQuery";
 import { useMutation } from "../../hooks/useMutation";
 import { useConfirm } from "../../hooks/useConfirm";
+import { usePagination } from "../../hooks/usePagination";
 import {
   Button,
   DataTable,
   FilterBar,
   PageHeader,
+  Pagination,
   RowActions,
   SearchInput,
   StatusBadge,
@@ -138,6 +140,11 @@ export default function ResidentsPage() {
   const sinCoincidencia =
     !loading && !error && filas.length > 0 && visibles.length === 0;
 
+  /* Paginación EN EL CLIENTE (F2-13b): `visibles` ya está deduplicado y
+   * filtrado (paginación DESPUÉS); el resetKey es la búsqueda. La meta
+   * ("N residentes") sigue con `residentes` (total deduplicado). */
+  const pag = usePagination(visibles, { resetKey: search });
+
   const conteo = loading
     ? undefined
     : `${residentes.length} residente${residentes.length === 1 ? "" : "s"}`;
@@ -226,7 +233,7 @@ export default function ResidentsPage() {
 
       <DataTable
         columns={columns}
-        rows={visibles}
+        rows={pag.pageRows}
         rowKey={(grupo) => grupo.fila.id_usuario}
         caption="Listado de residentes"
         loading={loading}
@@ -239,6 +246,16 @@ export default function ResidentsPage() {
             : "Crea la primera cuenta de residente."
         }
         emptyAction={sinCoincidencia ? undefined : triggerNuevo}
+      />
+      <Pagination
+        page={pag.page}
+        pageCount={pag.pageCount}
+        total={pag.total}
+        from={pag.from}
+        to={pag.to}
+        onPrev={pag.goPrev}
+        onNext={pag.goNext}
+        label="Paginación de residentes"
       />
 
       {nuevo && (

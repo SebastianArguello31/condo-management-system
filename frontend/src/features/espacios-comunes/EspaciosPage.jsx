@@ -22,6 +22,7 @@ import { routes } from "../../services/routes";
 import { useHashRoute } from "../../hooks/useHashRoute";
 import { useQuery } from "../../hooks/useQuery";
 import { useMutation } from "../../hooks/useMutation";
+import { usePagination } from "../../hooks/usePagination";
 import { validate, espacioCrear } from "../../validations";
 import {
   Button,
@@ -36,6 +37,7 @@ import {
   Input,
   Modal,
   PageHeader,
+  Pagination,
   RowActions,
   SearchInput,
   Select,
@@ -368,6 +370,11 @@ export default function EspaciosPage() {
   const sinCoincidencia =
     !loading && !error && filas.length > 0 && visibles.length === 0;
 
+  /* Paginación EN EL CLIENTE (F2-13b): la paginación va DESPUÉS del
+   * filtro de búsqueda; resetKey = búsqueda. La meta ("N espacios")
+   * sigue con `visibles` (total filtrado). */
+  const pag = usePagination(visibles, { resetKey: search });
+
   if (politicasParam !== undefined) {
     return (
       <SpacePolicies
@@ -466,7 +473,7 @@ export default function EspaciosPage() {
 
       <DataTable
         columns={columns}
-        rows={visibles}
+        rows={pag.pageRows}
         rowKey={(fila) => fila.id_espacio_comun}
         caption="Listado de espacios comunes"
         loading={loading}
@@ -481,6 +488,16 @@ export default function EspaciosPage() {
             : "Crea el primer espacio común."
         }
         emptyAction={sinCoincidencia ? undefined : triggerNuevo}
+      />
+      <Pagination
+        page={pag.page}
+        pageCount={pag.pageCount}
+        total={pag.total}
+        from={pag.from}
+        to={pag.to}
+        onPrev={pag.goPrev}
+        onNext={pag.goNext}
+        label="Paginación de espacios comunes"
       />
 
       {nuevo && (

@@ -22,6 +22,7 @@ import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useMutation, useQuery } from "../../hooks";
+import { usePagination } from "../../hooks/usePagination";
 import {
   Alert,
   Button,
@@ -30,6 +31,7 @@ import {
   Field,
   Input,
   PageHeader,
+  Pagination,
   Section,
   Skeleton,
   StatusBadge,
@@ -73,6 +75,10 @@ export default function ResidentHome({ onProfileUpdated }) {
   }, []);
 
   const [perfil, unidades = []] = data ?? [];
+
+  /* Paginación EN EL CLIENTE (F2-13b): sin filtros ni búsqueda → sin
+   * resetKey; la meta "N unidades" sigue con `unidades` (total). */
+  const pag = usePagination(unidades);
 
   /* Sincroniza el form con el perfil CARGADO/recargado (el único
    * reload() ocurre tras guardar, nunca mientras el usuario escribe). */
@@ -195,10 +201,20 @@ export default function ResidentHome({ onProfileUpdated }) {
             <DataTable
               caption="Unidades vinculadas a tu cuenta"
               columns={columnas}
-              rows={unidades}
+              rows={pag.pageRows}
               rowKey={(unidad) => `${unidad.id_residente}:${unidad.id_unidad ?? "sin-unidad"}`}
               emptyTitle="No tienes unidades vinculadas"
               emptyDescription="Contacta con la administración para vincular tu unidad. Sin unidad no puedes reportar incidencias."
+            />
+            <Pagination
+              page={pag.page}
+              pageCount={pag.pageCount}
+              total={pag.total}
+              from={pag.from}
+              to={pag.to}
+              onPrev={pag.goPrev}
+              onNext={pag.goNext}
+              label="Paginación de mis unidades"
             />
           </Section>
         </>

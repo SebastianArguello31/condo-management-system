@@ -4,12 +4,14 @@ import { routes } from "../../services/routes";
 import { useQuery } from "../../hooks/useQuery";
 import { useMutation } from "../../hooks/useMutation";
 import { useConfirm } from "../../hooks/useConfirm";
+import { usePagination } from "../../hooks/usePagination";
 import { formatDate } from "../../utils/format";
 import {
   DataTable,
   DefinitionList,
   Modal,
   PageHeader,
+  Pagination,
   RowActions,
   StatusBadge,
   useToast,
@@ -45,6 +47,11 @@ export default function MisReservasPage() {
    * primer render y desestructurar sin defaults daría undefined para cada
    * una (no []). */
   const [rows = [], spaces = [], events = []] = data || [];
+
+  /* Paginación EN EL CLIENTE (F2-13b): sin filtros ni búsqueda (la lista
+   * es la propia del residente) → sin resetKey; solo cambia de página el
+   * usuario. Meta y EmptyState siguen con `rows` (total). */
+  const pag = usePagination(rows);
 
   const [detail, setDetail] = useState(null);
   const confirm = useConfirm();
@@ -132,7 +139,7 @@ export default function MisReservasPage() {
     />
     <DataTable
       columns={columns}
-      rows={rows}
+      rows={pag.pageRows}
       rowKey={(row) => row.id_reserva}
       caption="Tus reservas de espacios comunes"
       loading={loading}
@@ -143,6 +150,16 @@ export default function MisReservasPage() {
       emptyAction={!loading && rows.length === 0
         ? <CreateReservation spaces={spaces} events={events} onCreated={reload} />
         : null}
+    />
+    <Pagination
+      page={pag.page}
+      pageCount={pag.pageCount}
+      total={pag.total}
+      from={pag.from}
+      to={pag.to}
+      onPrev={pag.goPrev}
+      onNext={pag.goNext}
+      label="Paginación de mis reservas"
     />
     {detail && <Modal title={`Reserva #${detail.id_reserva}`} onClose={() => setDetail(null)}>
       <DefinitionList

@@ -1121,6 +1121,10 @@ textarea.ui-control {
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
+  /* Aire lateral para que el anillo de foco del <nav> (extremos del
+   * pager) no toque el texto ni los botones (F2-13b). Constante en el
+   * estado normal: al aterrizar el foco no se mueve el contenido. */
+  padding-inline: var(--space-2);
   margin-top: var(--space-4);
   font-size: var(--fs-13);
   line-height: var(--lh-13);
@@ -1129,9 +1133,11 @@ textarea.ui-control {
 
 /* Acá aterriza el foco cuando el botón del extremo queda deshabilitado
  * tras la pulsación (tabindex=-1 solo programático): anillo visible del
- * kit, como el resto de los controles (base.css, 2px --focus-ring). */
+ * kit, como el resto de los controles (base.css, 2px --focus-ring), con
+ * offset para que no se pegue al contenido (F2-13b). */
 .ui-pagination:focus {
   outline: 2px solid var(--focus-ring);
+  outline-offset: var(--space-1);
 }
 
 .ui-pagination-info {

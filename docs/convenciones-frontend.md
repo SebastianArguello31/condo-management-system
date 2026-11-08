@@ -55,6 +55,13 @@ Referencia completa por componente (props/ejemplos/a11y):
 - `reload()` conserva datos previos (la lista no titila a vacío).
 - La mutación va con `useMutation` (dedupe/doble envío) y el listado se
   refresca con `reload()` + Toast de éxito.
+- **Listados largos (F2-13a):** paginación EN EL CLIENTE con
+  `usePagination(rows, { pageSize: 10, resetKey })` + `Pagination` del
+  kit (hermano del `<DataTable/>`); con ≤ 1 página el pager NO se
+  renderiza. La página vuelve a 1 solo al cambiar `resetKey`
+  (búsqueda/filtros); un `reload()` la conserva. Alternativa aceptada en
+  composición a mano: `pag.pageRows` a la tabla + `<Pagination/>`
+  debajo (patrón de la demo `#/ui`).
 
 ## 4. Formularios, errores y éxito (convención §2.18)
 
@@ -348,3 +355,20 @@ solo si su clave no coincide con el id.
   chocaban del legado) y rol legible vía `utils/roles.js` (`roleLabel`);
   el rol crudo de las COLUMNAS de tabla de las 3 pantallas queda como
   pulido (§8-bis del plan).
+- **Kit (`usePagination` + `Pagination`)** — F2-13a: paginación EN EL
+  CLIENTE integrada en `CrudPageUi` (prop aditiva `pageSize = 10`); los 7
+  listados del modo ui heredan el pager solo al superar 10 filas (con ≤ 1
+  página no se renderiza); la página se acota al encojer la lista, vuelve
+  a 1 solo con la búsqueda (`resetKey`) y el foco no se pierde en los
+  extremos (pasa al `<nav>`); paginación en SERVIDOR queda como deuda de
+  backend (§8-bis del plan).
+- **Composición a mano (Incidentes, Gestión/Mis reservas, Residentes,
+  Espacios, Insumos, "Mis unidades")** — F2-13b: `const pag =
+  usePagination(filasYaFiltradas, { resetKey: serializadosDeFiltros })` +
+  `<DataTable rows={pag.pageRows}/>` y `<Pagination label="Paginación de <pantalla>"/>`
+  como hermano del DataTable; conteos/EmptyState SIEMPRE con el total
+  (`pag.total` o la lista completa, nunca `pageRows.length`); acciones y
+  `reload()` conservan la página (el clamp acota); los sembrados por hash
+  (`?estado=`, `?bajo_stock=`) entran al resetKey sin escribir el pager en
+  la URL; pager base con `padding-inline` y foco con `outline-offset`
+  (respiro del anillo).

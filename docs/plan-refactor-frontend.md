@@ -59,7 +59,11 @@ Entregables: frontend refactorizado con base compartida, navegación clara,
 13. **Paginación fuera de Fase 1** (decisión con CP4). Comprobado contra el
     backend: **ningún endpoint pagina** (los `LIMIT` son `LIMIT 1`; los
     schemas de query solo filtran). La paginación será feature futura del
-    backend; su UI (pager + DataTable) se decide al migrar esos listados.
+    backend. **ACTUALIZADO en F2-13a (2026-11-07): la UI se decidió —
+    paginación EN EL CLIENTE** (hook `hooks/usePagination.js` +
+    `components/ui/Pagination.jsx` integrados en `CrudPageUi`; detalle en
+    "Sesión F2-13a"). La paginación en SERVIDOR sigue siendo feature
+    futura del backend (deuda documentada en §8-bis).
 14. **validations/ espeja los schemas Marshmallow reales** del backend
     (solo lectura) — nada inventado; mensajes de contraseña EXACTOS del
     backend; mínimo de contraseña confirmado: ≥8 caracteres y ≤72 bytes UTF-8.
@@ -2726,8 +2730,11 @@ excepción documentada en shell.css). El pulido del hover verde de
       consumen el MISMO endpoint que tenía el perfil: nada se perdió.
 - [ ] Drawer del shell sigue con breakpoint 760px (CSS legado); al consolidar
       AppShell final pasarlo a la convención (640px).
-- [ ] ⭐ Paginación (§2.13): decidir UI (pager + DataTable) al migrar
-      listados; el backend no pagina hoy.
+- [x] **Paginación (§2.13): DECIDIDA en F2-13a** — paginación EN EL CLIENTE
+      (hook `hooks/usePagination.js` + `components/ui/Pagination.jsx`);
+      integrada en `CrudPageUi` (las 7 pantallas del modo ui heredan sin
+      cambios). La paginación en SERVIDOR queda como deuda documentada en
+      §8-bis (feature futura del backend).
 
 **Pruebas NO ejecutadas** (los arneses se borraron en CP6b; probar en uso
 real a medida que se migren pantallas):
@@ -2986,6 +2993,13 @@ agenda cuando el dueño lo ordene.
 - [Kit (F2-12b)] — `.mg-modal-actions` (users-ui.css) sin CERO
   consumidores JSX (re-verificado con grep; ya lo reportaba el cierre de
   F2-10c) → borrar el bloque en la limpieza F2-11 — alcance: limpieza.
+- [Backend/F2-13a] — **paginación en SERVIDOR** (deuda): ningún endpoint
+  del backend pagina (los `LIMIT` son `LIMIT 1`; los schemas de query solo
+  filtran); F2-13a resolvió la UI con paginación EN EL CLIENTE sobre las
+  listas ya filtradas. Cuando el backend la implemente (page/pageSize en
+  los listados grandes), evaluarse hacer que `usePagination`/`CrudPageUi`
+  la consuman en vez de cortar en cliente — alcance: backend + kit
+  (futuro).
 
 ## 8-ter. Plantilla de migración de pantalla
 
@@ -3069,6 +3083,164 @@ cualquier pantalla.
 - **Nuevas secciones del plan:** §8-bis "Pulido pendiente" (lista vacía,
   formato pantalla — idea — alcance kit/pantalla) y §8-ter "Plantilla de
   migración de pantalla" (checklist canónico por paso F2-x).
+
+## Sesión F2-13a: paginación en el cliente (rama feature/paginacion)
+
+Rama `feature/paginacion` NACIDA de `feature/refactor-shell` (con F2-12a
+commiteado `15e2365` y F2-12b `bfb3834`). Trabajo SIN commit. Origen: el
+reporte de análisis llegaba con fragmentos ilegibles — la versión corregida
+verificada por lectura/git PREVALECE, como en F2-5. PASO 0 (solo lectura,
+hecho): `CrudPageUi.jsx` — `filtered` en :329-335 (case-insensitive sobre
+`columns`), `<DataTable rows={filtered}>` :614-625, búsqueda `useState`
+(:301), `reloadSignal` → `reload()` con datos conservados (:285-290), meta
+"N registros" con `filtered.length` (:549-552); `DataTable.jsx` NO pagina
+(marco `.ui-table-shell` ui.css:932; <640px el marco se retira y las filas
+se apilan en tarjetas :1037-1097); adyacencias `.ui-page-header +
+.ui-table-shell`/`.ui-filterbar + .ui-table-shell` → `--space-4`
+(ui.css:963-974): un `<Pagination>` hermano DESPUÉS del shell no rompe
+nada (el pager lleva su propio margin-top `--space-4`); barrel
+`components/ui/index.js` con named exports (sin Icon/ErrorBoundary);
+las demos viven en `dev/ui-guide.jsx` (`UiGuide` :692-705); hooks con
+export nombrado y JSDoc (CrudPageUi importa por archivo, no por barrel).
+**Hallazgo del
+seed:** Unidades = 12 filas (6 códigos × 2 torres) → 2 páginas;
+Políticas = 6 POR ESPACIO (3 espacios × 2 torres × 6 tipos de evento =
+36 en TODA la BD, pero la pantalla consulta /common-spaces/:id/policies);
+Usuarios ≈ 8, Edificios 2, Especialidades ~5, Empleados/Administradores
+más chicos → sin pager (el componente no renderiza con pageCount ≤ 1).
+
+**Lo hecho:**
+- **`hooks/usePagination.js` (NUEVO):** `usePagination(rows, { pageSize =
+  10, resetKey })` → `{ pageRows, page, pageCount, total, from, to,
+  setPage, goPrev, goNext, hasPrev, hasNext }`. Estado de página en el
+  hook; se ACOTA (clamp) a [1, pageCount] EN CADA RENDER con el patrón de
+  estado derivado (setState en fase de render, sin efectos sobre la
+  identidad de `rows`): si la lista encoge (búsqueda, eliminar la última
+  fila de la última página), cae a la página válida previa — nunca
+  "41–50 de 38" ni pager sobre 0 filas. Vuelve a 1 SOLO cuando cambia
+  `resetKey` (la búsqueda de CrudPageUi); `reload()` (Actualizar) y
+  `reloadSignal` (refresco externo de las 3 pantallas de usuarios) NO la
+  cambian. `pageSize` acotado a ≥1. Con 0 filas: pageCount 1, from/to 0.
+- **`components/ui/Pagination.jsx` (NUEVO, exportado en el barrel):**
+  props `{ page, pageCount, total, from, to, onPrev, onNext, label,
+  className }`; **renderiza NADA si pageCount <= 1** (paridad: sin pager
+  en listados cortos). `<nav aria-label={label || "Paginación"}>` con
+  tabIndex=-1: texto "Mostrando {from}–{to} de {total}"
+  (`aria-live="polite"`, tabular-nums), texto "Página {page} de
+  {pageCount}" y dos `Button variant="quiet" size="sm"` — "Anterior"
+  (`aria-label="Página anterior"`) y "Siguiente" (`aria-label="Página
+  siguiente"`), disabled en los extremos. **Foco (a11y AA):** tras
+  pulsar, el foco se queda en el botón; si el botón quedó deshabilitado
+  (la página llegó al extremo), el navegador suelta el foco y un efecto lo
+  recoloca en el propio `<nav>` (tabindex=-1 + anillo visible `.ui-
+  pagination:focus`, 2px --focus-ring) para no perder el teclado. Sin
+  números de página ni selector de tamaño.
+- **`ui.css` (único CSS del kit):** bloque aditivo `.ui-pagination` —
+  fila con `justify-content: space-between`, gap `--space-3`, margin-top
+  `--space-4` (NUNCA 0px sobre el marco), texto `--fs-13/--ink-2`,
+  tabular-nums en los números; <640px apilado en columna (texto centrado,
+  botones a `flex: 1` con target ≥ --control-h/44px). Solo tokens; sin
+  sombras/gradientes/emojis; radios ≤8px.
+- **`CrudPageUi.jsx`:** prop ADITIVA `pageSize = 10`;
+  `const pag = usePagination(filtered, { pageSize, resetKey: search })`;
+  la tabla recibe `pag.pageRows`; `<Pagination ... label={`Paginación de
+  ${title.toLowerCase()}`} />` como HERMANO inmediato del
+  `<DataTable/>` (fuera del `.ui-table-shell`). La meta "N registros"
+  sigue con `filtered.length` (total filtrado, como hoy). Los 7
+  consumidores (Usuarios, Empleados, Administradores, Especialidades,
+  Edificios, Unidades, Políticas) heredan SIN cambios en su código;
+  sin páginas (≤10 filas) NO hay pager.
+- **Demo `dev/ui-guide.jsx`:** sección "Pagination + usePagination" con
+  30 filas de ejemplo (página 1 de 3), registrada después de
+  DataTableSection; import por barrel + `hooks/usePagination`.
+- **NO tocado:** DataTable.jsx (API intacta: recibe filas ya cortadas),
+  CrudPage legacy, el hash/URL, backend, api.js, routes.js, routing.js,
+  App.jsx, las otras pantallas de composición (F2-13b), Dashboard,
+  InterventionMaterials, shell, `hooks/index.js` (los consumidores
+  importan por archivo, convención vigente).
+
+**Paridad:** sin pasar nada nuevo todo queda idéntico; los listados
+del modo ui ganan pager SOLO al superar 10 filas; búsqueda (resetKey),
+reload, reloadSignal, mutaciones y estados de carga/error/vacío intactos;
+la última página corta lo que queda (con 36 filas: "31–36 de 36").
+
+**Pendientes abiertos:** (1) pulido §8-bis: paginación en SERVIDOR como
+feature futura del backend (deuda registrada); (2) verificación del dueño
+(checklist en STATUS.md). NO se declara nada cerrado.
+
+## Sesión F2-13b: paginación en las pantallas de composición + ajuste visual del pager (rama feature/paginacion-pantallas)
+
+Rama indicada `feature/paginacion-pantallas` SOBRE `feature/paginacion`
+(F2-13a commiteado `f0ab733`); al cerrar la sesión el working tree seguía
+EN `feature/paginacion` (git SOLO LECTURA aquí: el dueño crea la rama y
+commitea los cambios SIN commit). PASO 0 verificado por lectura (resumen
+por pantalla — variable del total / resetKey / filas del seed):
+
+| Pantalla | Filas YA filtradas al DataTable | resetKey usado | Filas del seed | Pager |
+|---|---|---|---|---|
+| IncidentsPage | `filtradas` (:134-140, filtro estado+búsqueda en cliente) | `${busqueda}|${estadoFiltro}` | 41 (seed_demo.sql:255-317) | 5 páginas |
+| GestionReservasPage | `rows` (filtros de SERVIDOR) | `${espacio}|${estado}|${fecha}|${residente}` | 26 (seed_demo:851-886) | 3 páginas |
+| MisReservasPage | `rows` (sin filtros) | sin resetKey | 9/9/8 por residente | sin pager |
+| ResidentsPage | `visibles` (dedupe :118-131 → filtro búsqueda) | `search` | 4 deduplicadas (6 filas /residents) | sin pager |
+| EspaciosPage | `visibles` (filtro búsqueda; el hash `?politicas=` es subvista, no filtro de filas) | `search` | 6 (seed.sql:713-742) | sin pager |
+| MaintenancePage | `items` (filtros de SERVIDOR buscar/categoria/bajo_stock) | `claveFiltros` (`busquedaAplicada|categoria|bajoStock`) | 8 (seed_demo:193-203) | sin pager |
+| ResidentHome "Mis unidades" | `unidades` (sin filtros) | sin resetKey | 12 unidades posibles en la tabla | 2 páginas posibles |
+
+**Lo hecho:**
+- **Ajuste visual del pager (kit, SOLO `ui.css`, retrocompatible):**
+  `.ui-pagination` con `padding-inline: var(--space-2)` (CONSTANTE, no solo
+  en foco: al aterrizar el foco no se mueve el contenido) y
+  `.ui-pagination:focus` con `outline-offset: var(--space-1)` — el anillo
+  de 2px del foco programático del `<nav>` (extremos del pager) ya no toca
+  el texto ni los botones. El gap `--space-2` entre Anterior, "Página X de
+  Y" y Siguiente YA EXISTÍA en `.ui-pagination-botones` (se conserva) y el
+  apilado <640px queda intacto. Behavior del foco sin cambio
+  (Pagination.jsx/usePagination.js SIN tocar).
+- **Por pantalla (patrón único, como CrudPageUi :352/:633/:643):**
+  `const pag = usePagination(filas, { resetKey })` donde `filas` es la
+  lista YA filtrada/deduplicada/ordenada, `<DataTable rows={pag.pageRows}/>`
+  y `<Pagination/>` como HERMANO inmediato DESPUÉS del DataTable con label
+  específico ("Paginación de incidencias", "…de gestión de reservas",
+  "…de mis reservas", "…de residentes", "…de espacios comunes", "…de
+  insumos", "…de mis unidades"). Con ≤10 filas el pager NO se renderiza
+  (Pagination, :50-52). `pageSize` 10 (default) en TODAS.
+- **Conteos/estados con el TOTAL (decisión 3), sin tocarlos:** ya usaban
+  totales, nunca la página — IncidentsPage (`incidents.length`/`abiertas`,
+  :128-132, y EmptyState con `hayIncidencias`), GestionReservas
+  (`rows.length`/`pendientes` :181-187; EmptyState decide por
+  `hayFiltros = consulta !== ""`), MisReservas (`rows.length` :129-131),
+  ResidentsPage (meta con `residentes.length` dedup, EmptyState con
+  `sinCoincidencia`), EspaciosPage (meta con `visibles.length`), Maintenance
+  (`items.length`/`conStockBajo`; EmptyState por `hayFiltros`), ResidentHome
+  (`unidades.length`).
+- **Acciones verificadas:** asignar técnico y crear (IncidentsPage,
+  reload() conserva página), aprobar/rechazar/cancelar con `await reload()`
+  (Gestión), cancelar/crear (Mis reservas), toggle/vincular/crear
+  (Residentes), crear/editar (Espacios), editar/movimiento (Insumos),
+  guardar perfil (ResidentHome) — todas conservan la página; si la fila
+  desaparece del filtro, el clamp del hook acota a la página válida.
+  El resetKey NO incluye el contenido de los datos.
+- **Sembrados por hash:** `?estado=` (Incidencias/Gestión) y
+  `?bajo_stock=true` (Insumos) entran al resetKey → la pantalla arranca (y
+  re-sembra) en página 1; NUNCA se escribe la página en el hash.
+- **ResidentHome integrado** (decisión 8 del prompt): es DataTable con
+  ≥10 filas posibles (12 unidades del seed) y el cambio cabe en ≤5
+  ediciones (imports + pag + rows + pager) dentro del `<Section title="Mis
+  unidades">`.
+- **NO tocado:** Pagination.jsx / usePagination.js (API), DataTable,
+  CrudPageUi, kit JSX, backend, api.js, routes.js, routing.js, App.jsx,
+  Dashboard, InterventionMaterials, modales, filtros de servidor,
+  contratos de pantalla (props/rutas/endpoints). Documentación pendiente
+  de commit de F2-13a (plan §Sesión F2-13a, convenciones §3/§9,
+  kit-ui-referencia) ya estaba en el working tree de esta sesión.
+
+**Paridad:** conservan filtros, búsqueda, endpoints, sembrados por hash,
+acciones, modales y conteos (SIEMPRE con el total); cambian las filas de
+a 10 con pager cuando hay más de 10, y el pager gana gap + foco con respiro.
+
+**Pendientes abiertos:** verificación del dueño (checklist en STATUS.md);
+pulido §8-bis sin cambios. NO se declara nada cerrado. Commit sugerido:
+`feat(ui): paginación en pantallas de composición y ajuste visual del pager (F2-13b)`.
 
 ## 9. Prompt de arranque
 

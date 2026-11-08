@@ -463,6 +463,37 @@ SearchInput con etiquetas VISIBLES), `className`.
 ```
 Accesibilidad: alineación por la BASE del control; botones en esa línea.
 
+### Pagination — `components/ui/Pagination.jsx` (F2-13a)
+
+Pager simple Anterior/Siguiente con conteo; SIN números de página ni
+selector de tamaño. **Renderiza NADA si `pageCount <= 1`** (listados
+cortos idénticos a hoy). Recibe filas YA cortadas (no pagina).
+
+| Prop | Tipo | Obligatoria | Defecto | Notas |
+|---|---|---|---|---|
+| `page` | number | sí | — | página actual (acotada por el hook) |
+| `pageCount` | number | sí | — | total de páginas |
+| `total` | number | no | — | filas filtradas totales |
+| `from` / `to` | number | no | — | rango visible |
+| `onPrev` / `onNext` | fn | no | — | vía `goPrev`/`goNext` del hook |
+| `label` | string | no | `"Paginación"` | `aria-label` del `<nav>`; p. ej. "Paginación de unidades" |
+| `className` | string | no | `""` | |
+
+```jsx
+const pag = usePagination(filtered, { pageSize: 10, resetKey: search });
+<DataTable rows={pag.pageRows} ... />
+<Pagination page={pag.page} pageCount={pag.pageCount} total={pag.total}
+  from={pag.from} to={pag.to} onPrev={pag.goPrev} onNext={pag.goNext}
+  label={`Paginación de ${title.toLowerCase()}`} />
+```
+Accesibilidad: `<nav aria-label={label}>` hermano inmediato del
+`.ui-table-shell` (margin-top `--space-4` en ui.css); "Mostrando N–M de T"
+con `aria-live="polite"` y tabular-nums; botones `Button quiet sm` con
+`aria-label="Página anterior/siguiente"`, disabled en los extremos; si el
+botón pulsado queda deshabilitado, el foco pasa al propio `<nav>`
+(tabindex=-1, anillo visible) para no perder el teclado. <640px se apila
+en columna con botones de target completo.
+
 ### ErrorBoundary — `components/ui/ErrorBoundary.jsx`
 
 Componente de CLASE: `children`, `resetKey` (cual; al CAMBIAR limpia el
@@ -562,6 +593,27 @@ try {
 const confirm = useConfirm();
 if (!await confirm({ title: "Cancelar reserva", message: "¿Confirma cancelarla? No hay vuelta atrás.", danger: true })) return;
 ```
+
+### usePagination — `hooks/usePagination.js` (F2-13a)
+
+`usePagination(rows, { pageSize = 10, resetKey } = {})` →
+`{ pageRows, page, pageCount, total, from, to, setPage(n), goPrev, goNext,
+hasPrev, hasNext }`. Paginación EN CLIENTE sobre la lista ya filtrada.
+
+- `pageRows` — el corte para la tabla; `from/to` — rango visible (con 0
+  filas: `pageCount` 1 y `from/to` 0).
+- La página se ACOTA (clamp) a `[1, pageCount]` en cada render: si la
+  lista encoge, cae a la última página VÁLIDA (nunca pager sobre 0 filas).
+- La página vuelve a 1 SOLO cuando cambia `resetKey` (búsqueda y filtros);
+  `reload()` de useQuery la CONSERVA. No hay efectos por identidad de
+  `rows` (un array nuevo con mismos datos no resetea).
+
+```jsx
+const pag = usePagination(filtered, { pageSize: 10, resetKey: search });
+```
+
+(CrudPageUi ya lo integra con prop `pageSize = 10`; solo se necesita a
+mano en composición propia de pantalla.)
 
 ### Barrel `hooks/index.js`: re-exporta `useHashRoute`, `useQuery`,
 `useMutation`, `ConfirmProvider`, `useConfirm`, `useConfirmResponder`.
