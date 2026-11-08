@@ -31,18 +31,24 @@ def is_transition_allowed(current_status, new_status):
 def validate_status_change(reservation, new_status, user, now):
     validate_access(reservation, user)
 
-    if user["rol"] == "GESTOR" and new_status != "CONFIRMADA":
-        raise Forbidden("Los gestores solo pueden aprobar reservas")
-
     if user["rol"] == "RESIDENTE" and new_status != "CANCELADA":
         raise Forbidden("Los residentes solo pueden cancelar sus propias reservas")
 
-    if not is_transition_allowed(reservation["estado"], new_status):
-        raise Conflict("No se permite cambiar de {reservation['estado']} a {new_status}")
+    if not is_transition_allowed(reservation["estado"], new_status,):
+        raise Conflict(
+            f"No se permite cambiar de "
+            f"{reservation['estado']} a {new_status}"
+        )
 
     if new_status == "CANCELADA":
-        end_at = datetime.combine(reservation["fecha"], reservation["hora_fin"],)
-        current_time = datetime.combine(now["hoy"], now["hora_actual"],)
+        end_at = datetime.combine(
+            reservation["fecha"],
+            reservation["hora_fin"],
+        )
+        current_time = datetime.combine(
+            now["hoy"],
+            now["hora_actual"],
+        )
 
         if end_at <= current_time:
             raise Conflict("No se puede cancelar una reserva pasada")

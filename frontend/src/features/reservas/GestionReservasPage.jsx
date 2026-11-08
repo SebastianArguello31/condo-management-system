@@ -65,8 +65,7 @@ const nombreCompleto = (row) =>
 
 export default function GestionReservasPage({ user }) {
   const isAdmin = user?.rol === "ADMIN";
-  const isManager = user?.rol === "GESTOR";
-  const puedeAprobar = isAdmin || isManager;
+  const puedeGestionar = ["ADMIN", "GESTOR"].includes(user?.rol);
 
   const notify = useToast();
   const confirmar = useConfirm();
@@ -123,7 +122,9 @@ export default function GestionReservasPage({ user }) {
     const queryParams = new URLSearchParams();
 
     Object.entries(filtros).forEach(([clave, valor]) => {
-      if (valor !== "") queryParams.set(clave, valor);
+      if (valor !== "") {
+        queryParams.set(clave, valor);
+      }
     });
 
     return queryParams.toString();
@@ -160,11 +161,22 @@ export default function GestionReservasPage({ user }) {
   );
 
   async function pedirCambio(row, estado) {
-    if (cambiarEstado.busy || !puedeAprobar) return;
-    if (!isAdmin && estado !== "CONFIRMADA") return;
+    if (cambiarEstado.busy || !puedeGestionar) return;
 
     const textos = CONFIRMACION[estado];
     if (!textos) return;
+
+    const transicionPermitida =
+      (
+        row.estado === "PENDIENTE" &&
+        ["CONFIRMADA", "RECHAZADA", "CANCELADA"].includes(estado)
+      ) ||
+      (
+        row.estado === "CONFIRMADA" &&
+        estado === "CANCELADA"
+      );
+
+    if (!transicionPermitida) return;
 
     const ok = await confirmar({
       title: textos.title,
@@ -199,9 +211,8 @@ export default function GestionReservasPage({ user }) {
       ? `${rows.length} ${rows.length === 1 ? "reserva" : "reservas"} · ${pendientes} ${pendientes === 1 ? "pendiente" : "pendientes"}`
       : undefined;
 
-  const descripcion = isAdmin
-    ? "Revisa todas las reservas del condominio y gestiona su aprobación, rechazo o cancelación."
-    : "Revisa las solicitudes y aprueba las reservas pendientes.";
+  const descripcion =
+    "Revisa las reservas del condominio y gestiona su aprobación, rechazo o cancelación.";
 
   const meta = [descripcion, conteo].filter(Boolean).join(" · ");
   const hayFiltros = consulta !== "";
@@ -251,37 +262,38 @@ export default function GestionReservasPage({ user }) {
     {
       key: "acciones",
       header: "Acciones",
-      width: isAdmin
-        ? "calc(var(--space-12) * 5)"
-        : "calc(var(--space-12) * 4)",
+      width: "calc(var(--space-12) * 5)",
       render: (row) => (
         <RowActions
           actions={[
-            ...(puedeAprobar && row.estado === "PENDIENTE"
-              ? [{
-                  label: "Aprobar",
-                  ariaLabel: `Aprobar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${formatDate(row.fecha)}`,
-                  disabled: cambiarEstado.busy,
-                  onSelect: () => pedirCambio(row, "CONFIRMADA"),
-                }]
+            ...(puedeGestionar && row.estado === "PENDIENTE"
+              ? [
+                  {
+                    label: "Aprobar",
+                    ariaLabel: `Aprobar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${formatDate(row.fecha)}`,
+                    disabled: cambiarEstado.busy,
+                    onSelect: () => pedirCambio(row, "CONFIRMADA"),
+                  },
+                  {
+                    label: "Rechazar",
+                    danger: true,
+                    ariaLabel: `Rechazar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${formatDate(row.fecha)}`,
+                    disabled: cambiarEstado.busy,
+                    onSelect: () => pedirCambio(row, "RECHAZADA"),
+                  },
+                ]
               : []),
-            ...(isAdmin && row.estado === "PENDIENTE"
-              ? [{
-                  label: "Rechazar",
-                  danger: true,
-                  ariaLabel: `Rechazar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${formatDate(row.fecha)}`,
-                  disabled: cambiarEstado.busy,
-                  onSelect: () => pedirCambio(row, "RECHAZADA"),
-                }]
-              : []),
-            ...(isAdmin && ESTADOS_CANCELABLES.includes(row.estado)
-              ? [{
-                  label: "Cancelar",
-                  danger: true,
-                  ariaLabel: `Cancelar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${formatDate(row.fecha)}`,
-                  disabled: cambiarEstado.busy,
-                  onSelect: () => pedirCambio(row, "CANCELADA"),
-                }]
+
+            ...(puedeGestionar && ESTADOS_CANCELABLES.includes(row.estado)
+              ? [
+                  {
+                    label: "Cancelar",
+                    danger: true,
+                    ariaLabel: `Cancelar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${formatDate(row.fecha)}`,
+                    disabled: cambiarEstado.busy,
+                    onSelect: () => pedirCambio(row, "CANCELADA"),
+                  },
+                ]
               : []),
           ]}
         />
@@ -316,6 +328,7 @@ export default function GestionReservasPage({ user }) {
             onChange={actualizarFiltro}
           >
             <option value="">Todos los espacios</option>
+
             {espacios.map((espacio) => (
               <option
                 key={espacio.id_espacio_comun}
@@ -334,6 +347,7 @@ export default function GestionReservasPage({ user }) {
             onChange={actualizarFiltro}
           >
             <option value="">Todos los estados</option>
+
             {ESTADOS.map((estado) => (
               <option key={estado} value={estado}>
                 {estado}
@@ -367,6 +381,7 @@ export default function GestionReservasPage({ user }) {
               onChange={actualizarFiltro}
             >
               <option value="">Todos los residentes</option>
+
               {residentesUnicos.map((residente) => (
                 <option
                   key={residente.id_usuario}
