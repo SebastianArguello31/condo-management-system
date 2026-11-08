@@ -24,6 +24,18 @@ def lock_user_by_id(user_id, *, cursor):
         cursor=cursor,
     )
 
+def lock_user_credentials(user_id, *, cursor):
+    return query(
+        """
+            SELECT id_usuario, activo, password_hash
+            FROM usuarios
+            WHERE id_usuario = %s
+            FOR UPDATE
+        """,
+        (user_id,),
+        cursor=cursor,
+    )
+
 def insert_reset_token(user_id, token_hash, *, cursor):
     query(
         """
@@ -64,7 +76,8 @@ def update_password(user_id, password_hash, *, cursor):
     query(
         """
             UPDATE usuarios
-            SET password_hash = %s, session_version = session_version + 1
+            SET password_hash = %s,
+            session_version = session_version + 1
             WHERE id_usuario = %s
         """,
         (password_hash, user_id),

@@ -1,7 +1,7 @@
-from marshmallow import fields, validate
+from marshmallow import Schema, fields, validate
 
 from app.core.passwords import validate_password
-from app.core.validation import BaseSchema
+from app.core.validation import BaseSchema, required_text
 
 class LoginSchema(BaseSchema):
     email = fields.Email(required=True)
@@ -19,4 +19,13 @@ class ResetPasswordSchema(BaseSchema):
         ),
     )
     password = fields.Str(required=True, validate=validate_password,)
-    
+
+class MyProfileUpdateSchema(BaseSchema):
+    nombre = required_text()
+    apellido = required_text()
+    email = fields.Email(required=True, validate=validate.Length(max=254),)
+    telefono = required_text(40)
+
+class ChangePasswordSchema(Schema):
+    current_password = fields.Str(required=True, validate=validate.Length(min=1, max=200),)
+    password = fields.Str(required=True, validate=validate_password,)
