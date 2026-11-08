@@ -6,6 +6,12 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  /* Límite de ampliación horizontal: en pantallas anchas los cuadros dejan de
+     estirarse y el panel queda centrado (1280px = 32 × --space-10). */
+  width: 100%;
+  max-width: calc(var(--space-10) * 32);
+  margin-inline: auto;
+  box-sizing: border-box;
   animation: fadeIn 0.25s ease-out;
 }
 
@@ -143,7 +149,12 @@
 
 .dash-filters-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  /* auto-fill + máximo acotado: cada filtro mide entre 192px y 240px y no se
+     estira a lo ancho cuando sobran columnas. */
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(calc(var(--space-12) * 4), calc(var(--space-12) * 5))
+  );
   gap: 14px;
   align-items: flex-end;
 }
@@ -836,3 +847,179 @@
   width: 240px;
 }
 
+
+/* --------------------------------------------------------------------------
+   Paneles contraíbles (CollapsiblePanel.jsx) — solo tokens.
+   Propuesta para el kit: si Dev 1 lo aprueba, migra a ui.css como
+   "ui-disclosure" y este bloque se elimina.
+   -------------------------------------------------------------------------- */
+
+/* El cuerpo hereda el flex de la tarjeta (las tablas siguen con flex: 1). */
+.dash-card > .dash-panel-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* `hidden` debe ganarle a los display: grid/flex de los contenedores. */
+.dash-card > .dash-panel-body[hidden],
+.dash-panel-body[hidden],
+.dash-kpis-grid[hidden] {
+  display: none;
+}
+
+.dash-panel-title-area {
+  cursor: pointer;
+  min-width: 0;
+}
+
+.dash-card-header-side {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.dash-panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease;
+}
+
+.dash-panel-toggle:hover {
+  background: var(--status-neutral-bg);
+  color: var(--ink);
+}
+
+.dash-panel-toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-panel-toggle {
+    transition: none;
+  }
+}
+
+.dash-title-danger {
+  color: var(--status-danger-fg);
+}
+
+/* Estado contraído: solo título + chevron, sin altura fija ni separador. */
+.dash-col-6:has(> .dash-card.is-collapsed) {
+  align-self: start;
+}
+
+.dash-card.is-collapsed {
+  height: auto;
+}
+
+.dash-card.is-collapsed .dash-card-header {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.dash-filters-top {
+  gap: var(--space-3);
+}
+
+.dash-filters-card.is-collapsed .dash-filters-top {
+  margin-bottom: 0;
+}
+
+/* Cabecera del grupo de KPIs (sin tarjeta envolvente: evita tarjeta en tarjeta). */
+.dash-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dash-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.dash-group-header h2 {
+  margin: 0;
+  font-size: var(--fs-16);
+  line-height: var(--lh-16);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Drilldown por estado: nombre como enlace a #/incidencias?estado=... */
+.dash-link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--line-control);
+  text-underline-offset: 2px;
+  transition: color var(--motion-fast) ease;
+}
+
+.dash-link-btn:hover {
+  color: var(--brand);
+}
+
+.dash-link-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Corrección de Evolución Temporal: evita que las barras desborden vertical
+   u horizontalmente y alinea la línea base sobre las etiquetas de fecha. */
+.dash-col-12,
+.dash-col-6,
+.dash-card {
+  min-width: 0;
+}
+
+.dash-chart-container {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.dash-timeline-bars {
+  align-items: stretch;
+  gap: var(--space-2);
+  padding-top: var(--space-6);
+  border-bottom: 0;
+}
+
+.dash-bar-group {
+  flex: 1 1 0;
+  min-width: var(--space-7);
+}
+
+.dash-bar-pair {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  border-bottom: 1px solid var(--line);
+}

@@ -6,6 +6,7 @@ import { formatDate, formatDateTime } from "../../utils/format";
 import Icon from "../../components/ui/Icon";
 import Modal from "../../components/ui/Modal";
 import DateInput from "../../components/ui/DateInput";
+import CollapsiblePanel, { PanelToggle, useCollapsedPanels } from "./CollapsiblePanel";
 import "./dashboard.css";
 
 const ALL_STATES = [
@@ -184,25 +185,21 @@ function KpiCard({
   );
 }
 
-function Panel({ icon, title, subtitle, extra, children }) {
+function Panel({ id, icon, title, subtitle, extra, danger = false, panels, children }) {
   return (
     <div className="dash-col-6">
-      <div className="dash-card">
-        <div className="dash-card-header">
-          <div className="dash-card-header-text">
-            <h3>
-              <Icon name={icon} size={18} />
-              {title}
-            </h3>
-            <span className="dash-card-subtitle">
-              {subtitle}
-            </span>
-          </div>
-          {extra}
-        </div>
-
+      <CollapsiblePanel
+        id={id}
+        icon={icon}
+        title={title}
+        subtitle={subtitle}
+        danger={danger}
+        open={panels.isOpen(id)}
+        onToggle={() => panels.toggle(id)}
+        aside={extra}
+      >
         {children}
-      </div>
+      </CollapsiblePanel>
     </div>
   );
 }
@@ -405,6 +402,7 @@ export default function DashboardPage({ user, onNavigate }) {
   const [error, setError] = useState("");
   const [drilldown, setDrilldown] = useState(EMPTY_DRILLDOWN);
   const [dateReset, setDateReset] = useState(0);
+  const panels = useCollapsedPanels();
 
   const requestRef = useRef(null);
   const requestId = useRef(0);
@@ -749,31 +747,42 @@ export default function DashboardPage({ user, onNavigate }) {
       )}
 
       <section
-        className="dash-filters-card"
+        className={`dash-filters-card${panels.isOpen("filtros") ? "" : " is-collapsed"}`}
         aria-label="Filtros del panel"
       >
         <div className="dash-filters-top">
-          <h2>
+          <h2 className="dash-panel-title-area" onClick={() => panels.toggle("filtros")}>
             <Icon name="calendar" size={18} />
             Filtros y período de análisis
           </h2>
 
-          <div className="dash-presets">
-            {PRESETS.map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                className={
-                  `dash-preset-btn ${activePreset === key ? "is-active" : ""}`
-                }
-                onClick={() => applyPreset(key)}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="dash-card-header-side">
+            {panels.isOpen("filtros") && (
+              <div className="dash-presets">
+                {PRESETS.map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={
+                      `dash-preset-btn ${activePreset === key ? "is-active" : ""}`
+                    }
+                    onClick={() => applyPreset(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <PanelToggle
+              open={panels.isOpen("filtros")}
+              onToggle={() => panels.toggle("filtros")}
+              controls="dash-panel-filtros"
+              label="Filtros y período de análisis"
+            />
           </div>
         </div>
 
+        <div id="dash-panel-filtros" className="dash-panel-body" hidden={!panels.isOpen("filtros")}>
         <div className="dash-filters-grid">
           <div className="dash-filter-item">
             <label htmlFor="filter-desde">Desde</label>
@@ -862,6 +871,7 @@ export default function DashboardPage({ user, onNavigate }) {
             </button>
           </div>
         </div>
+        </div>
 
         {activeChips.length > 0 && (
           <div className="dash-active-filters-bar">
@@ -892,10 +902,27 @@ export default function DashboardPage({ user, onNavigate }) {
         )}
       </section>
 
-      <section
-        className="dash-kpis-grid"
-        aria-label="Indicadores principales"
-      >
+      <section className="dash-group" aria-labelledby="dash-kpis-title">
+        <div className="dash-group-header">
+          <h2
+            id="dash-kpis-title"
+            className="dash-panel-title-area"
+            onClick={() => panels.toggle("kpis")}
+          >
+            Indicadores clave
+          </h2>
+          <PanelToggle
+            open={panels.isOpen("kpis")}
+            onToggle={() => panels.toggle("kpis")}
+            controls="dash-panel-kpis"
+            label="Indicadores clave"
+          />
+        </div>
+        <div
+          id="dash-panel-kpis"
+          className="dash-kpis-grid"
+          hidden={!panels.isOpen("kpis")}
+        >
         <KpiCard
           color="blue"
           icon="incidents"
@@ -1016,10 +1043,13 @@ export default function DashboardPage({ user, onNavigate }) {
             )
           }
         />
+        </div>
       </section>
 
       <section className="dash-section-grid">
         <Panel
+          id="evolucion"
+          panels={panels}
           icon="chart"
           title="Evolución temporal: reportadas vs resueltas"
           subtitle="Tendencia diaria según los filtros actuales"
@@ -1084,6 +1114,8 @@ export default function DashboardPage({ user, onNavigate }) {
         </Panel>
 
         <Panel
+          id="estados"
+          panels={panels}
           icon="incidents"
           title="Distribución por estado de incidencia"
           subtitle="Ciclo de vida operativo completo"
@@ -1107,7 +1139,18 @@ export default function DashboardPage({ user, onNavigate }) {
                         className="dash-status-dot"
                         style={{ background: STATUS_COLORS[estado] }}
                       />
-                      {estado}
+                      {onNavigate ? (
+                        <button
+                          type="button"
+                          className="dash-link-btn"
+                          onClick={() => onNavigate("incidents", { estado })}
+                          aria-label={`Ver incidencias en estado ${estado}`}
+                        >
+                          {estado}
+                        </button>
+                      ) : (
+                        estado
+                      )}
                     </span>
                     <span className="dash-breakdown-stat">
                       {item.total}
@@ -1132,6 +1175,8 @@ export default function DashboardPage({ user, onNavigate }) {
         </Panel>
 
         <Panel
+          id="prioridades"
+          panels={panels}
           icon="clock"
           title="Carga por prioridad y metas SLA"
           subtitle="Horas promedio de resolución frente al tiempo objetivo"
@@ -1218,6 +1263,8 @@ export default function DashboardPage({ user, onNavigate }) {
         </Panel>
 
         <Panel
+          id="tecnicos"
+          panels={panels}
           icon="tool"
           title="Intervenciones por personal técnico"
           subtitle="Distribución operativa entre el equipo técnico"
@@ -1265,6 +1312,8 @@ export default function DashboardPage({ user, onNavigate }) {
         </Panel>
 
         <Panel
+          id="top-insumos"
+          panels={panels}
           icon="box"
           title="Insumos más utilizados en mantenimiento"
           subtitle="Rotación y costo neto, descontando devoluciones"
@@ -1302,22 +1351,37 @@ export default function DashboardPage({ user, onNavigate }) {
         </Panel>
 
         <Panel
+          id="bajo-stock"
+          panels={panels}
+          danger
           icon="alertTriangle"
           title="Insumos bajo stock mínimo"
           subtitle="Artículos que requieren reposición"
           extra={
-            <button
-              type="button"
-              className="dash-header-action-btn"
-              onClick={() =>
-                openDrilldown(
-                  "insumos_bajo_stock",
-                  "Catálogo bajo stock mínimo"
-                )
-              }
-            >
-              Ver catálogo ({kpis.insumos_bajo_stock ?? 0}) ↗
-            </button>
+            <>
+              <button
+                type="button"
+                className="dash-header-action-btn"
+                onClick={() =>
+                  openDrilldown(
+                    "insumos_bajo_stock",
+                    "Catálogo bajo stock mínimo"
+                  )
+                }
+              >
+                Ver catálogo ({kpis.insumos_bajo_stock ?? 0}) ↗
+              </button>
+              {onNavigate && (
+                <button
+                  type="button"
+                  className="dash-header-action-btn"
+                  onClick={() => onNavigate("maintenance", { bajo_stock: "true" })}
+                  title="Abrir Insumos filtrado por stock bajo"
+                >
+                  Ir a Insumos ↗
+                </button>
+              )}
+            </>
           }
         >
           <div className="dash-table-wrap">
