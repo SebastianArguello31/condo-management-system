@@ -5,6 +5,8 @@ import { useQuery } from "../../hooks/useQuery";
 import { useMutation } from "../../hooks/useMutation";
 import { validate, reservaCrear } from "../../validations";
 import { formatDate, formatTime } from "../../utils/format";
+import DateInput from "../../components/ui/DateInput";
+import Time24Field from "../../components/ui/Time24Field";
 import {
   Alert,
   Button,
@@ -19,46 +21,33 @@ import {
   useToast,
 } from "../../components/ui";
 
-/* F2-8b — "Nueva reserva" (CreateReservation) migrado a FormModal.
- * Misma consulta de disponibilidad (GET /common-spaces/:id/availability) al
- * cambiar espacio/fecha/tipo de evento, mismo POST /reservations (payload
- * idéntico al legado) y mismo contrato { spaces, events, onCreated } de Mis
- * reservas (onCreated = reload() del listado). Cambios de convención §2.18:
- * error de la acción DENTRO del modal (Alert danger con foco/scroll),
- * errores por campo (validate(form, reservaCrear) + err.errors normalizado),
- * éxito por Toast + cierre + onCreated, cierre bloqueado mientras busy y
- * cero window.confirm. Las reglas de negocio (solapamiento, horario de la
- * política, duración, anticipación, aforo) NO se duplican en cliente: el
- * backend responde 409 y el FormModal lo muestra. */
-
-/* err.errors del backend trae ARRAYS por campo → string por campo. */
 function normalizarErrores(errors) {
   return Object.fromEntries(
     Object.entries(errors).map(([campo, mensajes]) => [
       campo,
-      Array.isArray(mensajes) ? (mensajes[0] ?? "") : String(mensajes),
+      Array.isArray(mensajes)
+        ? (mensajes[0] ?? "")
+        : String(mensajes),
     ])
   );
 }
 
-export default function CreateReservation({ spaces, events, onCreated }) {
+export default function CreateReservation({
+  spaces,
+  events,
+  onCreated,
+}) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({});
   const [camposErr, setCamposErr] = useState(null);
   const [accionError, setAccionError] = useState("");
-  /* Se incrementa en cada intento fallido: mueve el foco al PRIMER control
-   * inválido del modal (los Field reparten aria-invalid). */
   const [intento, setIntento] = useState(0);
   const notify = useToast();
 
-  /* Disponibilidad: solo consulta con las 3 claves completas y el modal
-   * abierto. useQuery aborta la consulta en vuelo y DESCARTA los datos
-   * previos al cambiar una clave (equivalente al setAvailability(null) del
-   * legado). El rango de fechas (≤31 días) lo valida el endpoint: aquí
-   * siempre se consulta un solo día. */
   const completo = Boolean(
     form.id_espacio && form.fecha && form.id_tipo_evento
   );
+
   const {
     data: disponibilidad,
     loading: consultando,
@@ -70,7 +59,11 @@ export default function CreateReservation({ spaces, events, onCreated }) {
         fecha_inicio: form.fecha,
         fecha_fin: form.fecha,
       });
-      if (form.id_tipo_evento) params.set("id_tipo_evento", form.id_tipo_evento);
+
+      if (form.id_tipo_evento) {
+        params.set("id_tipo_evento", form.id_tipo_evento);
+      }
+
       return api(
         `${routes.commonSpaces}/${form.id_espacio}/availability?${params}`,
         { signal }
@@ -81,26 +74,33 @@ export default function CreateReservation({ spaces, events, onCreated }) {
   );
 
   const guardando = useMutation((body) =>
-    api(routes.reservations, { method: "POST", body })
+    api(routes.reservations, {
+      method: "POST",
+      body,
+    })
   );
+
   const busy = guardando.busy;
 
-  /* El error por campo se LIMPIA al editar ese campo. Cambiar espacio,
-   * fecha o tipo descarta la disponibilidad mostrada: useQuery aborta la
-   * consulta en vuelo y descarta los datos previos al cambiar sus deps. */
-  const actualizar = (event) => {
+  function actualizar(event) {
     const { name, value } = event.target;
+
     setForm((current) => ({ ...current, [name]: value }));
     setCamposErr((current) => {
       if (!current || !(name in current)) return current;
-      const { [name]: omitido, ...resto } = current;
-      return resto;
+
+      const next = { ...current };
+      delete next[name];
+      return next;
     });
-  };
+  }
 
   useEffect(() => {
     if (intento === 0) return;
-    document.querySelector(".ui-modal-body .ui-control-invalid")?.focus();
+
+    document
+      .querySelector(".ui-modal-body .ui-control-invalid")
+      ?.focus();
   }, [intento]);
 
   function abrir() {
@@ -111,25 +111,37 @@ export default function CreateReservation({ spaces, events, onCreated }) {
   }
 
   function cerrar() {
-    setOpen(false);
+    if (!busy) setOpen(false);
   }
 
   async function guardar() {
     if (busy) return;
+
     setAccionError("");
 
-    /* Espejo exacto de ReservationCreateSchema. */
     const limpio = {
       ...form,
       observaciones: (form.observaciones || "").trim(),
     };
+
     const erroresCampos = validate(limpio, reservaCrear);
-    setCamposErr(Object.keys(erroresCampos).length > 0 ? erroresCampos : null);
+    const horaValida = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+    for (const name of ["hora_inicio", "hora_fin"]) {
+      if (!horaValida.test(limpio[name] || "")) {
+        erroresCampos[name] = "Selecciona una hora y sus minutos.";
+      }
+    }
+
+    setCamposErr(
+      Object.keys(erroresCampos).length > 0
+        ? erroresCampos
+        : null
+    );
     setIntento((current) => current + 1);
+
     if (Object.keys(erroresCampos).length > 0) return;
 
-    /* Payload IDÉNTICO al legado: ids/personas Number, observaciones con
-     * trim ("" si queda vacía); fecha y horas como strings HH:MM/día. */
     const body = {
       ...form,
       id_espacio: Number(form.id_espacio),
@@ -147,8 +159,14 @@ export default function CreateReservation({ spaces, events, onCreated }) {
       notify("Reserva creada.");
       await onCreated?.();
     } catch (err) {
-      setAccionError(err?.message ?? "No se pudo crear la reserva.");
-      if (err?.errors) setCamposErr(normalizarErrores(err.errors));
+      setAccionError(
+        err?.message ?? "No se pudo crear la reserva."
+      );
+
+      if (err?.errors) {
+        setCamposErr(normalizarErrores(err.errors));
+      }
+
       setIntento((current) => current + 1);
     }
   }
@@ -156,165 +174,225 @@ export default function CreateReservation({ spaces, events, onCreated }) {
   const politicas = disponibilidad?.politicas ?? [];
   const tramos = disponibilidad?.tramos_ocupados ?? [];
 
-  return <>
-    <Button onClick={abrir}>Nueva reserva</Button>
-    {open && (
-      <FormModal
-        title="Nueva reserva"
-        open
-        busy={busy}
-        error={accionError || undefined}
-        showRequiredNote
-        submitLabel="Crear reserva"
-        onSubmit={guardar}
-        onClose={cerrar}
-      >
-        <div className="ui-form-stack">
-          <Field label="Espacio" required error={camposErr?.id_espacio}>
-            <Select
-              name="id_espacio"
-              autoComplete="off"
-              value={form.id_espacio || ""}
-              onChange={actualizar}
+  return (
+    <>
+      <Button onClick={abrir}>Nueva reserva</Button>
+
+      {open && (
+        <FormModal
+          title="Nueva reserva"
+          open
+          busy={busy}
+          error={accionError || undefined}
+          showRequiredNote
+          submitLabel="Crear reserva"
+          onSubmit={guardar}
+          onClose={cerrar}
+        >
+          <div className="ui-form-stack">
+            <Field
+              label="Espacio"
+              required
+              error={camposErr?.id_espacio}
             >
-              <option value="">Seleccionar...</option>
-              {spaces.map((s) => (
-                <option key={s.id_espacio_comun} value={s.id_espacio_comun}>
-                  {s.nombre}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Tipo de evento" required error={camposErr?.id_tipo_evento}>
-            <Select
-              name="id_tipo_evento"
-              autoComplete="off"
-              value={form.id_tipo_evento || ""}
-              onChange={actualizar}
+              <Select
+                name="id_espacio"
+                autoComplete="off"
+                value={form.id_espacio || ""}
+                onChange={actualizar}
+                disabled={busy}
+              >
+                <option value="">Seleccionar...</option>
+                {spaces.map((space) => (
+                  <option
+                    key={space.id_espacio_comun}
+                    value={space.id_espacio_comun}
+                  >
+                    {space.nombre}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field
+              label="Tipo de evento"
+              required
+              error={camposErr?.id_tipo_evento}
             >
-              <option value="">Seleccionar...</option>
-              {events.map((s) => (
-                <option key={s.id_tipo_evento} value={s.id_tipo_evento}>
-                  {s.nombre}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Fecha" required error={camposErr?.fecha}>
-            <Input
-              name="fecha"
-              type="date"
-              autoComplete="off"
-              value={form.fecha || ""}
-              onChange={actualizar}
-            />
-          </Field>
-          <Field label="Hora de inicio" required error={camposErr?.hora_inicio}>
-            <Input
+              <Select
+                name="id_tipo_evento"
+                autoComplete="off"
+                value={form.id_tipo_evento || ""}
+                onChange={actualizar}
+                disabled={busy}
+              >
+                <option value="">Seleccionar...</option>
+                {events.map((event) => (
+                  <option
+                    key={event.id_tipo_evento}
+                    value={event.id_tipo_evento}
+                  >
+                    {event.nombre}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field
+              label="Fecha"
+              required
+              error={camposErr?.fecha}
+            >
+              <DateInput
+                name="fecha"
+                value={form.fecha || ""}
+                onChange={actualizar}
+                disabled={busy}
+              />
+            </Field>
+
+            <Time24Field
+              label="Hora de inicio"
               name="hora_inicio"
-              type="time"
-              autoComplete="off"
               value={form.hora_inicio || ""}
               onChange={actualizar}
+              error={camposErr?.hora_inicio}
+              disabled={busy}
             />
-          </Field>
-          <Field label="Hora de fin" required error={camposErr?.hora_fin}>
-            <Input
+
+            <Time24Field
+              label="Hora de fin"
               name="hora_fin"
-              type="time"
-              autoComplete="off"
               value={form.hora_fin || ""}
               onChange={actualizar}
+              error={camposErr?.hora_fin}
+              disabled={busy}
             />
-          </Field>
-          <Field label="Personas" required error={camposErr?.cantidad_personas}>
-            <Input
-              name="cantidad_personas"
-              type="number"
-              min={1}
-              autoComplete="off"
-              value={form.cantidad_personas || ""}
-              onChange={actualizar}
-            />
-          </Field>
-          <Field
-            label="Observaciones"
-            error={camposErr?.observaciones}
-            help="Máximo 500 caracteres."
-          >
-            <Textarea
-              name="observaciones"
-              maxLength={500}
-              autoComplete="off"
-              value={form.observaciones || ""}
-              onChange={actualizar}
-            />
-          </Field>
-        </div>
 
-        {!completo ? (
-          <p role="status">
-            Selecciona espacio, fecha y tipo de evento para consultar la
-            disponibilidad.
-          </p>
-        ) : consultando && !disponibilidad ? (
-          <p role="status">Consultando la disponibilidad...</p>
-        ) : errorDisponibilidad && errorDisponibilidad.status === 409 ? (
-          /* Sin política para ese espacio/tipo (o espacio inactivo): aviso
-           * informativo; NO bloquea Guardar (el backend responde igual). */
-          <Alert tone="info">{errorDisponibilidad.message}</Alert>
-        ) : errorDisponibilidad ? (
-          <ErrorState
-            title="No se pudo consultar la disponibilidad"
-            description={errorDisponibilidad.message}
-            onRetry={recargarDisponibilidad}
-          />
-        ) : (
-          <>
-            <h3>Políticas de reserva</h3>
-            {!politicas.length ? (
-              /* Sin políticas: aviso informativo; NO deshabilita Guardar. */
-              <Alert tone="info">
-                No hay políticas configuradas para este espacio.
-              </Alert>
-            ) : (
-              politicas.map((p) => (
-                <div key={p.id_politica_reserva}>
-                  <h4>{p.tipo_evento}</h4>
-                  <DefinitionList
-                    items={[
-                      { term: "Apertura", detail: p.hora_apertura },
-                      { term: "Cierre", detail: p.hora_cierre },
-                      { term: "Duración máxima", detail: `${p.duracion_max_horas} h` },
-                      {
-                        term: "Anticipación",
-                        detail: `${p.dias_anticipacion_min}–${p.dias_anticipacion_max} días`,
-                      },
-                      { term: "Aforo", detail: p.aforo_maximo },
-                      { term: "Costo", detail: p.costo },
-                      { term: "Depósito", detail: p.deposito_garantia },
-                      { term: "Penalización", detail: p.penalizaciones },
-                    ]}
-                  />
-                </div>
-              ))
-            )}
-            <h3>Horarios ocupados</h3>
-            {!tramos.length ? (
-              <EmptyState title="Sin reservas en ese período" />
-            ) : (
-              <ul>
-                {tramos.map((t) => (
-                  <li key={t.id_reserva}>
-                    {formatDate(t.fecha)} · {formatTime(t.hora_inicio)}
-                    –{formatTime(t.hora_fin)} ({t.estado})
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-      </FormModal>
-    )}
-  </>;
+            <Field
+              label="Personas"
+              required
+              error={camposErr?.cantidad_personas}
+            >
+              <Input
+                name="cantidad_personas"
+                type="number"
+                min={1}
+                autoComplete="off"
+                value={form.cantidad_personas || ""}
+                onChange={actualizar}
+                disabled={busy}
+              />
+            </Field>
+
+            <Field
+              label="Observaciones"
+              error={camposErr?.observaciones}
+              help="Máximo 500 caracteres."
+            >
+              <Textarea
+                name="observaciones"
+                maxLength={500}
+                autoComplete="off"
+                value={form.observaciones || ""}
+                onChange={actualizar}
+                disabled={busy}
+              />
+            </Field>
+          </div>
+
+          {!completo ? (
+            <p role="status">
+              Selecciona espacio, fecha y tipo de evento para
+              consultar la disponibilidad.
+            </p>
+          ) : consultando && !disponibilidad ? (
+            <p role="status">
+              Consultando la disponibilidad...
+            </p>
+          ) : errorDisponibilidad?.status === 409 ? (
+            <Alert tone="info">
+              {errorDisponibilidad.message}
+            </Alert>
+          ) : errorDisponibilidad ? (
+            <ErrorState
+              title="No se pudo consultar la disponibilidad"
+              description={errorDisponibilidad.message}
+              onRetry={recargarDisponibilidad}
+            />
+          ) : (
+            <>
+              <h3>Políticas de reserva</h3>
+
+              {!politicas.length ? (
+                <Alert tone="info">
+                  No hay políticas configuradas para este espacio.
+                </Alert>
+              ) : (
+                politicas.map((politica) => (
+                  <div key={politica.id_politica_reserva}>
+                    <h4>{politica.tipo_evento}</h4>
+
+                    <DefinitionList
+                      items={[
+                        {
+                          term: "Apertura",
+                          detail: formatTime(politica.hora_apertura),
+                        },
+                        {
+                          term: "Cierre",
+                          detail: formatTime(politica.hora_cierre),
+                        },
+                        {
+                          term: "Duración máxima",
+                          detail: `${politica.duracion_max_horas} h`,
+                        },
+                        {
+                          term: "Anticipación",
+                          detail: `${politica.dias_anticipacion_min}–${politica.dias_anticipacion_max} días`,
+                        },
+                        {
+                          term: "Aforo",
+                          detail: politica.aforo_maximo,
+                        },
+                        {
+                          term: "Costo",
+                          detail: politica.costo,
+                        },
+                        {
+                          term: "Depósito",
+                          detail: politica.deposito_garantia,
+                        },
+                        {
+                          term: "Penalización",
+                          detail: politica.penalizaciones,
+                        },
+                      ]}
+                    />
+                  </div>
+                ))
+              )}
+
+              <h3>Horarios ocupados</h3>
+
+              {!tramos.length ? (
+                <EmptyState title="Sin reservas en ese período" />
+              ) : (
+                <ul>
+                  {tramos.map((tramo) => (
+                    <li key={tramo.id_reserva}>
+                      {formatDate(tramo.fecha)} ·{" "}
+                      {formatTime(tramo.hora_inicio)}–
+                      {formatTime(tramo.hora_fin)}{" "}
+                      ({tramo.estado})
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </FormModal>
+      )}
+    </>
+  );
 }
