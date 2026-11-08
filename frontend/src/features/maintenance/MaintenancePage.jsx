@@ -46,7 +46,7 @@ const NOTA_CONSUMOS =
   "Los consumos se registran desde las intervenciones de cada incidencia.";
 
 export default function MaintenancePage({ user }) {
-  const isAdmin = user?.rol === "ADMIN";
+  const puedeGestionar = ["ADMIN", "GESTOR"].includes(user?.rol);
   const { params } = useHashRoute();
 
   const [busqueda, setBusqueda] = useState("");
@@ -107,25 +107,25 @@ export default function MaintenancePage({ user }) {
   ])].filter(Boolean).sort();
 
   function openCreate() {
-    if (!isAdmin) return;
+    if (!puedeGestionar) return;
     setSelectedItem(null);
     setModal("item");
   }
 
   function openEdit(item) {
-    if (!isAdmin) return;
+    if (!puedeGestionar) return;
     setSelectedItem(item);
     setModal("item");
   }
 
   function openMovement(item) {
-    if (!isAdmin) return;
+    if (!puedeGestionar) return;
     setSelectedItem(item);
     setModal("movement");
   }
 
   function openHistory(item) {
-    if (!isAdmin) return;
+    if (!puedeGestionar) return;
     setSelectedItem(item);
     setModal("history");
   }
@@ -141,7 +141,7 @@ export default function MaintenancePage({ user }) {
       ? `${items.length} ${items.length === 1 ? "insumo" : "insumos"} · ${conStockBajo} con stock bajo`
       : undefined;
 
-  const triggerNuevo = isAdmin ? (
+  const triggerNuevo = puedeGestionar ? (
     <Button onClick={openCreate}>Nuevo insumo</Button>
   ) : null;
 
@@ -198,7 +198,7 @@ export default function MaintenancePage({ user }) {
         );
       },
     },
-    ...(isAdmin
+    ...(puedeGestionar
       ? [{
           key: "acciones",
           header: "Acciones",
@@ -318,7 +318,7 @@ export default function MaintenancePage({ user }) {
         emptyAction={vacioReal ? triggerNuevo : undefined}
       />
 
-      {isAdmin && modal === "item" && (
+      {puedeGestionar && modal === "item" && (
         <InsumoFormModal
           insumo={selectedItem}
           categorias={categorias}
@@ -328,7 +328,7 @@ export default function MaintenancePage({ user }) {
         />
       )}
 
-      {isAdmin && modal === "movement" && selectedItem && (
+      {puedeGestionar && modal === "movement" && selectedItem && (
         <MovimientoFormModal
           insumo={selectedItem}
           onClose={() => setModal(null)}
@@ -336,7 +336,7 @@ export default function MaintenancePage({ user }) {
         />
       )}
 
-      {isAdmin && modal === "history" && selectedItem && (
+      {puedeGestionar && modal === "history" && selectedItem && (
         <InsumoHistorialModal
           insumo={selectedItem}
           onClose={() => setModal(null)}

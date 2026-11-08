@@ -88,7 +88,7 @@ const ITEMS = {
   },
   empleados: {
     path: "/empleados",
-    label: "Empleados",
+    label: "Técnicos",
     icon: "employees",
     component: EmployeesPage,
     roles: [ADMIN],
@@ -161,7 +161,7 @@ const ITEMS = {
     label: "Insumos",
     icon: "maintenance",
     component: MaintenancePage,
-    roles: [ADMIN, TECNICO],
+    roles: [ADMIN, GESTOR, TECNICO],
   },
   categoriasInsumo: {
     path: "/categorias-insumo",
@@ -220,12 +220,18 @@ const GRUPOS = {
     { label: "Cuenta", items: ["perfilCuenta"] },
   ],
   [GESTOR]: [
-    { label: "Inicio", items: ["dashboard"] },
+    {
+      label: "Inicio",
+      items: ["dashboard"],
+    },
     {
       label: "Operación",
-      items: ["incidencias", "gestionReservas"],
+      items: ["incidencias", "insumos", "gestionReservas"],
     },
-    { label: "Cuenta", items: ["perfilCuenta"] },
+    {
+      label: "Cuenta",
+      items: ["perfilCuenta"],
+    },
   ],
   [RESIDENTE]: [
     {

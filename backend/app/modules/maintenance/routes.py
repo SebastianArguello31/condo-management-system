@@ -20,12 +20,13 @@ maintenance_bp = Blueprint("maintenance", __name__, url_prefix="/maintenance",)
 
 @maintenance_bp.get("/categories")
 @token_required
-@role_required("ADMIN", "TECNICO")
+@role_required("ADMIN", "GESTOR", "TECNICO")
 def list_categories():
-    active = g.current_user["rol"] != "ADMIN"
+    only_active = g.current_user["rol"] == "TECNICO"
+
     return jsonify(
         categories.list_categories(
-            active=active if active else None
+            active=True if only_active else None
         )
     )
 
@@ -55,13 +56,13 @@ def delete_category(category_id):
 
 @maintenance_bp.get("/insumos/bajo-stock")
 @token_required
-@role_required("ADMIN", "TECNICO")
+@role_required("ADMIN", "GESTOR", "TECNICO")
 def list_low_stock():
     return jsonify(inventory.list_low_stock())
 
 @maintenance_bp.get("/insumos")
 @token_required
-@role_required("ADMIN", "TECNICO")
+@role_required("ADMIN", "GESTOR", "TECNICO")
 def list_items():
     low_stock = request.args.get("bajo_stock", "false").lower()
 
@@ -79,7 +80,7 @@ def list_items():
 
 @maintenance_bp.post("/insumos")
 @token_required
-@role_required("ADMIN")
+@role_required("ADMIN", "GESTOR")
 def create_item():
     return jsonify(
         inventory.create_item(
@@ -89,7 +90,7 @@ def create_item():
 
 @maintenance_bp.patch("/insumos/<int:item_id>")
 @token_required
-@role_required("ADMIN")
+@role_required("ADMIN", "GESTOR")
 def update_item(item_id):
     return jsonify(
         inventory.update_item(
@@ -100,7 +101,7 @@ def update_item(item_id):
 
 @maintenance_bp.post("/insumos/<int:item_id>/existencias-iniciales")
 @token_required
-@role_required("ADMIN")
+@role_required("ADMIN", "GESTOR")
 def register_initial_stock(item_id):
     return jsonify(
         inventory.register_movement(
@@ -113,7 +114,7 @@ def register_initial_stock(item_id):
 
 @maintenance_bp.post("/insumos/<int:item_id>/entradas")
 @token_required
-@role_required("ADMIN")
+@role_required("ADMIN", "GESTOR")
 def register_entry(item_id):
     return jsonify(
         inventory.register_movement(
@@ -126,7 +127,7 @@ def register_entry(item_id):
 
 @maintenance_bp.post("/insumos/<int:item_id>/salidas")
 @token_required
-@role_required("ADMIN")
+@role_required("ADMIN", "GESTOR")
 def register_exit(item_id):
     return jsonify(
         inventory.register_movement(
@@ -139,7 +140,7 @@ def register_exit(item_id):
 
 @maintenance_bp.post("/insumos/<int:item_id>/ajustes")
 @token_required
-@role_required("ADMIN")
+@role_required("ADMIN", "GESTOR")
 def adjust_stock(item_id):
     return jsonify(
         inventory.register_movement(
@@ -152,7 +153,7 @@ def adjust_stock(item_id):
 
 @maintenance_bp.get("/insumos/<int:item_id>/movimientos")
 @token_required
-@role_required("ADMIN")
+@role_required("ADMIN", "GESTOR")
 def list_movements(item_id):
     return jsonify(
         inventory.list_movements(
