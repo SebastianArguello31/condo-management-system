@@ -22,6 +22,7 @@ import {
   Input,
   Modal,
   PageHeader,
+  Pagination,
   RowActions,
   RowActionsMenu,
   SearchInput,
@@ -36,6 +37,7 @@ import {
   useToast,
 } from "../components/ui";
 import { useConfirm } from "../hooks/useConfirm";
+import { usePagination } from "../hooks/usePagination";
 
 function logU(message) {
   console.log(`[ui-guide] ${message}`);
@@ -678,6 +680,55 @@ function DataTableSection() {
   );
 }
 
+/* Demo de paginación en cliente (F2-13a): 30 filas de ejemplo a 10 por
+ * página (3 páginas; la última también queda con 10). usePagination
+ * corta las filas y Pagination renderiza el pager. */
+const PAGINACION_DEMO = Array.from({ length: 30 }, (_, index) => ({
+  id: `pg${index + 1}`,
+  codigo: `R-${String(index + 1).padStart(4, "0")}`,
+  residente: `Residente ${index + 1}`,
+  saldo: `G. ${(index + 1) * 1000}`,
+}));
+
+function PaginationSection() {
+  const pag = usePagination(PAGINACION_DEMO, { pageSize: 10 });
+  const columnas = [
+    { key: "codigo", header: "Código", render: (fila) => <span className="ui-mono">{fila.codigo}</span> },
+    { key: "residente", header: "Residente" },
+    {
+      key: "saldo",
+      header: "Saldo",
+      align: "right",
+      render: (fila) => <span className="ui-mono">{fila.saldo}</span>,
+    },
+  ];
+  return (
+    <Bloque titulo="Pagination + usePagination (paginación en el cliente)">
+      <DataTable
+        columns={columnas}
+        rows={pag.pageRows}
+        rowKey={(fila) => fila.id}
+        caption="Listado de reservas paginado (demo)"
+      />
+      <Pagination
+        page={pag.page}
+        pageCount={pag.pageCount}
+        total={pag.total}
+        from={pag.from}
+        to={pag.to}
+        onPrev={pag.goPrev}
+        onNext={pag.goNext}
+        label="Paginación de la demo"
+      />
+      <p style={{ margin: 0, fontSize: "var(--fs-12)", color: "var(--ink-3)" }}>
+        Pager simple Anterior/Siguiente + "Mostrando N–M de T" (aria-live):
+        sin números de página. Renderiza NADA con 1 página o menos. El foco
+        no se pierde al llegar a un extremo: pasa al contenedor del pager.
+      </p>
+    </Bloque>
+  );
+}
+
 export default function UiGuide() {
   return (
     <div style={{ display: "grid", gap: "var(--space-5)", paddingBlock: "var(--space-4)" }}>
@@ -703,6 +754,7 @@ export default function UiGuide() {
       <FormModalSection />
       <ConfirmSection />
       <DataTableSection />
+      <PaginationSection />
     </div>
   );
 }

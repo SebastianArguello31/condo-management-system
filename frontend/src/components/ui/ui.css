@@ -1109,6 +1109,62 @@ textarea.ui-control {
   padding-block: var(--space-3) 0;
 }
 
+/* -- Paginación de listado (F2-13a) --------------------------------------------
+ * Pager simple Anterior/Siguiente + conteo; sin números de página ni
+ * selector de tamaño. Con 1 página o menos el componente NO renderiza, así
+ * que los listados cortos quedan idénticos (paridad sin pasar nada nuevo).
+ * El <nav> es hermano inmediato del marco de la tabla (.ui-table-shell) y
+ * su margen superior mantiene la separación de bloques del listado
+ * (nunca 0px). Los números usan tabular-nums. ----------------------------------- */
+.ui-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink-2);
+}
+
+/* Acá aterriza el foco cuando el botón del extremo queda deshabilitado
+ * tras la pulsación (tabindex=-1 solo programático): anillo visible del
+ * kit, como el resto de los controles (base.css, 2px --focus-ring). */
+.ui-pagination:focus {
+  outline: 2px solid var(--focus-ring);
+}
+
+.ui-pagination-info {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-pagination-botones {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-pagination-pagina {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .ui-pagination {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .ui-pagination-info {
+    text-align: center;
+  }
+
+  .ui-pagination-botones > .ui-btn {
+    flex: 1;
+  }
+}
+
 /* -- Movimiento reducido --------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   .ui-btn,
