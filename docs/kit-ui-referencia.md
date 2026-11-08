@@ -259,6 +259,14 @@ regla 1px; 1 columna <640px.
 ```
 Accesibilidad: `<dl>`/`<dt>`/`<dd>` nativos.
 
+F2-12b: las filas se alinean por LÍNEA BASE (etiqueta 12px y valor 14px
+comparten base; antes iban alineadas arriba) y la columna de etiquetas
+tiene tope `calc(var(--space-12) * 3)` (144px; antes 192px — el valor
+arrancaba ~204px). El `StatusBadge` dentro de un `dd` pierde su padding
+vertical SOLO dentro de la lista (`.ui-dl dd .ui-status`) para que la
+fila "Estado" mida lo mismo que las de texto. Con <640px el DL pasa a
+una columna (patrón actual) y el baseline no aplica.
+
 ### Timeline — `components/ui/Timeline.jsx`
 
 `entries` (REQUERIDA: `[{ id?, time, title, meta?, detail?, tone? }]`).
@@ -350,7 +358,12 @@ ni CSS propio (usa la clase existente). Usos: Mis reservas, CrudPageUi
 Accesibilidad: `<dialog>` nativo (foco atrapado y devuelto, Esc vía
 `onCancel`); `aria-labelledby`. NOTA: se abre al MONTAR (`showModal` en
 effect de mount) — controla la apertura con render condicional (`{abierto && …}`).
-Usa las clases legacy `mg-modal`/`mg-icon-button` (aisladas, "coco" ui-modal).
+F2-12b: el diálogo pinta TODO desde `.ui-modal` (radio `--radius-md`,
+fondo `--surface`, borde `--line`, sin sombra; `::backdrop` sin blur).
+El marcado conserva las clases legacy `mg-modal`/`mg-icon-button`, que
+ya no pisan los valores del kit; el dim del `::backdrop` legacy solo
+queda para los modales sin `backdrop=true` (p. ej. el drilldown del
+Dashboard, Dev 3).
 
 ### FormModal — `components/ui/FormModal.jsx` (`FormModal`, `useFormFieldError`)
 Patrón §2.18/§2.20 del plan hecho componente.
@@ -449,6 +462,37 @@ SearchInput con etiquetas VISIBLES), `className`.
 </FilterBar>
 ```
 Accesibilidad: alineación por la BASE del control; botones en esa línea.
+
+### Pagination — `components/ui/Pagination.jsx` (F2-13a)
+
+Pager simple Anterior/Siguiente con conteo; SIN números de página ni
+selector de tamaño. **Renderiza NADA si `pageCount <= 1`** (listados
+cortos idénticos a hoy). Recibe filas YA cortadas (no pagina).
+
+| Prop | Tipo | Obligatoria | Defecto | Notas |
+|---|---|---|---|---|
+| `page` | number | sí | — | página actual (acotada por el hook) |
+| `pageCount` | number | sí | — | total de páginas |
+| `total` | number | no | — | filas filtradas totales |
+| `from` / `to` | number | no | — | rango visible |
+| `onPrev` / `onNext` | fn | no | — | vía `goPrev`/`goNext` del hook |
+| `label` | string | no | `"Paginación"` | `aria-label` del `<nav>`; p. ej. "Paginación de unidades" |
+| `className` | string | no | `""` | |
+
+```jsx
+const pag = usePagination(filtered, { pageSize: 10, resetKey: search });
+<DataTable rows={pag.pageRows} ... />
+<Pagination page={pag.page} pageCount={pag.pageCount} total={pag.total}
+  from={pag.from} to={pag.to} onPrev={pag.goPrev} onNext={pag.goNext}
+  label={`Paginación de ${title.toLowerCase()}`} />
+```
+Accesibilidad: `<nav aria-label={label}>` hermano inmediato del
+`.ui-table-shell` (margin-top `--space-4` en ui.css); "Mostrando N–M de T"
+con `aria-live="polite"` y tabular-nums; botones `Button quiet sm` con
+`aria-label="Página anterior/siguiente"`, disabled en los extremos; si el
+botón pulsado queda deshabilitado, el foco pasa al propio `<nav>`
+(tabindex=-1, anillo visible) para no perder el teclado. <640px se apila
+en columna con botones de target completo.
 
 ### ErrorBoundary — `components/ui/ErrorBoundary.jsx`
 
@@ -550,6 +594,27 @@ const confirm = useConfirm();
 if (!await confirm({ title: "Cancelar reserva", message: "¿Confirma cancelarla? No hay vuelta atrás.", danger: true })) return;
 ```
 
+### usePagination — `hooks/usePagination.js` (F2-13a)
+
+`usePagination(rows, { pageSize = 10, resetKey } = {})` →
+`{ pageRows, page, pageCount, total, from, to, setPage(n), goPrev, goNext,
+hasPrev, hasNext }`. Paginación EN CLIENTE sobre la lista ya filtrada.
+
+- `pageRows` — el corte para la tabla; `from/to` — rango visible (con 0
+  filas: `pageCount` 1 y `from/to` 0).
+- La página se ACOTA (clamp) a `[1, pageCount]` en cada render: si la
+  lista encoge, cae a la última página VÁLIDA (nunca pager sobre 0 filas).
+- La página vuelve a 1 SOLO cuando cambia `resetKey` (búsqueda y filtros);
+  `reload()` de useQuery la CONSERVA. No hay efectos por identidad de
+  `rows` (un array nuevo con mismos datos no resetea).
+
+```jsx
+const pag = usePagination(filtered, { pageSize: 10, resetKey: search });
+```
+
+(CrudPageUi ya lo integra con prop `pageSize = 10`; solo se necesita a
+mano en composición propia de pantalla.)
+
 ### Barrel `hooks/index.js`: re-exporta `useHashRoute`, `useQuery`,
 `useMutation`, `ConfirmProvider`, `useConfirm`, `useConfirmResponder`.
 (Barrel UI: `components/ui/index.js` — todos los componentes menos
@@ -599,6 +664,18 @@ desplazar el día. Uso previsto: listados y detalles (F2-3 adopta, F2-4/F2-5 sig
 import { formatDate, formatDateTime } from "../utils/format";
 formatDate("2026-03-05");           // "05/03/2026"
 formatDateTime("2026-03-05T14:30"); // "05/03/2026 14:30"
+```
+
+### `utils/roles.js` (NUEVO, F2-12b)
+
+Etiquetas legibles de los roles reales del sistema (pantalla/shell comparten
+la misma fuente, nunca el código crudo): `ROLE_LABELS` y `roleLabel(rol)`
+(con FALLBACK al código si el rol no está en el mapa).
+
+```js
+import { roleLabel } from "../utils/roles";
+roleLabel("ADMIN");     // "Administrador"
+roleLabel("TECNICO");   // "Técnico"
 ```
 
 ### `validations/` (`validate.js`, `rules.js`, `schemas.js`)
@@ -677,8 +754,8 @@ módulos). Pasos:
 5. Rojo SOLO DEV: `rutaSoloDev` (`#/ui`) es el único patrón lazy +
    `import.meta.env.DEV` — nunca fuera de esa rama.
 
-Aterrizaje por rol (`RUTA_INICIAL`): ADMIN y TECNICO → `dashboard`;
-RESIDENTE → `incidencias` (se toca SOLO con decisión del dueño).
+Aterrizaje por rol (`RUTA_INICIAL`): ADMIN → `dashboard`; RESIDENTE y
+TECNICO → `incidencias` (se toca SOLO con decisión del dueño).
 
 ```js
 // 1) arriba: import MiPantalla from "../features/x/MiPantalla";

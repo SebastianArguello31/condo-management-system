@@ -1,4 +1,4 @@
-# Plan de refactorización del frontend — Dev 1 (Sprint 4, Grupo 6 IS2 FP-UNA)
+﻿# Plan de refactorización del frontend — Dev 1 (Sprint 4, Grupo 6 IS2 FP-UNA)
 
 Documento de persistencia del plan. La próxima sesión debe retomar desde aquí
 y de `STATUS.md` (ver también la sección "Prompt de arranque" al final).
@@ -40,12 +40,15 @@ Entregables: frontend refactorizado con base compartida, navegación clara,
 4. Un único archivo de configuración declarativa
    (`frontend/src/config/routing.js`: Ítems → groups por rol). AppShell y App
    no conocen claves de módulos. `features/auth/navigation.js` fue eliminado.
-5. **Aterrizaje por rol:** ADMIN y TECNICO → `#/dashboard`; **RESIDENTE →
-   `#/incidencias`** (actualizado en la integración con develop, que trae el
-   cambio del equipo: la decisión original del dueño con CP5 era ADMIN →
-   `#/usuarios` y RESIDENTE/TECNICO → `#/incidencias`).
+5. **Aterrizaje por rol:** ADMIN → `#/dashboard`; **RESIDENTE y TECNICO →
+   `#/incidencias`** (F2-11a, 2026-11-07: Indicadores solo para ADMIN;
+   hasta la integración con develop, que traía el cambio del equipo, el
+   ADMIN y el TECNICO aterrizaban en el dashboard).
 6. Token solo en memoria (sin persistencia): refresh cierra sesión. Igual que
    antes. 401 → evento "session-expired" → logout + hash limpio con replace.
+   *(Nota del merge con develop, 2026-11-08: el token de sesión ahora vive en
+   **sessionStorage** — así lo trae develop. Decisión 2.6 a actualizar; queda
+   como deuda de seguridad XSS, en estilo legado heredado del equipo.)*
 7. Copy en español neutro (tuteo) para todo lo nuevo.
 8. Contraste WCAG AA estricto: 4.5:1 texto, 3:1 bordes de controles y glifos;
    verificación con `frontend/scripts/check-contrast.mjs`.
@@ -59,7 +62,11 @@ Entregables: frontend refactorizado con base compartida, navegación clara,
 13. **Paginación fuera de Fase 1** (decisión con CP4). Comprobado contra el
     backend: **ningún endpoint pagina** (los `LIMIT` son `LIMIT 1`; los
     schemas de query solo filtran). La paginación será feature futura del
-    backend; su UI (pager + DataTable) se decide al migrar esos listados.
+    backend. **ACTUALIZADO en F2-13a (2026-11-07): la UI se decidió —
+    paginación EN EL CLIENTE** (hook `hooks/usePagination.js` +
+    `components/ui/Pagination.jsx` integrados en `CrudPageUi`; detalle en
+    "Sesión F2-13a"). La paginación en SERVIDOR sigue siendo feature
+    futura del backend (deuda documentada en §8-bis).
 14. **validations/ espeja los schemas Marshmallow reales** del backend
     (solo lectura) — nada inventado; mensajes de contraseña EXACTOS del
     backend; mínimo de contraseña confirmado: ≥8 caracteres y ≤72 bytes UTF-8.
@@ -404,13 +411,13 @@ terminado un paso mientras sus bugs sigan abiertos.
 
 | ID | Pantalla / rol | Síntoma | Causa | Paso que lo resuelve (§7) |
 |----|----------------|---------|-------|---------------------------|
-| B1 | Usuarios y accesos (admin) | Detalle en Usuarios y accesos | Por verificar | F2-6 |
+| B1 | Usuarios y accesos (admin) | Detalle en Usuarios y accesos | **VERIFICADA POR EL DUEÑO (2026-11-07)** | F2-6a |
 | B2 | Nuevo empleado (modal, admin) | Popup de correo del navegador al escribir el nombre | Verificada: `CreateAccount.jsx:50` — inputs sin `name` ni `autoComplete` (solo password tiene) y `CrudPage.jsx:310-312`; el navegador adivina el campo y ofrece correo guardado | **CERRADA POR DISEÑO** (F2-6a en el crear del kit; el archivo CreateAccount quedó sin consumidores y se RETIRÓ en F2-6b) |
 | B3 | Nuevo empleado | Mensaje suelto bajo el botón al cerrar el modal | Verificada: `CreateAccount.jsx:44` renderiza el error como `<p>` sin estilos (`mg-alert`) fuera del modal al cerrarlo | **CERRADA POR DISEÑO** (F2-6a; el error vive DENTRO del FormModal y CreateAccount se retiró en F2-6b) |
-| B4 | Empleados (admin) | Detalle en Empleados | Por verificar | F2-6 (HECHA 6a; por verificar con captura del dueño) |
-| B5 | Residentes (admin) | Ver unidades en Residentes | Por verificar | F2-6b HECHA (ResidentUnitsModal al kit; **por verificar con captura del dueño**, NO se declara cerrado) |
-| B6 | Espacios (admin) | Transición rota Espacios → Políticas de reserva | **Verificada con descripción del dueño (2026-11-01):** es frontend, no backend — la subvista se abre con estado local (`EspaciosPage` setea `policySpace`) y la URL NO cambia; F5 y "Atrás" pierden el contexto (F5 recae en la pantalla o aterrizaje de sesión; el historial no registra la subvista). La lectura de `EspaciosPage.jsx`/`SpacePolicies.jsx`/`CrudPage.jsx`/rutas backend era coherente; la causa era de diseño (subvista sin hash) | **F2-7b HECHA:** hash `#/espacios?politicas=<id>` (navigate para entrar y para Volver; id inexistente/inválido → EmptyState con "Volver a espacios"; foco al h1 de Políticas y al contenedor del listado al volver). **Por verificar con captura del dueño — NO se declara cerrado** |
-| B7 | Incidencias (técnico) / Mi perfil | Detalle en el modal de incidencias y en Mi perfil | Por verificar | F2-5 (detalle) / F2-4 (perfil) |
+| B4 | Empleados (admin) | Detalle en Empleados | **VERIFICADA POR EL DUEÑO (2026-11-07)** (F2-6a con captura) | F2-6a |
+| B5 | Residentes (admin) | Ver unidades en Residentes | **VERIFICADA POR EL DUEÑO (2026-11-07)** con captura del ResidentUnitsModal | F2-6b |
+| B6 | Espacios (admin) | Transición rota Espacios → Políticas de reserva | **Verificada con descripción del dueño (2026-11-01):** es frontend, no backend — la subvista se abre con estado local (`EspaciosPage` setea `policySpace`) y la URL NO cambia; F5 y "Atrás" pierden el contexto (F5 recae en la pantalla o aterrizaje de sesión; el historial no registra la subvista). La lectura de `EspaciosPage.jsx`/`SpacePolicies.jsx`/`CrudPage.jsx`/rutas backend era coherente; la causa era de diseño (subvista sin hash) | **F2-7b HECHA:** hash `#/espacios?politicas=<id>` (navigate para entrar y para Volver; id inexistente/inválido → EmptyState con "Volver a espacios"; foco al h1 de Políticas y al contenedor del listado al volver). **Por verificar con captura del dueño — NO se declara cerrado**. **ACTUALIZACIÓN (2026-11-07): VERIFICADA POR EL DUEÑO con captura.** |
+| B7 | Incidencias (técnico) / Mi perfil | Detalle en el modal de incidencias y en Mi perfil | **VERIFICADA POR EL DUEÑO (2026-11-07).** Por lectura el front estaba correcto (el `INCIDENT_SELECT` trae edificio/unidad y el modal los pinta en el DefinitionList con respaldo de la fila; la parte del perfil quedó sin reproducible al salir los historiales); nada se corrigió porque nada estaba roto | F2-5 (detalle) / F2-4 (perfil) |
 | B8 | Nueva incidencia (modal, residente) | Error de backend se renderiza al fondo de la página con el modal abierto | Verificada: el `error` es estado único de página — `IncidentsPage.jsx:55` lo setea al crear y se renderiza solo a nivel página (`IncidentsPage.jsx:103`); el modal de creación (línea 105) no lo muestra adentro (el de detalle sí, línea 106) | F2-5 |
 | B9 | Edificios, Unidades, Especialidades (admin) | Botón azul "Reintentar carga" parpadeante: aparece y desaparece al abrir la pantalla | Verificada: condición `!ready` en `CrudPage.jsx:239-240`; `ready` inicia `false` (línea 43) y pasa a `true` al resolver la carga (línea 78) — botón visible en cada montaje hasta que llega la lista | F2-1b (CrudPage sobre useQuery; se migra Especialidades) |
 | B10 | Unidades (admin) | "Tipo de unidad" solo acepta números | Verificada: `UnitsPage.jsx:11` declara `type: "number"` → input numérico en `CrudPage.jsx:299`; el backend SÍ expone el catálogo `GET /unit-types` (`backend/app/modules/units/routes.py:16-20`). Debería ser select con lookup (como Edificios, `BuildingsPage.jsx:12-19`). **NO lo causó CP6b:** `git diff HEAD~1 HEAD` prueba que la versión anterior ya usaba `type: "number"`; el cambio solo borró la rama `buildings`/detalle/timeout | F2-2 (select del catálogo unitTypes) |
@@ -421,12 +428,11 @@ terminado un paso mientras sus bugs sigan abiertos.
 > F2-8b VERIFICADAS por el dueño — F2-8c DESCARTADA; F2-4, F2-1b, F2-2,
 > F2-5a, F2-5b, F2-5c, F2-6a, F2-6b, F2-7a y F2-7b hechas — verificación
 > pendiente; F2-9 HECHA — pendiente de verificar):**
-> 1. **Verificación por el dueño** de F2-9 (checklist del Login en
->    STATUS.md), F2-1b, F2-2 (incluida ronda 1), F2-5a, F2-5b, F2-5c,
->    F2-6a, F2-6b, F2-7a y F2-7b (checklists en STATUS.md; en la de
->    incidencias, **B7 con captura**; en F2-6a, **B1/B4 con captura**; en
->    F2-6b, **B5 con captura**; en F2-7b, **B6 con captura** — NO se
->    declara cerrado) → abrir PRs de las ramas hechas.
+> 1. **Verificación por el dueño** de F2-10a/b/c (checklists en STATUS.md)
+>    y de los checkpoints restantes sin verificación (F2-9, F2-1b, F2-2,
+>    F2-5a, F2-5b, F2-5c, F2-6a, F2-6b, F2-7a, F2-7b) → abrir PRs de las
+>    ramas hechas. **B1, B4, B5, B6 y B7 VERIFICADAS POR EL DUEÑO
+>    (2026-11-07)** — ya no quedan bugs con captura pendiente.
 > 2. **F2-5 COMPLETO pulido** (§8-bis: Cancelar del residente, mover la
 >    asignación al detalle, columna Unidad) cuando el dueño lo ordene.
 > 3. **docs/convenciones-frontend.md** (guía del kit para los demás,
@@ -2433,6 +2439,281 @@ requerido ✓ · Motivo "*" = requerido ✓ (tipo no está en el schema
 porque determina el endpoint; requerido por decisión de UI). Historial —
 "Filtrar por tipo" SIN "*" (no es requerido) ✓.
 
+## Sesión F2-11a: Indicadores solo para ADMIN y aterrizaje del TECNICO en Incidencias (2026-11-07)
+
+Corte solicitado por el dueño (entrega ~2 días). Rama indicada:
+`feature/refactor-tecnico-sin-dashboard` desde develop actualizado. Alcance
+RESPETADO: SOLO `frontend/src/config/routing.js` + docs. NO tocados:
+DashboardPage/dashboard.css (Dev 3), App.jsx, AppShell, kit, CSS,
+validations, backend, pantallas de otros módulos.
+
+**PASO 0 (verificación, solo lectura):**
+
+- (a) Estado previo: `ITEMS.dashboard.roles = [ADMIN, TECNICO]`
+  (routing.js:40), `RUTA_INICIAL[TECNICO] = "dashboard"` (:150) y
+  `GRUPOS[TECNICO]` Comunidad con "dashboard" (:170). Referencias TECNICO
+  a la pantalla dashboard en el frontend: SOLO esas tres líneas de la
+  config. AppShell no tiene enlaces duros (el menú sale de `groups`);
+  `CLAVE_PANTALLA.dashboard` existe pero ninguna pantalla de TECNICO
+  navega a esa clave; no hay `#/dashboard` hardcodeado en ningún .jsx.
+  DashboardPage NO tiene ramas por TECNICO (solo `user.rol === "ADMIN"`,
+  DashboardPage.jsx:68; el filtro "Técnico Asignado" del dashboard es
+  `isAdmin &&`, :398). Sus `onNavigate("incidents")/"employees"` van al
+  adaptador de App.jsx y la resolución por rol los guarda igual.
+- (b) **App.jsx SÍ resuelve la ruta no permitida sin pantalla en blanco**
+  (no se tocó): `active` exige que la ruta esté en los GRUPOS del rol
+  (App.jsx:96-99); si no, `shown = null` y el efecto (:112-114) navega a
+  `fallback.path` (= `RUTA_INICIAL[rol]`) con `replace: true`. Con esta
+  sesión, un TECNICO que escriba `#/dashboard` a mano (o tenga esa sesión
+  abierta) termina REDIRIGIDO a `#/incidencias`.
+- (c) Backend (solo lectura): TODOS los 6 endpoints de
+  `backend/app/modules/analytics/routes.py` usan
+  `@role_required("ADMIN", "TECNICO")` (`/dashboard`, `/incidencias`,
+  `/intervenciones`, `/inventario`, `/registros`, `/filtros`). Reportado,
+  sin tocar backend.
+- (d) Grupos/rutas del TECNICO tras el cambio: Personas = ["perfil"]
+  (`#/perfil`), Comunidad = ["incidencias", "insumos"] (`#/incidencias`,
+  `#/insumos`); aterrizaje `#/incidencias`.
+
+**Cambios (6 ítems del alcance):** `roles: [ADMIN]` en
+`ITEMS.dashboard`; `RUTA_INICIAL[TECNICO] = "incidencias"` (con comentario
+actualizado); `GRUPOS[TECNICO]` Comunidad SIN "dashboard";
+docs/convenciones-frontend.md §7 (aterrizaje ADMIN → dashboard;
+RESIDENTE/TECNICO → incidencias); docs/kit-ui-referencia.md §5 (línea de
+`RUTA_INICIAL`); plan §2.5 (decisión vigente) + esta sesión + §7-bis
+(B1/B4/B5/B6/B7 **VERIFICADAS POR EL DUEÑO** con captura, 2026-11-07)
++ §8-bis (nota de deuda
+DashboardPage/backend) + agenda (ítem 1 sin capturas pendientes);
+STATUS.md (bloque del checkpoint).
+
+**Nota de rama:** git SOLO LECTURA — no se creó la rama ni se resolvió la
+apertura de `origin/develop` (había `640a855..63c2cf4` pendiente de
+fetch en el dry-run de verificación). Los cambios quedan SIN commit en el
+árbol; si `63c2cf4` ya es la integración de F2-10c (probable), el árbol
+contiene lo mismo y el dueño crea la rama y commitea sobre ella (los
+cambios no commiteados se conservan al cambiar de rama).
+
+## Sesión F2-12b: modales de detalle y Modal del kit por convención (2026-11-07)
+
+Corte solicitado por el dueño. Rama indicada:
+`feature/refactor-modales-detalle` (git SOLO LECTURA aquí: NO se creó; el
+trabajo queda SIN commit en el working tree y se conserva al crearla).
+Alcance RESPETADO: SOLO `components/ui/ui.css`,
+`styles/users-ui.css` (declaraciones del Modal en conflicto),
+`utils/roles.js` (NUEVO), `features/users/AccountDetailModal.jsx` (solo el
+campo Rol) + docs. NO tocados: AppShell.jsx, shell.css, App.jsx,
+routing.js, api.js, backend, validations/, Dashboard/InterventionMaterials,
+los JSX del kit (Modal/DefinitionList/FormModal/ConfirmDialog).
+
+**PASO 0 (verificación, solo lectura):**
+
+- (a) En `users-ui.css` SOLO estas declaraciones chocan con `.ui-modal`
+  del kit: `.mg-modal` (:112) `border:1px solid #dce7e1`,
+  `border-radius:16px`, `background:white`,
+  `box-shadow:0 25px 90px #10271a33`, `color:var(--ui-text)` (#182b31) y
+  `.mg-modal::backdrop` (:113) `backdrop-filter:blur(3px)` + fondo
+  #162e2b66. Ancho/padding/max-height son IDÉNTICOS a los del kit
+  (min 660px/0/calc(100dvh−40px)); `.mg-modal-heading`/`.mg-icon-button`/
+  `.mg-modal-actions` no pisan propiedades del kit en lo esencial: el kit
+  las gana por especificidad (0,2,0) salvo el HOVER del botón de cierre
+  (empate (0,3,0), gana el legacy — pulido §8-bis).
+- (b) Consumidores por clase: `mg-modal` y `mg-modal-heading` SOLO en
+  `Modal.jsx` (:32/:43); `mg-icon-button` en `Modal.jsx:50` (cierre) y
+  `AppShell.jsx:91` (menú móvil) → NO se tocan; `mg-modal-actions` con
+  CERO consumidores JSX (ya lo reportaba STATUS.md — se borra en F2-11).
+  Modal lo montan (todos reciben CSS igual): CrudPage legacy (sin
+  montaje real: las 7 pantallas pasan `variant="ui"`), FormModal,
+  ConfirmDialog, IncidentsDetailModal, EspaciosPage (Detalle),
+  MisReservasPage (Detalle), AccountDetailModal, ResidentUnitsModal,
+  InsumoHistorialModal, CreateReservation (no usa Modal, solo dl),
+  DashboardPage drilldown (Dev 3), `#/ui`.
+- (c) Cascada confirmada: main.jsx importa App (19) ANTES de
+  index.css/tokens/base.css (20-22); App.jsx importa login.css/shell.css/
+  ui.css (vía barrel de components/ui, línea 27) y `users-ui.css` al
+  FINAL (28) → en empates (0,1,0) gana el legado (causa del radio 16px/
+  sombra/blur vistos en pantalla). `base.css` no rescate: `.mg-modal`
+  (0,1,0) gana por orden y `.app-shell :focus-visible` (0,2,0) por
+  especificidad (foco del shell = deuda F2-12a).
+- (d) `.ui-modal` ya cubría TODO lo eliminado del legado: radio
+  `--radius-md`, fondo `--surface`, borde `--line`, `box-shadow:none`,
+  `::backdrop[data-backdrop=true]` con ink 45% y SIN blur; lo único
+  rescatado al retirar el blur: los modales SIN `backdrop=true`
+  (drilldown del Dashboard) conservan su dim #162e2b66 (solo se quitó
+  el desenfoque), qué detallifique.
+- (e) Rol crudo SOLO en `AccountDetailModal.jsx:104` (`detail.rol`);
+  las COLUMNAS de tabla de Usuarios/Employees/Admins también lo pintan
+  crudo (`UsersPage.jsx:32` `{ name: "rol" }` ídem) → pulido §8-bis.
+
+**Cambios (4 ítems):**
+
+1. `ui.css` `.ui-dl-row`: `align-items: baseline` (dt 12px y dd 14px
+   comparten base — defecto 8) + columna de etiquetas con tope
+   `calc(var(--space-12) * 3)` (144px; antes `* 4` = 192px y el valor
+   arrancaban ~204px — defecto 9). "Anticipación mínima"/"Duración
+   máxima" caben (a 12px las palabras más largas miden <110px); <640px
+   sigue 1 columna sin cambio. Regla nueva acotada
+   `.ui-dl dd .ui-status { padding-block: 0 }` — ALTERNATIVA MÍNIMA
+   señalada por el dueño: sin ella el badge (21px de línea + 8px de
+   padding) dejaba la fila Estado ~3px más alta que las de texto; con
+   ella el dd mide lo mismo que una fila de texto y el baseline alinea
+   el glifo+texto del badge con la etiqueta. Afecta a TODOS los DL del
+   kit (Estado en Mis reservas/Espacios/Incidencias, políticas de
+   CreateReservation, demos de `#/ui`): consistente, retrocompatible
+   (CSS-only, sin props).
+2. `users-ui.css` `.mg-modal`/`.mg-modal::backdrop` (112-113): SOLO
+   fuera las declaraciones en conflicto (border #dce7e1, radius 16px,
+   background white, box-shadow, backdrop-filter blur) — defecto 11.
+   Gana `.ui-modal`: radio `--radius-md` (6px), fondo `--surface`,
+   borde `--line`, sin sombra, backdrop sin blur. Quedan ancho/padding/
+   max-height/color (idénticos o equivalentes) y el dim del ::backdrop
+   para modales sin `backdrop=true` (Dashboard no cambia su dim, solo
+   pierde el blur, radio y sombra). `.mg-modal-heading`/`
+   .mg-icon-button`/`.mg-modal-actions` INTACTOS (consumidores vivos).
+3. NUEVO `utils/roles.js`: `ROLE_LABELS = { ADMIN: "Administrador",
+   TECNICO: "Técnico", RESIDENTE: "Residente" }` + `roleLabel(rol)`
+   (fallback al código si no está en el mapa) — defecto 10.
+   `AccountDetailModal.jsx` lo usa en el campo Rol. AppShell (que tiene
+   su mapa duplicado en :14 con "Empleado") LO ADOPTA EN F2-12a.
+4. JSX del kit SIN tocar (Modal/DefinitionList/FormModal/ConfirmDialog).
+
+**Qué conserva (paridad):** estructura y datos de los modales, el footer
+"Cerrar", el foco al abrir/Esc-devuelve-foco (del `<dialog>` nativo), el
+cierre bloqueado en busy de FormModal, los payloads/endpoints de siempre.
+**Qué cambia (visual):** filas de dl alineadas por base, columna de
+etiquetas máx 144px, fila Estado de la altura de las de texto, rol
+legible ("Administrador/Técnico/Residente"), modal con radio 6px, sin
+sombra difusa y sin desenfoque de fondo.
+
+**Nota de rama:** git SOLO LECTURA — el dueño crea
+`feature/refactor-modales-detalle` desde el árbol actual (con F2-11a
+commiteada `0301846`); los cambios no commiteados se conservan al
+cambiar de rama. Commit sugerido: `style(ui): DefinitionList alineado
+por línea base, Modal por convención y rol legible (F2-12b)`.
+
+## Sesión F2-12a: shell por tokens, marca tipográfica, menú compacto y rol legible en tablas (2026-11-07)
+
+Rama indicada: `feature/refactor-shell` (sobre
+`feature/refactor-modales-detalle` con F2-12b commiteada `bfb3834`).
+Alcance RESPETADO: `components/AppShell.jsx`, `components/shell.css`,
+`styles/users-ui.css` (solo bloques del shell y muertos PROBADOS),
+`features/users/{UsersPage,EmployeesPage,AdminsPage}.jsx` (SOLO el render
+de la columna de rol) + docs. NO tocados: App.jsx, routing.js, api.js,
+backend, components/ui (JSX y CSS), validations/, DashboardPage/
+dashboard.css, InterventionMaterials, index.css, kit, breakpoint del
+drawer (760px, deuda F2-11, decisión 10).
+
+**PASO 0 (verificación, solo lectura) — resultado:**
+
+- (a) `AppShell.jsx` (100 líneas): contrato `{ user, groups, activePath,
+  onNavigate, onLogout, children}`; grupos por rol desde routing; botón
+  activo con `is-current` + `aria-current="page"`; drawer con `inert`
+  cuando cerrado, foco al primer control al abrir y de vuelta al botón de
+   menú (overlay, Esc, toggle); `ROLE_LABELS` local en :14 (mapa
+   duplicado con TECNICO = "Empleado"); botón "Cerrar sesión"
+  en :86; avatar de iniciales en :83; píldora de rol en :94; breakpoint
+  760 (`matchMedia`) en :12; skip link a `#main-content` en :58.
+- (b) Variables `--ui-*` de `users-ui.css:2` y consumidores con grep en
+  `frontend/src` completo: `--ui-accent` CERO consumidores; `--ui-text`
+  lo consume `.app-shell` (color, :2) y `.mg-modal` (:117) pero esta se
+  define el PROPIO valor local (autosuficiente); `--ui-muted` CERO;
+  `--ui-border` solo las reglas del shell (:4/:16/:23) que se
+  reemplazan. NINGUNA variable es consumida por `.mg-*` externos ni por
+  features/JSX y style inline → se conservan (no se borran, decisión 11) pero
+  apuntan a tokens (`--brand/--ink/--ink-2/--line`) desde shell.css.
+- (c) `.mg-avatar`: único consumidor JSX `AppShell.jsx:83`
+  (`.mg-avatar-square` solo CSS) → muerte probada al retirar el avatar.
+  `.shell-breadcrumb` y `.shell-active-dot`: CERO consumidores JSX (lo
+  decía §8; borradas junto con la regla móvil del breadcrumb).
+- (d) Consumidores de `.app-shell`/`.shell-content` fuera de AppShell:
+  CERO (Dashboard de Dev 3 usa sus propias clases `dash-*`;
+  `dashboard.css` sin `app-shell`; `dev/ui-guide.jsx` tampoco). La regla
+  de foco `.app-shell :focus-visible` solo la definía users-ui.css:143.
+- (e) Rol en tablas: las 3 columnas son `{ name: "rol", label: "Rol" }`
+  con CERO `render` (UsersPage.jsx:32, EmployeesPage.jsx:56,
+  AdminsPage.jsx:44); la búsqueda de `CrudPageUi.jsx:329-335` filtra con
+   `String(row[column.name])` — valor CRUDO, no el render → agregar
+   `render` NO afecta la búsqueda (el kit no tiene ordenamiento de tabla).
+- (f) Altura estimada del menú ADMIN a 1280×720 (tokens: barra
+  44px + margen 4px = 52px por ítem; encabezado de grupo ~40px; marca
+  ~88px; bloque de usuario ~129px): contenido del nav ≈ 740-780px vs
+  ~500px disponibles → scroll interno necesario a 720 (también
+  lo era con los valores legados ~800px+). "Gestión de reservas" queda
+  COMPLETO al final del scroll (nunca cortado a medias); sin flechas
+  nativas (thumb `thin` + `--line-control`).
+
+**Cambios:**
+
+1. `components/shell.css` reescrito y ahora ÚNICO CSS del shell (antes
+   solo el ítem activo): la regla `.app-shell` y TODOS los bloques
+   `.shell-*` salieron de `users-ui.css` hacia tokens — fondos `--bg`
+   (workspace) / `--surface` (sidebar), bordes 1px `--line`, tinta
+   `--ink/--ink-2/--ink-3`; marca tipográfica sin cuadro de color (glifo
+   `buildings` en `--brand` + "Condominio" font-display `--fs-20`/600 +
+   "Gestión de comunidad" `--fs-12` `--ink-3`; envuelve a 375px con
+   `flex-wrap`); ítem de navegación sin tinte verde ni 650 (hover
+   `--bg`; activo = color `--brand`, borde izquierdo 2px `--brand`,
+   peso 600, radio `--radius-sm`, `aria-current="page"` preservado);
+   menú compacto por tokens (`--row-h`, `--space-1/2/3/4`,
+   `--fs-12/--fs-13`) con scroll fino (`scrollbar-width: thin`,
+   `scrollbar-color: var(--line-control) transparent`); bloque de
+   usuario sin avatar (nombre `--fs-14` `--ink`, rol `--fs-12`
+   `--ink-3`) y "Cerrar sesión" = `Button kit quiet/sm/block` con solo
+   regla local de gap del icono; topbar SOLO móvil (desaparece la franja
+   vacía de escritorio; el botón de menú conserva
+   `aria-controls`/`aria-expanded` y mide 24px de glifo + 2×8px de
+   padding del `.mg-icon-button` heredado = objetivo 40px); sin
+   avatar/píldora/breadcrumb; pie `--fs-12` `--ink-3` (contraste del
+   token ≥ 4.6:1 sobre `--bg`); skip link `--surface`/`--brand`;
+   overlay del drawer por tokens (`color-mix(ink 45%)`, igual que los
+   modales del kit); `.shell-content` max-width 1560 INTACTO y padding
+   tokenizado `--space-10 --space-9` (38px 36px antes; +2px arriba,
+   repórtese visual).
+2. `AppShell.jsx`: sin `ROLE_LABELS` local — `roleLabel(user.rol)`
+   importado de `utils/roles.js` (TECNICO pasa de "Empleado" a "Técnico",
+   corrigiendo el mapa duplicado); sin avatar de iniciales ni
+   píldora de rol; el `<header>` (topbar) SOLO se renderiza en móvil
+   (`isMobile`, mismo `matchMedia(:12)`), el escritorio se queda sin
+   franja; "Cerrar sesión" es el `Button` del kit; contrato intacto.
+4. `users-ui.css`: borradas las reglas del shell reemplazadas
+   (`shell-*` incluida la píldora, el breadcrumb y el `.app-shell` de
+   hex) y las MUERTAS probadas por el PASO 0 + rediseño:
+   `.shell-active-dot`, `.shell-breadcrumb` (+ regla móvil),
+   `.shell-role` (+"span interno"), `.mg-avatar`/`.mg-avatar-square`
+   (cero consumidores). La regla de foco quedó SOLO con
+   `.mg-modal :focus-visible` (3px legacy; lo gana `ui.css:904` y se
+   revisa en F2-11 — decisión 8). `.mg-modal button { font-weight: 600 }`
+     quedó intacto y sin la parte `.app-shell button` (dejarla habría
+     puesto peso 600 sobre los Button del kit del shell por orden de
+     carga: users-ui.css es el ÚLTIMO stylesheet). Media queries:
+   solo quedan las reglas `.mg-*` de pantalla.
+5. Roles en tablas (decisión 12): en las 3 pantallas la columna "Rol"
+   usa `render: (row) => roleLabel(row.rol)` con el `name: "rol"`
+   intacto: la búsqueda sigue leyendo el valor crudo (el kit no tiene
+   ordenamiento de tabla) → "Administrador/Técnico/Residente" en
+   pantalla, sin cambios de comportamiento.
+
+**Paridad (conserva):** grupos por rol, navegación por hash,
+`aria-current`, drawer con `inert`/foco de vuelta/skip link ("Ir al
+contenido"), cerrar sesión, aterrizaje por rol (routing sin cambios).
+**Cambia (decidido):** fondos y todos los valores por tokens; marca
+tipográfica (sin cuadro verde ni radio 12); ítem activo sin tinte ni
+peso 650; menú compacto con scroll fino; topbar solo móvil; usuario sin
+avatar ni píldora de rol y rol "Técnico" correcto; "Cerrar sesión" con
+aspecto exacto del kit; pie legible (`--fs-12 --ink-3`); foco por anillo
+2px del kit desde el skip link; rol legible en las 3 tablas.
+
+**Nota de rama:** el dueño crea `feature/refactor-shell` (ya con F2-12b
+commiteada `bfb3834`); trabajo SIN commit al cierre de esta sesión.
+Commit sugerido: `style(shell): shell por tokens, marca tipográfica,
+menú compacto y rol legible en tablas (F2-12a)`. NO se declara nada
+cerrado sin verificación del dueño.
+
+Reportes a §8-bis añadidos: anchuras px heredadas del sidebar
+(246/220/250) y el `top: -100px` del skip link sin token (posición,
+excepción documentada en shell.css). El pulido del hover verde de
+`mg-icon-button` (F2-12b) NO se activa aquí: el shell sigue consumiendo
+`mg-icon-button` en el botón de menú móvil (queda para F2-11).
+
 ## 8. Pendientes y hallazgos abiertos
 **Producto de Dev 1:**
 - [x] Verificación final de CP6b: guía `#/ui` — completada por el dueño y
@@ -2452,8 +2733,11 @@ porque determina el endpoint; requerido por decisión de UI). Historial —
       consumen el MISMO endpoint que tenía el perfil: nada se perdió.
 - [ ] Drawer del shell sigue con breakpoint 760px (CSS legado); al consolidar
       AppShell final pasarlo a la convención (640px).
-- [ ] ⭐ Paginación (§2.13): decidir UI (pager + DataTable) al migrar
-      listados; el backend no pagina hoy.
+- [x] **Paginación (§2.13): DECIDIDA en F2-13a** — paginación EN EL CLIENTE
+      (hook `hooks/usePagination.js` + `components/ui/Pagination.jsx`);
+      integrada en `CrudPageUi` (las 7 pantallas del modo ui heredan sin
+      cambios). La paginación en SERVIDOR queda como deuda documentada en
+      §8-bis (feature futura del backend).
 
 **Pruebas NO ejecutadas** (los arneses se borraron en CP6b; probar en uso
 real a medida que se migren pantallas):
@@ -2481,16 +2765,19 @@ real a medida que se migren pantallas):
       `.timeline*` (header, item, body), `.priority-badge`, `.status-*`
       (ASIGNADA, CANCELADA, CERRADA, EN_ESPERA, EN_PROCESO, EN_REVISION,
       RECHAZADA, RECIBIDA, RESUELTA), `.login-container`, `.login-form`;
-      de `users-ui.css`: `.shell-breadcrumb`, `.shell-active-dot`,
-      `.mg-stats`, `.mg-stat-icon`, `.mg-identity`, `.mg-you`, `.mg-tag`,
+      de `users-ui.css`: `.mg-stats`, `.mg-stat-icon`, `.mg-identity`,
+      `.mg-you`, `.mg-tag`,
       `.mg-tags`, `.mg-description`, `.mg-required`,
       `.mg-specialty-picker` (+ `is-selected`), `.mg-delete-button`,
       `.mg-delete-summary`, `.mg-pagination`, `.mg-bottom-note`,
-      `.mg-spinner`, `.mg-avatar-square`; **nuevo tras F2-4** (el perfil ya
+      `.mg-spinner`; **nuevo tras F2-4** (el perfil ya
       no consume ninguna): `.resident-dashboard-grid`,
       `.resident-profile-card`, `.resident-units-card`,
       `.resident-history-card`, `.resident-card-heading`,
-      `.resident-empty-note`, `.resident-form-actions`. (`.tabular-nums` de
+      `.resident-empty-note`, `.resident-form-actions`. *(F2-12a ya
+      eliminó del CSS: `.shell-breadcrumb`, `.shell-active-dot`,
+      `.shell-role`, `.mg-avatar`, `.mg-avatar-square` — muerte probada
+      con grep y rediseño.)* (`.tabular-nums` de
       base.css no
       tiene consumidores como CLASE, pero el valor CSS
       `font-variant-numeric: tabular-nums` sí se usa en ui.css: decidir en la
@@ -2665,6 +2952,15 @@ agenda cuando el dueño lo ordene.
   queda resuelto para la próxima ronda de estilo de InterventionMaterials
   (F2-10c/F2-11).)*
 
+- [DashboardPage (Dev 3)] — **sin ramas por TECNICO** (el componente solo
+  distingue `user.rol === "ADMIN"`, DashboardPage.jsx:68): al retirarle la
+  pantalla al TECNICO (F2-11a) no pierde nada de su código. El backend
+  `/analytics/*` SÍ admite TECNICO (`@role_required("ADMIN", "TECNICO")`
+  en los 6 endpoints de analytics/routes.py): si el equipo quiere volver a
+  darle el dashboard al técnico, es deuda de BACKEND (restringir
+  /analytics a ADMIN) + una línea de routing, no del componente —
+  alcance: backend + routing.
+
 - [MaintenancePage] — la descripción de la columna Insumo era
   `.mg-description` (atenuada); el kit no tiene clase de texto
   secundario para celdas → quedó texto normal con un `<span display:
@@ -2683,8 +2979,30 @@ agenda cuando el dueño lo ordene.
   alcance: pantalla.
 - [MaintenancePage] — busca por nombre/descripción EXACTA del legado
   (`buscar` del backend, sin precisar si cubre sintilde/caso): probar
-  "tubería"/"TUBERIA" en la verificación y reportar si el backend es
-  sensible a tildes/caso — alcance: backend (solo reporte).
+   "tubería"/"TUBERIA" en la verificación y reportar si el backend es
+   sensible a tildes/caso — alcance: backend (solo reporte).
+
+- [Usuarios/Empleados/Administradores (F2-12b)] — el ROL crudo en la
+  COLUMNA de tabla (`UsersPage.jsx:32` `{ name: "rol" }`; ídem
+  Employees/Admins): `utils/roles.js` → `render` con `roleLabel` en las
+  3 columnas — alcance: pantalla. — **RESUELTO en F2-12a** (búsqueda/la
+  lectura de datos sigue sobre el valor crudo; sin orden de tabla).
+- [Kit/Modal (F2-12b)] — el HOVER del botón de cierre del modal usa los
+  verdes legacy (`users-ui.css:83` gana el empate (0,3,0) sobre
+  `.ui-modal .ui-modal-close:hover`): se corregía si el shell dejaba de
+  consumir `mg-icon-button`, pero F2-12a lo sigue usando en el botón de
+  menú móvil → queda para F2-11 (o subiendo especificidad del hover
+  del kit) — alcance: kit/limpieza (F2-11).
+- [Kit (F2-12b)] — `.mg-modal-actions` (users-ui.css) sin CERO
+  consumidores JSX (re-verificado con grep; ya lo reportaba el cierre de
+  F2-10c) → borrar el bloque en la limpieza F2-11 — alcance: limpieza.
+- [Backend/F2-13a] — **paginación en SERVIDOR** (deuda): ningún endpoint
+  del backend pagina (los `LIMIT` son `LIMIT 1`; los schemas de query solo
+  filtran); F2-13a resolvió la UI con paginación EN EL CLIENTE sobre las
+  listas ya filtradas. Cuando el backend la implemente (page/pageSize en
+  los listados grandes), evaluarse hacer que `usePagination`/`CrudPageUi`
+  la consuman en vez de cortar en cliente — alcance: backend + kit
+  (futuro).
 
 ## 8-ter. Plantilla de migración de pantalla
 
@@ -2768,6 +3086,164 @@ cualquier pantalla.
 - **Nuevas secciones del plan:** §8-bis "Pulido pendiente" (lista vacía,
   formato pantalla — idea — alcance kit/pantalla) y §8-ter "Plantilla de
   migración de pantalla" (checklist canónico por paso F2-x).
+
+## Sesión F2-13a: paginación en el cliente (rama feature/paginacion)
+
+Rama `feature/paginacion` NACIDA de `feature/refactor-shell` (con F2-12a
+commiteado `15e2365` y F2-12b `bfb3834`). Trabajo SIN commit. Origen: el
+reporte de análisis llegaba con fragmentos ilegibles — la versión corregida
+verificada por lectura/git PREVALECE, como en F2-5. PASO 0 (solo lectura,
+hecho): `CrudPageUi.jsx` — `filtered` en :329-335 (case-insensitive sobre
+`columns`), `<DataTable rows={filtered}>` :614-625, búsqueda `useState`
+(:301), `reloadSignal` → `reload()` con datos conservados (:285-290), meta
+"N registros" con `filtered.length` (:549-552); `DataTable.jsx` NO pagina
+(marco `.ui-table-shell` ui.css:932; <640px el marco se retira y las filas
+se apilan en tarjetas :1037-1097); adyacencias `.ui-page-header +
+.ui-table-shell`/`.ui-filterbar + .ui-table-shell` → `--space-4`
+(ui.css:963-974): un `<Pagination>` hermano DESPUÉS del shell no rompe
+nada (el pager lleva su propio margin-top `--space-4`); barrel
+`components/ui/index.js` con named exports (sin Icon/ErrorBoundary);
+las demos viven en `dev/ui-guide.jsx` (`UiGuide` :692-705); hooks con
+export nombrado y JSDoc (CrudPageUi importa por archivo, no por barrel).
+**Hallazgo del
+seed:** Unidades = 12 filas (6 códigos × 2 torres) → 2 páginas;
+Políticas = 6 POR ESPACIO (3 espacios × 2 torres × 6 tipos de evento =
+36 en TODA la BD, pero la pantalla consulta /common-spaces/:id/policies);
+Usuarios ≈ 8, Edificios 2, Especialidades ~5, Empleados/Administradores
+más chicos → sin pager (el componente no renderiza con pageCount ≤ 1).
+
+**Lo hecho:**
+- **`hooks/usePagination.js` (NUEVO):** `usePagination(rows, { pageSize =
+  10, resetKey })` → `{ pageRows, page, pageCount, total, from, to,
+  setPage, goPrev, goNext, hasPrev, hasNext }`. Estado de página en el
+  hook; se ACOTA (clamp) a [1, pageCount] EN CADA RENDER con el patrón de
+  estado derivado (setState en fase de render, sin efectos sobre la
+  identidad de `rows`): si la lista encoge (búsqueda, eliminar la última
+  fila de la última página), cae a la página válida previa — nunca
+  "41–50 de 38" ni pager sobre 0 filas. Vuelve a 1 SOLO cuando cambia
+  `resetKey` (la búsqueda de CrudPageUi); `reload()` (Actualizar) y
+  `reloadSignal` (refresco externo de las 3 pantallas de usuarios) NO la
+  cambian. `pageSize` acotado a ≥1. Con 0 filas: pageCount 1, from/to 0.
+- **`components/ui/Pagination.jsx` (NUEVO, exportado en el barrel):**
+  props `{ page, pageCount, total, from, to, onPrev, onNext, label,
+  className }`; **renderiza NADA si pageCount <= 1** (paridad: sin pager
+  en listados cortos). `<nav aria-label={label || "Paginación"}>` con
+  tabIndex=-1: texto "Mostrando {from}–{to} de {total}"
+  (`aria-live="polite"`, tabular-nums), texto "Página {page} de
+  {pageCount}" y dos `Button variant="quiet" size="sm"` — "Anterior"
+  (`aria-label="Página anterior"`) y "Siguiente" (`aria-label="Página
+  siguiente"`), disabled en los extremos. **Foco (a11y AA):** tras
+  pulsar, el foco se queda en el botón; si el botón quedó deshabilitado
+  (la página llegó al extremo), el navegador suelta el foco y un efecto lo
+  recoloca en el propio `<nav>` (tabindex=-1 + anillo visible `.ui-
+  pagination:focus`, 2px --focus-ring) para no perder el teclado. Sin
+  números de página ni selector de tamaño.
+- **`ui.css` (único CSS del kit):** bloque aditivo `.ui-pagination` —
+  fila con `justify-content: space-between`, gap `--space-3`, margin-top
+  `--space-4` (NUNCA 0px sobre el marco), texto `--fs-13/--ink-2`,
+  tabular-nums en los números; <640px apilado en columna (texto centrado,
+  botones a `flex: 1` con target ≥ --control-h/44px). Solo tokens; sin
+  sombras/gradientes/emojis; radios ≤8px.
+- **`CrudPageUi.jsx`:** prop ADITIVA `pageSize = 10`;
+  `const pag = usePagination(filtered, { pageSize, resetKey: search })`;
+  la tabla recibe `pag.pageRows`; `<Pagination ... label={`Paginación de
+  ${title.toLowerCase()}`} />` como HERMANO inmediato del
+  `<DataTable/>` (fuera del `.ui-table-shell`). La meta "N registros"
+  sigue con `filtered.length` (total filtrado, como hoy). Los 7
+  consumidores (Usuarios, Empleados, Administradores, Especialidades,
+  Edificios, Unidades, Políticas) heredan SIN cambios en su código;
+  sin páginas (≤10 filas) NO hay pager.
+- **Demo `dev/ui-guide.jsx`:** sección "Pagination + usePagination" con
+  30 filas de ejemplo (página 1 de 3), registrada después de
+  DataTableSection; import por barrel + `hooks/usePagination`.
+- **NO tocado:** DataTable.jsx (API intacta: recibe filas ya cortadas),
+  CrudPage legacy, el hash/URL, backend, api.js, routes.js, routing.js,
+  App.jsx, las otras pantallas de composición (F2-13b), Dashboard,
+  InterventionMaterials, shell, `hooks/index.js` (los consumidores
+  importan por archivo, convención vigente).
+
+**Paridad:** sin pasar nada nuevo todo queda idéntico; los listados
+del modo ui ganan pager SOLO al superar 10 filas; búsqueda (resetKey),
+reload, reloadSignal, mutaciones y estados de carga/error/vacío intactos;
+la última página corta lo que queda (con 36 filas: "31–36 de 36").
+
+**Pendientes abiertos:** (1) pulido §8-bis: paginación en SERVIDOR como
+feature futura del backend (deuda registrada); (2) verificación del dueño
+(checklist en STATUS.md). NO se declara nada cerrado.
+
+## Sesión F2-13b: paginación en las pantallas de composición + ajuste visual del pager (rama feature/paginacion-pantallas)
+
+Rama indicada `feature/paginacion-pantallas` SOBRE `feature/paginacion`
+(F2-13a commiteado `f0ab733`); al cerrar la sesión el working tree seguía
+EN `feature/paginacion` (git SOLO LECTURA aquí: el dueño crea la rama y
+commitea los cambios SIN commit). PASO 0 verificado por lectura (resumen
+por pantalla — variable del total / resetKey / filas del seed):
+
+| Pantalla | Filas YA filtradas al DataTable | resetKey usado | Filas del seed | Pager |
+|---|---|---|---|---|
+| IncidentsPage | `filtradas` (:134-140, filtro estado+búsqueda en cliente) | `${busqueda}|${estadoFiltro}` | 41 (seed_demo.sql:255-317) | 5 páginas |
+| GestionReservasPage | `rows` (filtros de SERVIDOR) | `${espacio}|${estado}|${fecha}|${residente}` | 26 (seed_demo:851-886) | 3 páginas |
+| MisReservasPage | `rows` (sin filtros) | sin resetKey | 9/9/8 por residente | sin pager |
+| ResidentsPage | `visibles` (dedupe :118-131 → filtro búsqueda) | `search` | 4 deduplicadas (6 filas /residents) | sin pager |
+| EspaciosPage | `visibles` (filtro búsqueda; el hash `?politicas=` es subvista, no filtro de filas) | `search` | 6 (seed.sql:713-742) | sin pager |
+| MaintenancePage | `items` (filtros de SERVIDOR buscar/categoria/bajo_stock) | `claveFiltros` (`busquedaAplicada|categoria|bajoStock`) | 8 (seed_demo:193-203) | sin pager |
+| ResidentHome "Mis unidades" | `unidades` (sin filtros) | sin resetKey | 12 unidades posibles en la tabla | 2 páginas posibles |
+
+**Lo hecho:**
+- **Ajuste visual del pager (kit, SOLO `ui.css`, retrocompatible):**
+  `.ui-pagination` con `padding-inline: var(--space-2)` (CONSTANTE, no solo
+  en foco: al aterrizar el foco no se mueve el contenido) y
+  `.ui-pagination:focus` con `outline-offset: var(--space-1)` — el anillo
+  de 2px del foco programático del `<nav>` (extremos del pager) ya no toca
+  el texto ni los botones. El gap `--space-2` entre Anterior, "Página X de
+  Y" y Siguiente YA EXISTÍA en `.ui-pagination-botones` (se conserva) y el
+  apilado <640px queda intacto. Behavior del foco sin cambio
+  (Pagination.jsx/usePagination.js SIN tocar).
+- **Por pantalla (patrón único, como CrudPageUi :352/:633/:643):**
+  `const pag = usePagination(filas, { resetKey })` donde `filas` es la
+  lista YA filtrada/deduplicada/ordenada, `<DataTable rows={pag.pageRows}/>`
+  y `<Pagination/>` como HERMANO inmediato DESPUÉS del DataTable con label
+  específico ("Paginación de incidencias", "…de gestión de reservas",
+  "…de mis reservas", "…de residentes", "…de espacios comunes", "…de
+  insumos", "…de mis unidades"). Con ≤10 filas el pager NO se renderiza
+  (Pagination, :50-52). `pageSize` 10 (default) en TODAS.
+- **Conteos/estados con el TOTAL (decisión 3), sin tocarlos:** ya usaban
+  totales, nunca la página — IncidentsPage (`incidents.length`/`abiertas`,
+  :128-132, y EmptyState con `hayIncidencias`), GestionReservas
+  (`rows.length`/`pendientes` :181-187; EmptyState decide por
+  `hayFiltros = consulta !== ""`), MisReservas (`rows.length` :129-131),
+  ResidentsPage (meta con `residentes.length` dedup, EmptyState con
+  `sinCoincidencia`), EspaciosPage (meta con `visibles.length`), Maintenance
+  (`items.length`/`conStockBajo`; EmptyState por `hayFiltros`), ResidentHome
+  (`unidades.length`).
+- **Acciones verificadas:** asignar técnico y crear (IncidentsPage,
+  reload() conserva página), aprobar/rechazar/cancelar con `await reload()`
+  (Gestión), cancelar/crear (Mis reservas), toggle/vincular/crear
+  (Residentes), crear/editar (Espacios), editar/movimiento (Insumos),
+  guardar perfil (ResidentHome) — todas conservan la página; si la fila
+  desaparece del filtro, el clamp del hook acota a la página válida.
+  El resetKey NO incluye el contenido de los datos.
+- **Sembrados por hash:** `?estado=` (Incidencias/Gestión) y
+  `?bajo_stock=true` (Insumos) entran al resetKey → la pantalla arranca (y
+  re-sembra) en página 1; NUNCA se escribe la página en el hash.
+- **ResidentHome integrado** (decisión 8 del prompt): es DataTable con
+  ≥10 filas posibles (12 unidades del seed) y el cambio cabe en ≤5
+  ediciones (imports + pag + rows + pager) dentro del `<Section title="Mis
+  unidades">`.
+- **NO tocado:** Pagination.jsx / usePagination.js (API), DataTable,
+  CrudPageUi, kit JSX, backend, api.js, routes.js, routing.js, App.jsx,
+  Dashboard, InterventionMaterials, modales, filtros de servidor,
+  contratos de pantalla (props/rutas/endpoints). Documentación pendiente
+  de commit de F2-13a (plan §Sesión F2-13a, convenciones §3/§9,
+  kit-ui-referencia) ya estaba en el working tree de esta sesión.
+
+**Paridad:** conservan filtros, búsqueda, endpoints, sembrados por hash,
+acciones, modales y conteos (SIEMPRE con el total); cambian las filas de
+a 10 con pager cuando hay más de 10, y el pager gana gap + foco con respiro.
+
+**Pendientes abiertos:** verificación del dueño (checklist en STATUS.md);
+pulido §8-bis sin cambios. NO se declara nada cerrado. Commit sugerido:
+`feat(ui): paginación en pantallas de composición y ajuste visual del pager (F2-13b)`.
 
 ## 9. Prompt de arranque
 

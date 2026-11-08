@@ -13,7 +13,10 @@ frontend/src/
 ├── main.jsx                Fuentes @fontsource + tokens/base
 ├── config/routing.js       ÚNICA config de rutas/roles/grupos (ver §7)
 ├── components/
-│   ├── AppShell.jsx        Shell Bitácora
+│   ├── AppShell.jsx        Shell Bitácora (F2-12a: estilos por tokens
+│   │                       en `components/shell.css`; topbar solo móvil;
+│   │                       rol de `utils/roles.js`)
+│   ├── shell.css           Único CSS del shell (100 % tokens)
 │   ├── CrudPage.jsx        CRUD genérico legacy (pantallas pendientes)
 │   └── ui/                 Kit: componentes + ui.css (único CSS del kit)
 ├── hooks/                  useHashRoute, useQuery, useMutation, useConfirm
@@ -52,6 +55,13 @@ Referencia completa por componente (props/ejemplos/a11y):
 - `reload()` conserva datos previos (la lista no titila a vacío).
 - La mutación va con `useMutation` (dedupe/doble envío) y el listado se
   refresca con `reload()` + Toast de éxito.
+- **Listados largos (F2-13a):** paginación EN EL CLIENTE con
+  `usePagination(rows, { pageSize: 10, resetKey })` + `Pagination` del
+  kit (hermano del `<DataTable/>`); con ≤ 1 página el pager NO se
+  renderiza. La página vuelve a 1 solo al cambiar `resetKey`
+  (búsqueda/filtros); un `reload()` la conserva. Alternativa aceptada en
+  composición a mano: `pag.pageRows` a la tabla + `<Pagination/>`
+  debajo (patrón de la demo `#/ui`).
 
 ## 4. Formularios, errores y éxito (convención §2.18)
 
@@ -87,6 +97,11 @@ Referencia completa por componente (props/ejemplos/a11y):
 - Un solo `h1` por pantalla (PageHeader); secciones con `Section` (`h2`).
 - Anillo de foco 2px (`--focus-ring`); navegación por teclado en todos los
   menús/modales (Esc cierra y devuelve el foco).
+- Shell del AppShell: skip link "Ir al contenido" (`#main-content`);
+  drawer ≤760px (deuda F2-11: convención sería 640px) con `inert`,
+  overlay, foco al primer ítem al abrir y de vuelta al botón de menú al
+  cerrar; ningún estilo de foco propio del shell (todo el anillo es
+  función del kit y de base.css; F2-12a retiró el 3px verde heredado).
 - Contraste WCAG AA estricto: 4.5:1 texto, 3:1 bordes de controles y
   glifos — verificación con `frontend/scripts/check-contrast.mjs`.
 - `role="alert"` solo en errores (Alert danger / ErrorState); avisos
@@ -97,8 +112,9 @@ Referencia completa por componente (props/ejemplos/a11y):
 ## 7. Registro de pantalla en `config/routing.js`
 
 ITEMS → GRUPOS (ver pasos y ejemplo en `docs/kit-ui-referencia.md` §5).
-Aterrizaje por rol fijado: ADMIN/TECNICO → `#/dashboard`, RESIDENTE →
-`#/incidencias`. Las pantallas de otros devs navegan con
+Aterrizaje por rol fijado: ADMIN → `#/dashboard`, RESIDENTE y TECNICO →
+`#/incidencias` (F2-11a: Indicadores solo para ADMIN; el hash `#/dashboard`
+con sesión TECNICO cae a la pantalla por defecto del rol, nunca en blanco). Las pantallas de otros devs navegan con
 `onNavigate(clave)` (adaptador legado) y se agregan a `CLAVE_PANTALLA`
 solo si su clave no coincide con el id.
 
@@ -142,11 +158,27 @@ solo si su clave no coincide con el id.
 - **Errores y éxito:** error de una acción de modal DENTRO del modal
   (FormModal: Alert danger con foco/scroll); éxito SIEMPRE por Toast del
   padre; confirmaciones con `useConfirm` — cero `window.confirm`.
+- **Rol legible (F2-12b):** el rol JAMÁS se muestra como código crudo
+  (ADMIN/TECNICO/RESIDENTE); usar `roleLabel(rol)` de `utils/roles.js`
+  (fuente única de las etiquetas "Administrador/Técnico/Residente").
 - **Formularios inline (perfil y similares):** `Section` + `Field`,
   error de la acción en `Alert` danger al nivel de la sección, éxito en
   `Toast` (sin `notice` de página).
 
 ## 9. Registro por pantalla migrada (una línea cada una)
+
+- **Shell (`AppShell` + `shell.css`)** — F2-12a: estilos 100 % tokens
+  (fondos `--bg`/`--surface`, bordes `--line`, tinta `--ink-*`); marca
+  tipográfica SIN cuadro de color (glifo `buildings` en `--brand`);
+  ítem activo sin tinte (color `--brand` + borde izq. 2px + peso 600);
+  topbar SOLO móvil (solo botón de menú de 40px); bloque de usuario sin
+  avatar/píldora y "Cerrar sesión" como `Button quiet sm block` del
+  kit; pie legible (`--fs-12 --ink-3`); foco 2px del kit (retirado el
+  3px heredado); rol legible vía `roleLabel` de `utils/roles.js` en el
+  shell y en las columnas de Usuarios/Empleados/Administradores (la
+  búsqueda sigue sobre el valor crudo); CSS del shell consolidado en
+  `shell.css` (users-ui.css solo conserva `.mg-*` de pantalla);
+  breakpoint 760 del drawer queda como deuda F2-11.
 
 (ninguna todavía — se agrega una línea al cerrar cada migración:
 
@@ -313,4 +345,30 @@ solo si su clave no coincide con el id.
   (`formatQuantity`/`formatQuantityUnit`, misma lógica exacta); SIN busy
   global de pantalla (cada modal gestiona el suyo) y sin `.mg-*` en la
   página; `quantity.js` sirve a página y modales, InterventionMaterials
-  conserva su copia privada (intacto).
+   conserva su copia privada (intacto).
+- **Modales de detalle de cuentas (`AccountDetailModal`)** — F2-12b:
+  kit por convención sin tocar los JSX (DefinitionList con filas
+  alineadas por LÍNEA BASE y columna de etiquetas tope 144px; fila
+  Estado con StatusBadge a la misma altura que las de texto; Modal con
+  radio `--radius-md`, `--surface`, borde `--line`, SIN sombra y SIN
+  backdrop desenfocado — se retiraron solo las declaraciones que
+  chocaban del legado) y rol legible vía `utils/roles.js` (`roleLabel`);
+  el rol crudo de las COLUMNAS de tabla de las 3 pantallas queda como
+  pulido (§8-bis del plan).
+- **Kit (`usePagination` + `Pagination`)** — F2-13a: paginación EN EL
+  CLIENTE integrada en `CrudPageUi` (prop aditiva `pageSize = 10`); los 7
+  listados del modo ui heredan el pager solo al superar 10 filas (con ≤ 1
+  página no se renderiza); la página se acota al encojer la lista, vuelve
+  a 1 solo con la búsqueda (`resetKey`) y el foco no se pierde en los
+  extremos (pasa al `<nav>`); paginación en SERVIDOR queda como deuda de
+  backend (§8-bis del plan).
+- **Composición a mano (Incidentes, Gestión/Mis reservas, Residentes,
+  Espacios, Insumos, "Mis unidades")** — F2-13b: `const pag =
+  usePagination(filasYaFiltradas, { resetKey: serializadosDeFiltros })` +
+  `<DataTable rows={pag.pageRows}/>` y `<Pagination label="Paginación de <pantalla>"/>`
+  como hermano del DataTable; conteos/EmptyState SIEMPRE con el total
+  (`pag.total` o la lista completa, nunca `pageRows.length`); acciones y
+  `reload()` conservan la página (el clamp acota); los sembrados por hash
+  (`?estado=`, `?bajo_stock=`) entran al resetKey sin escribir el pager en
+  la URL; pager base con `padding-inline` y foco con `outline-offset`
+  (respiro del anillo).

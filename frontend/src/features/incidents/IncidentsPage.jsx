@@ -29,6 +29,7 @@ import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useHashRoute } from "../../hooks/useHashRoute";
 import { useQuery } from "../../hooks/useQuery";
+import { usePagination } from "../../hooks/usePagination";
 import { formatDate } from "../../utils/format";
 import {
   Button,
@@ -36,6 +37,7 @@ import {
   Field,
   FilterBar,
   PageHeader,
+  Pagination,
   RowActions,
   SearchInput,
   Select,
@@ -174,6 +176,12 @@ export default function IncidentsPage({ user }) {
       ))
   );
 
+  /* Paginación EN EL CLIENTE (F2-13b): filas YA filtradas; el resetKey
+   * es la búsqueda + el filtro de estado serializados (el sembrado del
+   * hash ?estado= también lo cambia → vuelve a la página 1). La meta del
+   * PageHeader y el EmptyState siguen usando `incidents` (total). */
+  const pag = usePagination(filtradas, { resetKey: `${busqueda}|${estadoFiltro}` });
+
   const columns = [
     { key: "titulo", header: "Título" },
     { key: "tipo", header: "Tipo", render: (row) => row.tipo_incidencia || "Sin tipo" },
@@ -264,7 +272,7 @@ export default function IncidentsPage({ user }) {
     </FilterBar>
     <DataTable
       columns={columns}
-      rows={filtradas}
+      rows={pag.pageRows}
       rowKey={(row) => row.id_incidencia}
       caption={`Listado de ${titulo.toLowerCase()}`}
       loading={loading}
@@ -277,6 +285,16 @@ export default function IncidentsPage({ user }) {
       emptyAction={!loading && hayIncidencias
         ? <Button variant="quiet" onClick={limpiarFiltros}>Limpiar filtros</Button>
         : (isResident ? triggerNuevo : undefined)}
+    />
+    <Pagination
+      page={pag.page}
+      pageCount={pag.pageCount}
+      total={pag.total}
+      from={pag.from}
+      to={pag.to}
+      onPrev={pag.goPrev}
+      onNext={pag.goNext}
+      label="Paginación de incidencias"
     />
     {showCreate && (
       <IncidentsCreateModal

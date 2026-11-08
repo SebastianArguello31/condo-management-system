@@ -1,36 +1,11 @@
 /* Base de navegación y pantallas de personas. Los estilos de los otros módulos se conservan. */
-.app-shell { --ui-accent: #186553; --ui-text: #182b31; --ui-muted: #65767d; --ui-border: #e3e9e8; color: var(--ui-text); background: #f5f7f7; min-height: 100vh; } /* fuentes heredan de base.css (tokens) */
-.app-shell button, .mg-modal button { font-family: inherit; font-weight: 600; }
-.shell-sidebar { width: 246px; position: fixed; inset: 0 auto 0 0; background: white; border-right: 1px solid var(--ui-border); display: flex; flex-direction: column; z-index: 30; }
-.shell-brand { display: flex; align-items: center; gap: 12px; padding: 33px 25px 29px; }
-.shell-brand-icon { background: #186553; color: white; border-radius: 12px; width: 43px; height: 43px; display: grid; place-items: center; }
-.shell-brand strong { font-size: 20px; letter-spacing: -.5px; }
-.shell-brand small { display: block; color: #7c898d; font-size: 11px; margin-top: 3px; }
-nav.shell-navigation { display: block; padding: 3px 15px; flex: 1; overflow-y: auto; margin: 0; }
-.shell-nav-group { margin-bottom: 29px; }
-.shell-nav-group > p { color: #8a989d; font-size: 10px; font-weight: 700; letter-spacing: 1.7px; margin: 13px 14px; }
-.shell-nav-group > button { display: flex; align-items: center; width: 100%; min-height: 45px; gap: 12px; margin: 5px 0; padding: 12px 14px; color: #66747b; background: transparent; border-radius: 8px; text-align: left; font-size: 13px; font-weight: 500; }
-.shell-nav-group > button:hover { background: #f4f7f6; }
-.shell-nav-group > button.is-current { color: #16634f; background: #e9f3ef; font-weight: 650; }
-.shell-active-dot { width: 6px; height: 6px; background: #25886b; border-radius: 50%; margin-left: auto; }
-.shell-account { padding: 19px; border-top: 1px solid var(--ui-border); }
-.shell-account-info { display: flex; gap: 10px; align-items: center; }
-.shell-account-info > div { min-width: 0; }
-.shell-account-info strong { font-size: 12px; display: block; overflow-wrap: anywhere; }
-.shell-account-info small { font-size: 11px; color: #7b898f; }
-.shell-account > button { display: flex; gap: 10px; align-items: center; color: #697c81; background: #f5f7f7; width: 100%; justify-content: center; margin-top: 18px; font-size: 12px; }
-.shell-workspace { margin-left: 246px; min-height: 100vh; display: flex; flex-direction: column; }
-.shell-header { background: #ffffffd9; min-height: 76px; border-bottom: 1px solid var(--ui-border); padding: 0 36px; display: flex; align-items: center; gap: 14px; }
-.shell-breadcrumb { display: flex; gap: 13px; align-items: center; font-size: 12px; color: #8a989c; }
-.shell-breadcrumb strong { color: #34494e; font-weight: 600; }
-.shell-role { margin-left: auto; display: inline-flex; gap: 7px; align-items: center; border: 1px solid #dce8e4; background: #f8fbf9; border-radius: 25px; padding: 7px 13px; color: #446458; font-size: 11px; white-space: nowrap; }
-.shell-role > span { width: 6px; height: 6px; background: #2e9879; border-radius: 50%; }
-.shell-content { width: 100%; max-width: 1560px; padding: 38px 36px; margin: 0 auto; flex: 1; min-width: 0; }
-.shell-footer { padding: 0 36px 22px; color: #91a09f; font-size: 10px; display: flex; justify-content: space-between; }
-.shell-menu.mg-icon-button, .shell-overlay { display: none; }
-.shell-skip { position: fixed; top: -100px; left: 20px; z-index: 100; padding: 12px; background: white; color: #12543f; }
-.shell-skip:focus { top: 10px; }
-.management-page { font-size: 13px; }
+/* F2-12a: la regla .app-shell y TODO el CSS del shell (sidebar/marca/menú/
+ * cuenta/workspace/footer/skip/overlay/ítem activo) se movió a
+ * components/shell.css por tokens. De lo que era el shell queda aquí
+ * únicamente la parte compartida con los modales del kit (.mg-modal
+ * button) y las reglas .mg-* de pantallas con consumidores vivos (la
+ * limpieza muerta es de F2-11). */
+.mg-modal button { font-family: inherit; font-weight: 600; }
 .mg-page-heading { display: flex; justify-content: space-between; align-items: center; gap: 22px; margin-bottom: 27px; }
 .mg-page-heading h1 { font-size: clamp(25px, 2.4vw, 34px); font-weight: 650; letter-spacing: -1px; margin: 7px 0 10px; line-height: 1.2; }
 .mg-page-heading p { color: #74838a; line-height: 1.65; margin: 0; max-width: 590px; }
@@ -60,9 +35,10 @@ table.mg-table { margin: 0; min-width: 690px; }
 .mg-table td { padding: 19px 22px; border-bottom: 1px solid #eef2f0; vertical-align: middle; }
 .mg-table tr:last-child td { border-bottom: 0; }
 .mg-table tbody tr:hover { background: #fcfdfc; }
+/* F2-12a: .mg-avatar/.mg-avatar-square eliminadas — único consumidor JSX
+ * era el avatar del bloque de usuario de AppShell (retirado en el
+ * rediseño; grep sin otro consumo; .mg-identity queda para F2-11). */
 .mg-identity { display: flex; gap: 12px; align-items: center; min-width: 185px; }
-.mg-avatar { flex-shrink: 0; display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #eef3f0; color: #44725f; font-size: 12px; font-weight: 650; }
-.mg-avatar-square { border-radius: 10px; }
 .mg-identity strong { display: block; font-size: 12px; font-weight: 650; overflow-wrap: anywhere; max-width: 260px; }
 .mg-identity > div > span { display: block; font-size: 11px; color: #859296; margin-top: 4px; overflow-wrap: anywhere; max-width: 280px; }
 .mg-you { display: inline-block; font-size: 9px; padding: 2px 5px; color: #3e7963; background: #edf5f0; border-radius: 4px; margin-left: 8px; }
@@ -109,8 +85,13 @@ button.mg-icon-button:disabled { opacity: .3; }
 .mg-spinner { width: 24px; height: 24px; border: 2px solid #d4e4dc; border-top-color: #408c68; border-radius: 50%; animation: mg-spin 1s linear infinite; }
 @keyframes mg-spin { to { transform: rotate(360deg); } }
 .mg-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-.mg-modal { --ui-text: #182b31; padding: 0; width: min(660px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); border: 1px solid #dce7e1; border-radius: 16px; background: white; color: var(--ui-text); box-shadow: 0 25px 90px #10271a33; }
-.mg-modal::backdrop { background: #162e2b66; backdrop-filter: blur(3px); }
+/* F2-12b: radio/sombra/borde/fondo y el blur del ::backdrop salieron del
+ * legado — pintan .ui-modal (radio --radius-md, --surface, borde --line,
+ * box-shadow none, backdrop sin blur). Ancho/padding/max-height quedan
+ * (idénticos al kit) y el dim persiste SOLO para los modales sin
+ * backdrop=true (p. ej. drilldown del Dashboard, pantalla de Dev 3). */
+.mg-modal { --ui-text: #182b31; padding: 0; width: min(660px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); color: var(--ui-text); }
+.mg-modal::backdrop { background: #162e2b66; }
 .mg-modal-heading { display: flex; align-items: flex-start; justify-content: space-between; padding: 25px 28px 21px; border-bottom: 1px solid #edf1ef; gap: 12px; }
 .mg-modal-heading h2 { font-size: 21px; letter-spacing: -.3px; margin: 0 0 8px; font-weight: 650; }
 .mg-modal-heading p { font-size: 12px; color: #85928c; margin: 0; overflow-wrap: anywhere; line-height: 1.6; }
@@ -135,25 +116,16 @@ label.mg-check-field { display: flex; flex-direction: row; justify-content: spac
 .mg-delete-summary { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 10px 0 20px; }
 .mg-delete-summary > svg { color: #bc5450; }
 .mg-delete-summary > span { font-size: 12px; color: #8b9892; overflow-wrap: anywhere; }
-.app-shell :focus-visible, .mg-modal :focus-visible { outline: 3px solid #84baa1; outline-offset: 3px; }
+/* F2-12a: el selector `.app-shell :focus-visible` (outline 3px #84baa1)
+ * salió de esta regla para que prevalezca el anillo del kit y de base.css
+ * (2px --focus-ring). El selector de .mg-modal queda (lo gana ui.css:893 y
+ * se revisa en F2-11). */
+.mg-modal :focus-visible { outline: 3px solid #84baa1; outline-offset: 3px; }
 @media (max-width: 1150px) {
-  .shell-sidebar { width: 220px; }
-  .shell-workspace { margin-left: 220px; }
-  .shell-content { padding: 30px 24px; }
-  .shell-header { padding: 0 24px; }
   .mg-toolbar { flex-wrap: wrap; }
   label.mg-search { max-width: none; flex: 1 1 200px; }
 }
 @media (max-width: 760px) {
-  .shell-sidebar { transform: translateX(-100%); visibility: hidden; width: 250px; }
-  .shell-sidebar.is-open { transform: none; visibility: visible; }
-  .shell-workspace { margin-left: 0; }
-  .shell-menu.mg-icon-button { display: inline-flex; }
-  .shell-overlay { display: block; position: fixed; inset: 0; background: #18362c66; z-index: 25; border-radius: 0; }
-  .shell-header { padding: 0 16px; min-height: 63px; }
-  .shell-breadcrumb > span, .shell-breadcrumb > svg { display: none; }
-  .shell-content { padding: 25px 16px; }
-  .shell-footer { padding: 0 16px 20px; }
   .mg-page-heading { align-items: flex-start; flex-direction: column; gap: 16px; }
   .mg-stats { gap: 8px; }
   .mg-stat { padding: 15px 12px; }

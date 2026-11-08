@@ -3,6 +3,7 @@ import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useHashRoute } from "../../hooks/useHashRoute";
 import { useQuery } from "../../hooks/useQuery";
+import { usePagination } from "../../hooks/usePagination";
 import InsumoFormModal from "./InsumoFormModal";
 import InsumoHistorialModal from "./InsumoHistorialModal";
 import MovimientoFormModal from "./MovimientoFormModal";
@@ -14,6 +15,7 @@ import {
   Field,
   FilterBar,
   PageHeader,
+  Pagination,
   RowActions,
   SearchInput,
   Select,
@@ -100,6 +102,17 @@ export default function MaintenancePage({ user }) {
   }, [claveFiltros]);
 
   const items = data ?? [];
+
+  /* Paginación EN EL CLIENTE (F2-13b): filtro de SERVIDOR (la consulta no
+   * cambia); el resetKey es la MISMA clave serializada de filtros y la
+   * búsqueda aplicada (`claveFiltros` — el sembrado ?bajo_stock=true
+   * también la cambia → página 1). Meta y EmptyState siguen con `items`.
+   */
+  const pag = usePagination(items, { resetKey: claveFiltros });
+
+  /* Apertura de los tres modales del kit (F2-10b/10c): cada modal
+   * gestiona SU carga, error y busy por dentro; selectedItem + modal son
+   * el único estado compartido con la pantalla. */
 
   const categoriasFiltro = [...new Set([
     ...categorias.map((item) => item.nombre),
@@ -296,7 +309,7 @@ export default function MaintenancePage({ user }) {
 
       <DataTable
         columns={columns}
-        rows={items}
+        rows={pag.pageRows}
         rowKey={(row) => row.id_insumo}
         caption="Listado de insumos"
         loading={loading}
@@ -316,6 +329,16 @@ export default function MaintenancePage({ user }) {
             : NOTA_CONSUMOS
         }
         emptyAction={vacioReal ? triggerNuevo : undefined}
+      />
+      <Pagination
+        page={pag.page}
+        pageCount={pag.pageCount}
+        total={pag.total}
+        from={pag.from}
+        to={pag.to}
+        onPrev={pag.goPrev}
+        onNext={pag.goNext}
+        label="Paginación de insumos"
       />
 
       {puedeGestionar && modal === "item" && (

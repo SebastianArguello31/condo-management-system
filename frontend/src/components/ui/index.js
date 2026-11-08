@@ -23,3 +23,4 @@ export { default as FormModal, useFormFieldError } from "./FormModal";
 export { default as ConfirmDialog } from "./ConfirmDialog";
 export { default as DataTable } from "./DataTable";
 export { default as FilterBar } from "./FilterBar";
+export { default as Pagination } from "./Pagination";

@@ -597,9 +597,16 @@ textarea.ui-control {
   column-gap: var(--space-6);
 }
 
+/* F2-12b: filas alineadas por LÍNEA BASE (dt 12px vs dd 14px compartían
+ * solo el borde superior) y columna de etiquetas con tope 144px (antes
+ * 192px + gap 12px dejaba el valor arrancando ~204px). Con <640px el DL
+ * pasa a 1 columna y la alineación no aplica. El badge de Estado pierde
+ * su padding vertical SOLO dentro del DL para que su fila mida lo mismo
+ * que las de texto. */
 .ui-dl-row {
   display: grid;
-  grid-template-columns: minmax(auto, calc(var(--space-12) * 4)) 1fr;
+  grid-template-columns: minmax(auto, calc(var(--space-12) * 3)) 1fr;
+  align-items: baseline;
   gap: var(--space-3);
   padding-block: var(--space-2);
   border-bottom: 1px solid var(--line);
@@ -623,6 +630,10 @@ textarea.ui-control {
   color: var(--ink);
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.ui-dl dd .ui-status {
+  padding-block: 0;
 }
 
 @media (max-width: 640px) {
@@ -1096,6 +1107,68 @@ textarea.ui-control {
   align-items: flex-end;
   gap: var(--space-2) var(--space-3);
   padding-block: var(--space-3) 0;
+}
+
+/* -- Paginación de listado (F2-13a) --------------------------------------------
+ * Pager simple Anterior/Siguiente + conteo; sin números de página ni
+ * selector de tamaño. Con 1 página o menos el componente NO renderiza, así
+ * que los listados cortos quedan idénticos (paridad sin pasar nada nuevo).
+ * El <nav> es hermano inmediato del marco de la tabla (.ui-table-shell) y
+ * su margen superior mantiene la separación de bloques del listado
+ * (nunca 0px). Los números usan tabular-nums. ----------------------------------- */
+.ui-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  /* Aire lateral para que el anillo de foco del <nav> (extremos del
+   * pager) no toque el texto ni los botones (F2-13b). Constante en el
+   * estado normal: al aterrizar el foco no se mueve el contenido. */
+  padding-inline: var(--space-2);
+  margin-top: var(--space-4);
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--ink-2);
+}
+
+/* Acá aterriza el foco cuando el botón del extremo queda deshabilitado
+ * tras la pulsación (tabindex=-1 solo programático): anillo visible del
+ * kit, como el resto de los controles (base.css, 2px --focus-ring), con
+ * offset para que no se pegue al contenido (F2-13b). */
+.ui-pagination:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: var(--space-1);
+}
+
+.ui-pagination-info {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-pagination-botones {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ui-pagination-pagina {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .ui-pagination {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .ui-pagination-info {
+    text-align: center;
+  }
+
+  .ui-pagination-botones > .ui-btn {
+    flex: 1;
+  }
 }
 
 /* -- Movimiento reducido --------------------------------------------------------- */

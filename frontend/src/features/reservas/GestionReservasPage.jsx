@@ -5,6 +5,7 @@ import { useHashRoute } from "../../hooks/useHashRoute";
 import { useQuery } from "../../hooks/useQuery";
 import { useMutation } from "../../hooks/useMutation";
 import { useConfirm } from "../../hooks/useConfirm";
+import { usePagination } from "../../hooks/usePagination";
 import { formatDate, formatTime } from "../../utils/format";
 import DateInput from "../../components/ui/DateInput";
 import {
@@ -14,6 +15,7 @@ import {
   Field,
   FilterBar,
   PageHeader,
+  Pagination,
   RowActions,
   Select,
   StatusBadge,
@@ -140,6 +142,19 @@ export default function GestionReservasPage({ user }) {
   );
 
   const rows = data ?? [];
+
+  /* Paginación EN EL CLIENTE (F2-13b): `rows` ya llega filtrado del
+   * servidor (la consulta no cambia); el resetKey son los filtros
+   * serializados ("Limpiar filtros" y el sembrado del hash ?estado=
+   * también los cambian → vuelve a la página 1). Meta y EmptyState
+   * siguen con `rows`/`consulta` (total). */
+  const pag = usePagination(rows, {
+    resetKey: `${filtros.espacio}|${filtros.estado}|${filtros.fecha}|${filtros.residente}`,
+  });
+
+  /* Residente como Select (decisión 2): deduplicado por usuario
+   * conservando la PRIMERA fila (los GET /residents llegan ordenados por
+   * apellido y nombre, mismo criterio del dedicado de ResidentsPage). */
 
   const residentesUnicos = useMemo(() => {
     const grupos = new Map();
@@ -407,7 +422,7 @@ export default function GestionReservasPage({ user }) {
 
       <DataTable
         columns={columns}
-        rows={rows}
+        rows={pag.pageRows}
         rowKey={(row) => row.id_reserva}
         caption="Listado de reservas del condominio"
         loading={loading}
@@ -432,6 +447,16 @@ export default function GestionReservasPage({ user }) {
             )
             : undefined
         }
+      />
+      <Pagination
+        page={pag.page}
+        pageCount={pag.pageCount}
+        total={pag.total}
+        from={pag.from}
+        to={pag.to}
+        onPrev={pag.goPrev}
+        onNext={pag.goNext}
+        label="Paginación de gestión de reservas"
       />
     </section>
   );

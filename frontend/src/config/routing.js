@@ -32,7 +32,7 @@ const TECNICO = "TECNICO";
 const ITEMS = {
   dashboard: {
     path: "/dashboard",
-    label: "Dashboard",
+    label: "Indicadores",
     icon: "dashboard",
     component: DashboardPage,
     roles: [ADMIN, GESTOR],
@@ -179,6 +179,11 @@ const ITEMS = {
   },
 };
 
+/* Pantalla por defecto por rol: el ADMIN aterriza en el Dashboard; el
+ * RESIDENTE y el TECNICO en Incidencias (F2-11a: Indicadores solo para
+ * ADMIN; el TECNICO conserva Incidencias e Insumos). Nota del merge con
+ * develop: el GESTOR (rol nuevo del equipo) aterriza también en el
+ * dashboard; TECNICO y RESIDENTE siguen aterrizando en incidencias. */
 const RUTA_INICIAL = {
   [ADMIN]: "dashboard",
   [GESTOR]: "dashboard",

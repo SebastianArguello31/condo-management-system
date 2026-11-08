@@ -27,11 +27,21 @@
  * Necesario para pantallas con acciones de fila MANEJADAS por la pantalla
  * (p. ej. Activar/Desactivar el acceso de una cuenta), que no pasan por
  * las mutaciones internas de este componente. Default undefined → sin
- * efecto; ningún consumidor actual lo pasa. */
+ * efecto; ningún consumidor actual lo pasa.
+ * Aditivo F2-13a: paginación en CLIENTE con usePagination + Pagination del
+ * kit: la tabla recibe la página cortada (`pag.pageRows`) y el pager va
+ * como hermano del .ui-table-shell; sin páginas (>10 filas) no renderiza
+ * NADA, así que sin pasar nada nuevo el comportamiento es IDÉNTICO. La
+ * página vuelve a 1 solo cuando cambia la búsqueda (`resetKey`); un
+ * reload()/refresco externo la conserva y acotar la página al encojer la
+ * lista evita páginas vacías ("41–50 de 38" o pager con cero filas).
+ * Prop opcional `pageSize` (defecto 10). La meta "N registros" sigue el
+ * total filtrado como hoy. */
 import { useEffect, useRef, useId, useMemo, useState } from "react";
 import { api } from "../services/api";
 import { routes } from "../services/routes";
 import { useMutation } from "../hooks/useMutation";
+import { usePagination } from "../hooks/usePagination";
 import { useQuery } from "../hooks/useQuery";
 import { useConfirm } from "../hooks/useConfirm";
 import { validate, especialidadCrear } from "../validations";
@@ -44,6 +54,7 @@ import {
   FormModal,
   Input,
   PageHeader,
+  Pagination,
   RowActions,
   SearchInput,
   Select,
@@ -267,6 +278,7 @@ export default function CrudPageUi({
   editLabel,
   schema,
   reloadSignal,
+  pageSize = 10,
 }) {
   const { data, loading, error, reload } = useQuery(
     async (signal) => {
@@ -333,6 +345,11 @@ export default function CrudPageUi({
         .includes(search.toLocaleLowerCase())
     )
   );
+
+  /* F2-13a: paginación en cliente SOBRE el filtrado. La página se acota al
+   * encojer la lista y vuelve a 1 solo al cambiar la búsqueda; reload(),
+   * reloadSignal y las mutaciones la conservan. */
+  const pag = usePagination(filtered, { pageSize, resetKey: search });
 
   const sinCoincidencia = !loading && !error && rows.length > 0 && filtered.length === 0;
 
@@ -613,7 +630,7 @@ export default function CrudPageUi({
 
       <DataTable
         columns={columnasTabla}
-        rows={filtered}
+        rows={pag.pageRows}
         rowKey={(row) => row[idField]}
         caption={`Listado de ${title.toLowerCase()}`}
         loading={loading}
@@ -622,6 +639,16 @@ export default function CrudPageUi({
         emptyTitle={sinCoincidencia ? "No hay registros que coincidan." : "No hay registros"}
         emptyDescription={sinCoincidencia ? "Ajusta la búsqueda para ver resultados." : "Aún no agregaste ningún registro."}
         emptyAction={canCreate && !sinCoincidencia ? triggerNuevo : undefined}
+      />
+      <Pagination
+        page={pag.page}
+        pageCount={pag.pageCount}
+        total={pag.total}
+        from={pag.from}
+        to={pag.to}
+        onPrev={pag.goPrev}
+        onNext={pag.goNext}
+        label={`Paginación de ${title.toLowerCase()}`}
       />
     </section>
   );
