@@ -1,89 +1,45 @@
-# Ejecutar los tests
+# Guía de pruebas
 
-Ejecuta los comandos desde la raíz del proyecto, usando PowerShell.
-No necesitas iniciar el backend ni el frontend.
+La suite actual es local y aislada. No requiere iniciar Flask o Vite ni disponer de PostgreSQL, Redis, SMTP o Docker. Python utiliza `unittest` y mocks; JavaScript utiliza `node:test`.
 
-## 1. Instalar dependencias
+## Preparación y ejecución
 
-```powershell
-py -m pip install -r requirements.txt
-```
-
-## 2. Tests sin PostgreSQL
+Desde la raíz, en PowerShell y con el entorno virtual activado según el [README](../README.md):
 
 ```powershell
-$env:RUN_DB_TESTS = "0"
-py -B -m unittest discover -s backend/tests -t backend -p "test_*.py" -v
+python -m pip install -r requirements.txt
+npm --prefix frontend ci
+python -B -m unittest discover -s backend/tests -t backend -p "test_*.py" -v
+npm --prefix frontend test
 ```
 
-Actualmente se detectan 55 tests: 39 pueden ejecutarse sin PostgreSQL
-y 16 se omiten.
+No se utilizan `RUN_DB_TESTS` ni `TEST_DB_*`. `backend/tests/__init__.py` bloquea conexiones reales mediante psycopg2 y sockets durante el proceso. Mantén `-t backend` para cargar el paquete y sus protecciones.
 
-## 3. Preparar la base de pruebas
-
-Crea en pgAdmin una base llamada `condo_management_test`.
-Debe ser diferente de la base habitual del proyecto.
-
-El usuario de PostgreSQL debe poder crear esquemas dentro de ella.
-
-Configura estas variables en la misma ventana de PowerShell:
+Para ejecutar archivos específicos:
 
 ```powershell
-$env:TEST_DB_HOST = "localhost"
-$env:TEST_DB_PORT = "5432"
-$env:TEST_DB_NAME = "condo_management_test"
-$env:TEST_DB_USER = Read-Host "Usuario de PostgreSQL"
-
-$clavePruebas = Read-Host "Contraseña de PostgreSQL" -AsSecureString
-$credencialPruebas = [System.Net.NetworkCredential]::new("", $clavePruebas)
-$env:TEST_DB_PASSWORD = $credencialPruebas.Password
-
-Remove-Variable clavePruebas, credencialPruebas
-
-$env:RUN_DB_TESTS = "1"
+python -B -m unittest discover -s backend/tests -t backend -p "test_reservation_rules.py" -v
+node --test frontend/tests/validation.test.js
 ```
 
-Estas variables no crean la base ni el usuario. Si abres otra ventana,
-debes configurarlas nuevamente.
+## Cobertura y límites
 
-## 4. Ejecutar todos los tests
+- Backend: autenticación, permisos, reglas de reservas e incidencias, recuperación de contraseña, adjuntos, indicadores, helpers de datos e integridad del código.
+- Frontend: validación y utilidades de teléfonos.
+- No se comprueban consultas contra PostgreSQL real, migraciones ejecutadas, SMTP, cola Redis ni flujos completos en navegador. Actualmente no existe una suite en `backend/tests/integration`.
+
+Para verificar también la compilación:
 
 ```powershell
-py -B -m unittest discover -s backend/tests -t backend -p "test_*.py" -v
+npm --prefix frontend run build
 ```
 
-## 5. Ejecutar solo integración
+La compilación no sustituye una revisión funcional en navegador.
 
-```powershell
-py -B -m unittest discover -s backend/tests/integration -t backend -p "test_*.py" -v
-```
+## Resultados y diagnóstico
 
-Las pruebas preparan automáticamente el esquema, las migraciones
-y los datos. Al terminar, eliminan sus esquemas temporales.
+`ok` o `pass` indica éxito; `FAIL` indica un resultado inesperado; `ERROR`, un fallo de preparación o ejecución; `skipped`, una prueba que no se ejecutó.
 
-No necesitas cargar manualmente `schema.sql` ni ejecutar Alembic
-en la base de tests.
+Si aparece `No module named 'app'`, ejecuta desde la raíz e incluye `-t backend`. Si falta una dependencia, verifica el intérprete del entorno virtual. Un `ExternalConnectionError` indica que falta sustituir una dependencia por un mock; no se resuelve configurando una base real.
 
-## 6. Ejecutar un archivo específico
-
-Ejemplo para reservas:
-
-```powershell
-py -B -m unittest discover -s backend/tests/integration -t backend -p "test_reservations_db.py" -v
-```
-
-Cambia el nombre del archivo para probar otro módulo.
-
-## Resultados
-
-- `ok`: prueba correcta.
-- `FAIL`: resultado diferente al esperado.
-- `ERROR`: error durante la preparación o ejecución.
-- `skipped`: prueba omitida; no se comprobó su funcionamiento.
-
-Si aparece `No module named 'app'`, verifica que ejecutes desde
-la raíz e incluyas `-t backend`.
-
-Si falla la conexión, comprueba que PostgreSQL esté iniciado,
-que la base exista y que las credenciales sean correctas.
-
+Ubica nuevos tests en `backend/tests/test_*.py` o `frontend/tests/*.test.js`. Simula las dependencias en el módulo donde se utilizan e incluye casos de permisos y errores cuando afecten al comportamiento.
