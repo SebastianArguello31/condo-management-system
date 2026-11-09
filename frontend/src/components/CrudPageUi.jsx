@@ -62,6 +62,8 @@ import {
   useFormFieldError,
   useToast,
 } from "./ui";
+import { isValidPhone } from "../utils/phone";
+
 
 const EMPTY_LOOKUPS = [];
 const always = () => true;
@@ -432,6 +434,16 @@ export default function CrudPageUi({
         value = value.map(Number);
       } else if (field.type === "select" || field.type === "number") {
         value = Number(value);
+      }
+
+      if (
+        field.name === "telefono" &&
+        value &&
+        !isValidPhone(String(value))
+      ) {
+        return {
+          error: "Ingresa un teléfono válido con su prefijo de país.",
+        };
       }
 
       body[field.name] = value;

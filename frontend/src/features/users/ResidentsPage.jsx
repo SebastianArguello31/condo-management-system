@@ -45,7 +45,7 @@ import {
 import { estadoCuenta } from "./AccountDetailModal";
 import ResidentCreateModal from "./ResidentCreateModal";
 import ResidentUnitsModal from "./ResidentUnitsModal";
-
+import PhoneLink from "../../components/ui/PhoneLink";
 const DESCRIPCION =
   "Administra las cuentas y unidades vinculadas de cada residente.";
 
@@ -166,7 +166,9 @@ export default function ResidentsPage() {
     {
       key: "telefono",
       header: "Teléfono",
-      render: (grupo) => grupo.fila.telefono || "—",
+      render: (grupo) => (
+        <PhoneLink value={grupo.fila.telefono} />
+      ),
     },
     {
       key: "unidades",

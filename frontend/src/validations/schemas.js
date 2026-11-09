@@ -15,6 +15,7 @@ import {
   longitud,
   maximo,
   requerido,
+  telefonoValido,
 } from "./rules";
 
 /* Origen: backend/app/modules/users/schemas/accounts.py — AccountSchema /
@@ -25,7 +26,7 @@ export const cuenta = {
   nombre: [requerido(), longitud(1, 150)],
   apellido: [requerido(), longitud(1, 150)],
   email: [requerido(), correo(), maximo(254)],
-  telefono: [requerido(), longitud(1, 40)],
+  telefono: [requerido(), longitud(1, 40), telefonoValido()],
   password: [requerido(), contrasena()],
 };
 
@@ -55,7 +56,7 @@ export const perfilEmpleado = {
   nombre: [requerido(), longitud(1, 150)],
   apellido: [requerido(), longitud(1, 150)],
   email: [requerido(), correo(), maximo(254)],
-  telefono: [requerido(), longitud(1, 40)],
+  telefono: [requerido(), longitud(1, 40), telefonoValido()],
 };
 
 /* Origen: backend/app/modules/users/schemas/residents.py —
@@ -64,7 +65,7 @@ export const perfilResidente = {
   nombre: [requerido(), longitud(1, 150)],
   apellido: [requerido(), longitud(1, 150)],
   email: [correo(), maximo(254)],
-  telefono: [requerido(), longitud(1, 40)],
+  telefono: [requerido(), longitud(1, 40), telefonoValido()],
 };
 
 /* Origen: backend/app/core/passwords.py — validate_password (uso aislado,

@@ -42,7 +42,7 @@ import {
   StatusBadge,
   useToast,
 } from "../../components/ui";
-
+import PhoneLink from "../../components/ui/PhoneLink";
 /* Presentación del ESTADO de una cuenta (decisión F2-6a): inicial mayús-
  * cula como texto del preset de especialidades; override ACTIVA
  * success+check / INACTIVA muted (dot por defecto del tone). ÚNICA
@@ -101,7 +101,10 @@ export default function AccountDetailModal({ usuario, onClose }) {
             },
             { term: "Nombre", detail: nombreCompleto(detail) },
             { term: "Email", detail: detail.email },
-            { term: "Teléfono", detail: detail.telefono || "—" },
+            {
+              term: "Teléfono",
+              detail: <PhoneLink value={detail.telefono} />,
+            },
             { term: "Rol", detail: roleLabel(detail.rol) },
             { term: "Creada", detail: formatDate(detail.created_at) || "—" },
           ]}

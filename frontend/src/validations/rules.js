@@ -5,6 +5,21 @@
  * validate() aplica trim() a los strings antes de evaluar (igual que el
  * pre_load de BaseSchema en el backend), salvo para password.
  * ========================================================================== */
+import { isValidPhone } from "../utils/phone";
+
+export const telefonoValido = () => (value) => {
+  if (
+    value === undefined ||
+    value === null ||
+    String(value).trim() === ""
+  ) {
+    return null;
+  }
+
+  return isValidPhone(String(value))
+    ? null
+    : "Ingresa un teléfono válido con su prefijo de país.";
+};
 
 export const requerido = () => (value) => {
   const vacio = value === undefined

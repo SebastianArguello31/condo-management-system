@@ -44,7 +44,7 @@ import {
 } from "../../components/ui";
 import InterventionMaterials from "./InterventionMaterials";
 import { PRIORIDAD_TONO } from "./priorities";
-
+import PhoneLink from "../../components/ui/PhoneLink";
 /* Schema local del cambio de estado (espejo del backend rules.py — no
  * existe en validations/schemas.js porque el endpoint no es de creación). */
 const ESTADO_SCHEMA = {
@@ -293,6 +293,12 @@ export default function IncidentsDetailModal({
               ...(detail.residente_nombre
                 ? [{ term: "Reportante", detail: `${detail.residente_nombre} ${detail.residente_apellido}` }]
                 : []),
+              {
+                term: "Teléfono de contacto",
+                detail: (
+                  <PhoneLink value={detail.residente_telefono} />
+                ),
+              },
               ...(edificio ? [{ term: "Edificio", detail: edificio }] : []),
               ...(unidad ? [{ term: "Unidad", detail: unidad }] : []),
             ]}
