@@ -22,6 +22,7 @@ class TestBackendIntegrity(unittest.TestCase):
     def setUp(self):
         self.aplicacion = create_app({
             "TESTING": True,
+            "RATELIMIT_STORAGE_URI": "memory://",
             "JWT_SECRET_KEY": "clave-exclusiva-de-pruebas-no-produccion",
             "JWT_ACCESS_TOKEN_HOURS": 2,
         })
@@ -55,7 +56,11 @@ class TestBackendIntegrity(unittest.TestCase):
             if not regla.rule.startswith("/condominio"):
                 continue
 
-            if regla.rule == "/condominio/auth/login":
+            if regla.rule in {
+                "/condominio/auth/login",
+                "/condominio/auth/forgot-password",
+                "/condominio/auth/reset-password",
+            }:
                 continue
 
             ruta = re.sub(r"<[^>]+>", "1", regla.rule)
@@ -88,6 +93,30 @@ class TestBackendIntegrity(unittest.TestCase):
 
         self.assertEqual(respuesta.status_code, 401)
 
+    def test_token_revocado_no_permite_acceder(self):
+        with patch("app.core.decorators.get_user", return_value={
+            "id_usuario": 2, "rol": "RESIDENTE", "activo": True,
+            "session_version": 1,
+        }):
+            respuesta = self.cliente.get(
+                "/condominio/auth/me", headers=self.cabeceras(),
+            )
+        self.assertEqual(respuesta.status_code, 401)
+
+    def test_sesion_valida_no_expone_version_interna(self):
+        usuario = {
+            "id_usuario": 2, "rol": "RESIDENTE", "activo": True,
+            "session_version": 0,
+        }
+        with patch("app.core.decorators.get_user", return_value=usuario):
+            respuesta = self.cliente.get(
+                "/condominio/auth/me", headers=self.cabeceras(),
+            )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertNotIn("session_version", respuesta.get_json())
+        self.assertEqual(usuario["session_version"], 0)
+        self.assertEqual(respuesta.headers["Cache-Control"], "no-store")
+
     def test_usuario_desactivado(self):
         with patch(
             "app.core.decorators.get_user",
@@ -111,6 +140,7 @@ class TestBackendIntegrity(unittest.TestCase):
                 "id_usuario": 2,
                 "rol": "RESIDENTE",
                 "activo": True,
+                "session_version": 0,
             },
         ):
             respuesta = self.cliente.get(
@@ -155,6 +185,7 @@ class TestBackendIntegrity(unittest.TestCase):
 
         espacio = {
             "activo": True,
+                "session_version": 0,
             "capacidad": 20,
         }
 

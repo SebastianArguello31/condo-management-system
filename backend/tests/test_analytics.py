@@ -214,6 +214,7 @@ class TestAnalyticsServices(unittest.TestCase):
 class TestAnalyticsHttpRoutes(unittest.TestCase):
     def setUp(self):
         self.app = create_app({
+            "RATELIMIT_STORAGE_URI": "memory://",
             "TESTING": True,
             "JWT_SECRET_KEY": "clave-pruebas-analytics-de-32-bytes!",
             "JWT_ACCESS_TOKEN_HOURS": 1,
@@ -227,7 +228,7 @@ class TestAnalyticsHttpRoutes(unittest.TestCase):
         self.addCleanup(bloqueo.stop)
 
     def login_as(self, user):
-        parche = patch("app.core.decorators.get_user", return_value={**user, "activo": True})
+        parche = patch("app.core.decorators.get_user", return_value={**user, "activo": True, "session_version": 0})
         parche.start()
         self.addCleanup(parche.stop)
         with self.app.app_context():
@@ -267,7 +268,7 @@ class TestAnalyticsHttpRoutes(unittest.TestCase):
                 self.assertEqual(self.client.get(f"/condominio/analytics/{path}", headers=headers).status_code, 400)
 
     def test_drilldown_envia_estado_y_limite(self):
-        headers = self.login_as(TECNICO)
+        headers = self.login_as(ADMIN)
         with patch.object(overview, "get_records", return_value=[]) as servicio:
             response = self.client.get(
                 "/condominio/analytics/registros?tipo_registro=incidencias&estado=ASIGNADA&limit=20&id_prioridad=2",
@@ -278,3 +279,12 @@ class TestAnalyticsHttpRoutes(unittest.TestCase):
         self.assertEqual(args[0], "incidencias")
         self.assertEqual(args[1], {"id_prioridad": 2})
         self.assertEqual(kwargs, {"status": "ASIGNADA", "limit": 20})
+
+    def test_tecnico_no_accede_a_ninguna_ruta_analitica(self):
+        headers = self.login_as(TECNICO)
+        for path in ("dashboard", "incidencias", "intervenciones", "inventario",
+                     "registros?tipo_registro=incidencias", "filtros"):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(
+                    f"/condominio/analytics/{path}", headers=headers,
+                ).status_code, 403)
