@@ -138,15 +138,16 @@ export default function MaintenancePage({ user }) {
     {
       key: "insumo",
       header: "Insumo",
+      cellClassName: "inventory-item-cell",
       render: (row) => (
-        <>
-          {row.nombre}
+        <div className="inventory-item">
+          <strong>{row.nombre}</strong>
           {row.descripcion && (
-            <span style={{ display: "block" }}>
+            <span className="inventory-item-description">
               {row.descripcion}
             </span>
           )}
-        </>
+        </div>
       ),
     },
     {
@@ -191,6 +192,7 @@ export default function MaintenancePage({ user }) {
       ? [{
           key: "acciones",
           header: "Acciones",
+          cellClassName: "mobile-actions-cell",
           width: "calc(var(--space-12) * 7)",
           render: (row) => (
             <RowActions
@@ -219,7 +221,7 @@ export default function MaintenancePage({ user }) {
   ];
 
   return (
-    <section>
+    <section className="mobile-management-page">
       <style>{ESTILOS_PANTALLA}</style>
 
       <PageHeader

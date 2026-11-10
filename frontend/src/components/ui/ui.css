@@ -1363,3 +1363,59 @@ textarea.ui-control {
   outline-offset: 3px;
 }
 
+
+/* Mobile management views: full-width fields and readable inventory cards. */
+.inventory-item-description { display: block; color: var(--ink-3); margin-top: var(--space-1); }
+/* Align controls independently of the help text below each desktop field. */
+@media (min-width: 641px) {
+  .mobile-management-page .ui-filterbar {
+    align-items: flex-start;
+    row-gap: var(--space-4);
+  }
+  .mobile-management-page .ui-filterbar > .ui-field {
+    grid-template-rows: var(--space-4) var(--control-h);
+    min-width: 0;
+  }
+  .mobile-management-page .ui-filterbar .ui-field-label {
+    line-height: var(--space-4);
+  }
+  .mobile-management-page .ui-filterbar > .ui-btn {
+    margin-top: var(--space-5);
+  }
+}
+@media (max-width: 640px) {
+  .mobile-management-page .ui-filterbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+  .mobile-management-page .ui-filterbar > * { min-width: 0; width: 100%; }
+  .mobile-management-page .ui-filterbar .ui-control { min-height: 44px; font-size: 16px; }
+  .mobile-management-page .ui-filterbar > .ui-btn { min-height: 44px; }
+  .mobile-management-page .ui-table colgroup { display: none; }
+  .mobile-management-page .ui-table td { overflow-wrap: anywhere; }
+  .mobile-management-page .ui-table .inventory-item-cell,
+  .mobile-management-page .ui-table .mobile-actions-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    text-align: left;
+  }
+  .mobile-management-page .ui-table .inventory-item { text-align: left; }
+  .mobile-management-page .ui-actions-inline {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: var(--space-2);
+  }
+  .mobile-management-page .ui-actions-inline > .ui-btn {
+    flex: 1 1 auto;
+    min-height: 44px;
+    height: auto;
+    margin: 0;
+    white-space: normal;
+  }
+  .acciones-insumos > .ui-btn:last-child { flex-basis: 100%; }
+}

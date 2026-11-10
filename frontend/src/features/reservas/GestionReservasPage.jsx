@@ -265,6 +265,7 @@ export default function GestionReservasPage({ user }) {
     {
       key: "acciones",
       header: "Acciones",
+      cellClassName: "mobile-actions-cell",
       width: "calc(var(--space-12) * 5)",
       render: (row) => (
         <RowActions
@@ -305,7 +306,7 @@ export default function GestionReservasPage({ user }) {
   ];
 
   return (
-    <section>
+    <section className="mobile-management-page">
       <PageHeader title="Gestión de reservas" meta={meta} />
 
       {errorCatalogos && (

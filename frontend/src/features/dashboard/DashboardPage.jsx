@@ -1183,7 +1183,8 @@ export default function DashboardPage({ user, onNavigate }) {
           }
         >
           <div className="dash-breakdown-equal-grid">
-            {technicianRows.map((item, index) => (
+            {!technicianBase.length && <p className="dash-empty">No hay personal técnico para estos filtros.</p>}
+            {technicianRows.filter(Boolean).map((item, index) => (
               <div
                 className="dash-breakdown-row"
                 key={item?.id_tecnico ?? `technician-${index}`}
@@ -1228,7 +1229,7 @@ export default function DashboardPage({ user, onNavigate }) {
           extra={<span className="dash-header-pill">Mayor rotación</span>}
         >
           <div className="dash-table-wrap">
-            <table className="dash-table">
+            <table className="dash-table dash-mobile-table">
               <thead>
                 <tr>
                   <th>Insumo</th>
@@ -1241,11 +1242,11 @@ export default function DashboardPage({ user, onNavigate }) {
               <tbody>
                 {inventario.top_insumos.map((item) => (
                   <tr key={item.id_insumo}>
-                    <td><strong>{item.insumo}</strong></td>
-                    <td>{item.categoria}</td>
-                    <td className="text-right">{item.total_consumido}</td>
-                    <td className="text-right">{money(item.costo_total)}</td>
-                    <td className="text-center">{item.intervenciones}</td>
+                    <td data-label="Insumo"><strong>{item.insumo}</strong></td>
+                    <td data-label="Categoría">{item.categoria}</td>
+                    <td data-label="Consumo" className="text-right">{item.total_consumido}</td>
+                    <td data-label="Costo total" className="text-right">{money(item.costo_total)}</td>
+                    <td data-label="Intervenciones" className="text-center">{item.intervenciones}</td>
                   </tr>
                 ))}
                 {!inventario.top_insumos.length && (
@@ -1293,7 +1294,7 @@ export default function DashboardPage({ user, onNavigate }) {
           }
         >
           <div className="dash-table-wrap">
-            <table className="dash-table">
+            <table className="dash-table dash-mobile-table">
               <thead>
                 <tr>
                   <th>Artículo</th>
@@ -1305,13 +1306,13 @@ export default function DashboardPage({ user, onNavigate }) {
               <tbody>
                 {inventario.insumos_bajo_stock.map((item) => (
                   <tr key={item.id_insumo}>
-                    <td>
+                    <td data-label="Artículo">
                       <strong>{item.nombre}</strong>
                       <div>{item.categoria}</div>
                     </td>
-                    <td className="text-right">{item.stock}</td>
-                    <td className="text-right">{item.stock_minimo}</td>
-                    <td className="text-right">+{item.faltante}</td>
+                    <td data-label="Stock actual" className="text-right">{item.stock}</td>
+                    <td data-label="Mínimo" className="text-right">{item.stock_minimo}</td>
+                    <td data-label="Faltante" className="text-right">+{item.faltante}</td>
                   </tr>
                 ))}
                 {!inventario.insumos_bajo_stock.length && (
