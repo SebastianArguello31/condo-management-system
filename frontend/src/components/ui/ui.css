@@ -725,14 +725,7 @@ textarea.ui-control {
   color: var(--ink-2);
 }
 
-/* -- K2: aislamiento del CSS legado ---------------------------------------------
- * index.css tiene selectores "desnudos" (button, input, select, th, td, label)
- * que se filtran en los componentes del kit. Reparado: th/td de .ui-table
- * (fondo, padding y alineación explícitos), .ui-control (padding y fuente
- * explícitos) y los botones de cierre/clear, que no definían border-radius.
- * Auditado sin cambios: .ui-btn (define todo), .ui-alert y sus tonos
- * (bg+color explícitos), .ui-modal (bg/color/borde explícitos).
- * -------------------------------------------------------------------------- */
+/* Aísla los controles y las celdas del kit de los selectores globales heredados. */
 .ui-alert-close,
 .ui-toast-close,
 .ui-search-clear {
@@ -949,17 +942,7 @@ textarea.ui-control {
   border-top: 0;
 }
 
-/* Ajuste F2-3 (línea doble sobre el thead): origen verificado en el CSS real —
- * ninguna regla legada (index.css th/td solo border-bottom; users-ui.css .mg-table
- * th, scoped) ni ninguna regla del kit da borde superior al th. La doble real es
- * la ADYACENCIA: en las pantallas del kit la cabecera de página subrayada
- * (.ui-page-header, border-bottom con --line, arriba en este archivo) va
- * seguida DIRECTAMENTE del marco (.ui-table-shell, border --line), con 0px
- * entre ambas: dos líneas de 1px del mismo color se leen como una línea doble
- * encima del thead. Separación aditiva SOLO en esa adyacencia (la guía #/ui,
- * que no apila la tabla junto al PageHeader, no cambia). Resultado: una
- * sola línea exterior del panel (el marco) y la delimitación inferior del
- * encabezado (th border-bottom). */
+/* Separa la cabecera del marco de tabla para evitar que sus bordes se vean como una línea doble. */
 .ui-page-header + .ui-table-shell {
   margin-top: var(--space-4);
 }
@@ -982,15 +965,7 @@ textarea.ui-control {
   color: var(--ink);
 }
 
-/* K2, actualizado por el ajuste F2-3 (5a): cabecera de tabla con MÁS PESO —
- * 13px (--fs-13/--lh-13), 600, --ink (antes --ink-2) y tracking normal
- * (antes 0.02em) sobre un tinte más marcado ya existente
- * (--status-neutral-bg, antes --bg); mayúsculas y border-bottom
- * (delimitador de la cabecera) intactos. Contraste --ink sobre
- * --status-neutral-bg ≈ 13.5:1 (AA holgado). Cambio de KIT: afecta a todas
- * las tablas (usos verificados: Mis reservas y la guía #/ui). En la pila
- * móvil (<640px) thead está display:none y las etiquetas de las tarjetas
- * apiladas (td::before) mantienen sus propios pesos/colores: sin riesgo. */
+/* Cabeceras de tabla con fondo y peso propios; en móvil se usan las etiquetas de cada tarjeta. */
 .ui-table th {
   text-align: left;
   background: var(--status-neutral-bg);
@@ -1337,3 +1312,54 @@ textarea.ui-control {
   line-height: var(--lh-13);
   color: var(--ink-2);
 }
+.ui-phone-contact {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  max-width: 100%;
+}
+
+.ui-phone-number,
+.ui-phone-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.ui-phone-number {
+  color: var(--ink);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.ui-phone-number svg {
+  flex-shrink: 0;
+  color: var(--ink-3);
+}
+.ui-phone-number:hover {
+  color: var(--brand);
+  text-decoration: underline;
+}
+.ui-phone-whatsapp {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid #a7d8ba;
+  border-radius: var(--radius-sm);
+  background: #eef9f1;
+  color: #176b3a;
+  font-size: var(--fs-12);
+  font-weight: 600;
+}
+.ui-phone-whatsapp:hover {
+  background: #ddf2e4;
+  border-color: #176b3a;
+}
+.ui-phone-number:focus-visible,
+.ui-phone-whatsapp:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+

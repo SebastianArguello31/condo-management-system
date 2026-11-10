@@ -1,42 +1,5 @@
-/* F2-1b — Modo "ui" de CrudPage (activado solo con variant="ui").
- * Paridad con el modo legado para los mismos contratos de props:
- * carga (useQuery con signal), búsqueda (mismo criterio: columnas
- * declaradas, insensible a mayúsculas), crear/editar/eliminar (mismos
- * endpoints y payloads: trim de strings, nullable → null, multiselect y
- * select/number → Number, checkbox → boolean, password omitida si vacía al
- * editar y tope de 72 bytes), validaciones y mensajes del legado, permisos
- * canCreate/canEdit/canDelete/canEditRow/isFieldDisabled, lookups,
- * getRecordLabel y renderExtraActions. Defaults: updateMethod="PATCH".
- * Diferencias por convención (plan §2.18): error de la acción DENTRO del
- * FormModal, éxito por Toast, eliminación con useConfirm (danger) y carga
- * con Skeleton sin parpadeo de "Reintentar" (cierra B9).
- * Aditivo de la ronda 1 (F2-1b): acciones de fila como botones visibles
- * vía RowActions (Editar quiet sm + Eliminar danger-ghost sm, patrón de
- * Mis reservas, sin menú) y labels opcionales createLabel/editLabel para
- * el botón de crear y los títulos de los modales.
- * Aditivo F2-6a: prop opcional `schema` (objeto de validations/ que espeja
- * al backend) para validar en cliente en crear/editar; sin `schema` el
- * comportamiento es IDÉNTICO al anterior (incluido `especialidadCrear`
- * por endpoint, solo para /specialties). Aditivo F2-6a (extras de
- * sesión): field type "checks" (grupo de Checkbox del kit, para
- * especialidad_ids como checkboxes del catálogo; aditivo, sin tocar los
- * tipos existentes) con props opcionales onlyActive y emptyMessage, y
- * cuerpo del grupo tratado igual que multiselect (array → números).
- * Aditivo F2-6a: prop opcional `reloadSignal` (número); al cambiar,
- * `reload()` con datos previos conservados (la lista no titila a vacío).
- * Necesario para pantallas con acciones de fila MANEJADAS por la pantalla
- * (p. ej. Activar/Desactivar el acceso de una cuenta), que no pasan por
- * las mutaciones internas de este componente. Default undefined → sin
- * efecto; ningún consumidor actual lo pasa.
- * Aditivo F2-13a: paginación en CLIENTE con usePagination + Pagination del
- * kit: la tabla recibe la página cortada (`pag.pageRows`) y el pager va
- * como hermano del .ui-table-shell; sin páginas (>10 filas) no renderiza
- * NADA, así que sin pasar nada nuevo el comportamiento es IDÉNTICO. La
- * página vuelve a 1 solo cuando cambia la búsqueda (`resetKey`); un
- * reload()/refresco externo la conserva y acotar la página al encojer la
- * lista evita páginas vacías ("41–50 de 38" o pager con cero filas).
- * Prop opcional `pageSize` (defecto 10). La meta "N registros" sigue el
- * total filtrado como hoy. */
+/* CRUD configurable con búsqueda, formularios, permisos y paginación en el cliente.
+ * reloadSignal refresca acciones externas; los conteos usan el total filtrado. */
 import { useEffect, useRef, useId, useMemo, useState } from "react";
 import { api } from "../services/api";
 import { routes } from "../services/routes";
@@ -45,25 +8,8 @@ import { usePagination } from "../hooks/usePagination";
 import { useQuery } from "../hooks/useQuery";
 import { useConfirm } from "../hooks/useConfirm";
 import { validate, especialidadCrear } from "../validations";
-import {
-  Button,
-  Checkbox,
-  DataTable,
-  Field,
-  FilterBar,
-  FormModal,
-  Input,
-  PageHeader,
-  Pagination,
-  RowActions,
-  SearchInput,
-  Select,
-  Textarea,
-  useFormFieldError,
-  useToast,
-} from "./ui";
+import { Button, Checkbox, DataTable, Field, FilterBar, FormModal, Input, PageHeader, Pagination, RowActions, SearchInput, Select, Textarea, useFormFieldError, useToast, } from "./ui";
 import { isValidPhone } from "../utils/phone";
-
 
 const EMPTY_LOOKUPS = [];
 const always = () => true;
@@ -91,29 +37,13 @@ function normalizarErrores(errors) {
   );
 }
 
-function CampoCrud({
-  field,
-  valor,
-  alCambiar,
-  deshabilitado,
-  opciones,
-  ayuda,
-  asteriscoRequerido,
-  esEdicion,
-}) {
+function CampoCrud({ field, valor, alCambiar, deshabilitado, opciones, ayuda, asteriscoRequerido, esEdicion,}) {
   const error = useFormFieldError(field.name);
   const grupoId = useId();
 
   if (field.type === "checkbox") {
     return (
-      <Checkbox
-        label={field.label}
-        name={field.name}
-        autoComplete="off"
-        checked={Boolean(valor)}
-        disabled={deshabilitado}
-        onChange={(event) => alCambiar(event.target.checked)}
-      />
+      <Checkbox label={field.label} name={field.name} autoComplete="off" checked={Boolean(valor)} disabled={deshabilitado} onChange={(event) => alCambiar(event.target.checked)}/>
     );
   }
 
@@ -152,12 +82,7 @@ function CampoCrud({
             </>
           )}
         </p>
-        <div
-          role="group"
-          aria-labelledby={`${grupoId}-label`}
-          aria-describedby={descritos}
-          style={{ display: "grid", gap: "var(--space-2)" }}
-        >
+        <div role="group" aria-labelledby={`${grupoId}-label`} aria-describedby={descritos} style={{ display: "grid", gap: "var(--space-2)" }}>
           {visibles.map((option) => (
             <Checkbox
               key={option[field.optionId]}
@@ -196,12 +121,7 @@ function CampoCrud({
   }
 
   return (
-    <Field
-      label={field.label}
-      required={asteriscoRequerido}
-      error={error}
-      help={ayuda}
-    >
+    <Field label={field.label} required={asteriscoRequerido} error={error} help={ayuda}>
       {field.type === "select" || field.type === "multiselect" ? (
         <Select
           name={field.name}
@@ -410,12 +330,7 @@ export default function CrudPageUi({
         value = value.trim();
       }
 
-      if (
-        field.required &&
-        field.type !== "checkbox" &&
-        !(field.type === "password" && editingId !== null) &&
-        (value === "" || (Array.isArray(value) && value.length === 0))
-      ) {
+      if (field.required && field.type !== "checkbox" && !(field.type === "password" && editingId !== null) && (value === "" || (Array.isArray(value) && value.length === 0))) {
         return { error: `Completa el campo ${field.label}` };
       }
 
@@ -436,11 +351,7 @@ export default function CrudPageUi({
         value = Number(value);
       }
 
-      if (
-        field.name === "telefono" &&
-        value &&
-        !isValidPhone(String(value))
-      ) {
+      if (field.name === "telefono" && value && !isValidPhone(String(value))) {
         return {
           error: "Ingresa un teléfono válido con su prefijo de país.",
         };
@@ -582,20 +493,10 @@ export default function CrudPageUi({
 
   return (
     <section>
-      <PageHeader
-        title={title}
-        meta={meta}
-        actions={!loading && rows.length === 0 ? null : triggerNuevo}
-      />
+      <PageHeader title={title} meta={meta} actions={!loading && rows.length === 0 ? null : triggerNuevo}/>
 
       <FilterBar>
-        <SearchInput
-          label={`Buscar en ${title.toLowerCase()}`}
-          value={search}
-          onChange={setSearch}
-          onClear={() => setSearch("")}
-          placeholder="Buscar registros..."
-        />
+        <SearchInput label={`Buscar en ${title.toLowerCase()}`} value={search} onChange={setSearch} onClear={() => setSearch("")} placeholder="Buscar registros..."/>
         <Button variant="quiet" disabled={busy || loading} onClick={reload}>
           Actualizar
         </Button>

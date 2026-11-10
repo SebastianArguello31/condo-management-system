@@ -1,3 +1,5 @@
+# Operaciones de negocio para insumos y existencias.
+# Coordina las comprobaciones y el acceso a los repositorios antes de devolver el resultado.
 from decimal import Decimal
 
 from werkzeug.exceptions import BadRequest, NotFound
@@ -5,7 +7,6 @@ from werkzeug.exceptions import BadRequest, NotFound
 from app.core.db_helpers import transaction
 from app.modules.maintenance.repositories import categories as categories_repo
 from app.modules.maintenance.repositories import inventory as repo
-
 
 def list_items(filters):
     with transaction() as cursor:
@@ -17,18 +18,14 @@ def list_items(filters):
             cursor=cursor,
         )
 
-
 def create_item(data):
     with transaction() as cursor:
-        category = categories_repo.get_category_by_name(
-            data["categoria"], cursor=cursor, for_share=True
-        )
+        category = categories_repo.get_category_by_name(data["categoria"], cursor=cursor, for_share=True)
         if category is None or not category["activo"]:
             raise BadRequest("Selecciona una categoría de insumo activa")
         data = {**data, "categoria": category["nombre"]}
         created = repo.insert_item(data, cursor=cursor)
         return repo.get_item(created["id_insumo"], cursor=cursor)
-
 
 def update_item(item_id, data):
     if not data:
@@ -37,15 +34,12 @@ def update_item(item_id, data):
         if repo.get_item(item_id, cursor=cursor, for_update=True) is None:
             raise NotFound("Insumo no encontrado")
         if "categoria" in data:
-            category = categories_repo.get_category_by_name(
-                data["categoria"], cursor=cursor, for_share=True
-            )
+            category = categories_repo.get_category_by_name(data["categoria"], cursor=cursor, for_share=True)
             if category is None or not category["activo"]:
                 raise BadRequest("Selecciona una categoría de insumo activa")
             data = {**data, "categoria": category["nombre"]}
         repo.update_item(item_id, data, cursor=cursor)
         return repo.get_item(item_id, cursor=cursor)
-
 
 def register_movement(item_id, movement_type, data, actor_id):
     quantity = Decimal(data["cantidad"])
@@ -67,20 +61,12 @@ def register_movement(item_id, movement_type, data, actor_id):
             if item["stock"] != 0 or repo.has_initial_movement(item_id, cursor=cursor):
                 raise BadRequest("Las existencias iniciales ya fueron registradas")
 
+        # El saldo y su movimiento se guardan juntos para que el historial refleje el stock resultante.
         updated = repo.change_stock(item_id, delta, cursor=cursor)
         if updated is None:
             raise BadRequest("El movimiento dejaría el stock en negativo")
-        repo.insert_movement(
-            item_id,
-            effective_type,
-            quantity,
-            updated["stock"],
-            data["motivo"],
-            actor_id,
-            cursor=cursor,
-        )
+        repo.insert_movement(item_id, effective_type, quantity, updated["stock"], data["motivo"], actor_id, cursor=cursor,)
         return repo.get_item(item_id, cursor=cursor)
-
 
 def list_movements(item_id, filters):
     with transaction() as cursor:
@@ -94,7 +80,6 @@ def list_movements(item_id, filters):
             intervention_id=filters.get("id_intervencion"),
             cursor=cursor,
         )
-
 
 def list_low_stock():
     return list_items({"bajo_stock": True, "activo": True})

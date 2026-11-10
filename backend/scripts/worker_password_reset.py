@@ -1,3 +1,5 @@
+# Proceso que consume la cola Redis de recuperación de contraseñas.
+# Selecciona un worker compatible con Windows cuando no está disponible el modelo de procesos de Unix.
 import os
 import sys
 from pathlib import Path
@@ -11,29 +13,21 @@ sys.path.insert(0, str(backend_dir))
 
 from app.core.config import Config
 
+# SimpleWorker evita fork y TimerDeathPenalty reemplaza los tiempos de espera basados en señales Unix.
 class WindowsWorker(SimpleWorker):
     death_penalty_class = TimerDeathPenalty
 
 def main():
-    connection = Redis.from_url(
-        Config.REDIS_URL,
-        socket_connect_timeout=5,
-    )
+    connection = Redis.from_url(Config.REDIS_URL, socket_connect_timeout=5,)
 
     try:
         connection.ping()
 
-        queue = Queue(
-            "password-reset",
-            connection=connection,
-        )
+        queue = Queue("password-reset", connection=connection,)
 
         worker_class = WindowsWorker if os.name == "nt" else Worker
 
-        worker = worker_class(
-            [queue],
-            connection=connection,
-        )
+        worker = worker_class([queue], connection=connection,)
 
         print("Worker iniciado. Esperando solicitudes de recuperación.")
         worker.work()

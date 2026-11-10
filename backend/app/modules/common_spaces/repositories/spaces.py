@@ -1,3 +1,5 @@
+# Acceso SQL a espacios comunes.
+# Encapsula las consultas usadas por los servicios de este módulo.
 from app.core.db_helpers import query, update_record
 
 SPACE_SELECT = """
@@ -29,10 +31,10 @@ def get_space(space_id, *, cursor=None):
 def lock_space(space_id, *, cursor):
     return query(
         """
-        SELECT id_espacio_comun, capacidad, activo
-        FROM espacios_comunes
-        WHERE id_espacio_comun = %s
-        FOR UPDATE;
+            SELECT id_espacio_comun, capacidad, activo
+            FROM espacios_comunes
+            WHERE id_espacio_comun = %s
+            FOR UPDATE;
         """,
         (space_id,),
         cursor=cursor,
@@ -41,14 +43,14 @@ def lock_space(space_id, *, cursor):
 def insert_space(data, *, cursor):
     return query(
         """
-        INSERT INTO espacios_comunes (
-            nombre,
-            descripcion,
-            capacidad,
-            id_edificio
-        )
-        VALUES (%s, %s, %s, %s)
-        RETURNING id_espacio_comun;
+            INSERT INTO espacios_comunes (
+                nombre,
+                descripcion,
+                capacidad,
+                id_edificio
+            )
+            VALUES (%s, %s, %s, %s)
+            RETURNING id_espacio_comun;
         """,
         (data["nombre"], data.get("descripcion"), data["capacidad"], data["id_edificio"],),
         cursor=cursor,

@@ -4,19 +4,7 @@
  * archivo y la clase de origen. NO conectado a pantallas todavía (CP6a).
  * ========================================================================== */
 
-import {
-  contrasena,
-  correo,
-  decimal,
-  entero,
-  fecha,
-  hora,
-  listaDeEnteros,
-  longitud,
-  maximo,
-  requerido,
-  telefonoValido,
-} from "./rules";
+import { contrasena, correo, decimal, entero, fecha, hora, listaDeEnteros, longitud, maximo, requerido, telefonoValido, } from "./rules.js";
 
 /* Origen: backend/app/modules/users/schemas/accounts.py — AccountSchema /
  * UserCreateSchema / ResidentCreateSchema / EmployeeCreateSchema /
@@ -107,14 +95,8 @@ export const espacioCrear = {
   id_edificio: [requerido(), entero(1)],
 };
 
-/* Origen: backend/app/modules/common_spaces/schemas.py — PolicySchema.
- * politicaCrear(capacidad) es un FACTORY (la pantalla le pasa la capacidad
- * del espacio como número, o null si no la tiene): NO vive una regla de
- * capacidad en el schema del backend (la superación llega como Conflict
- * 409 de services.save_policy), así que el aforo es REGLA DE PANTALLA y
- * con capacidad null se omite (el backend responde de todos modos). Las
- * reglas cruzadas del @validates_schema del backend se copian con su
- * MENSAJE EXACTO montadas en el campo que las dispara. */
+/* La capacidad del espacio limita el aforo en el formulario cuando está disponible.
+ * El backend valida también esta regla al guardar la política. */
 const monto = (value) => {
   const texto = String(value ?? "").trim();
   const numero = Number(texto);

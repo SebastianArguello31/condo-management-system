@@ -1,30 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/* Paginación en cliente (F2-13a): corta una lista ya filtrada en páginas.
- *
- * Comportamientos:
- * - `rows` es la lista YA CORTADA por la pantalla (p. ej. el `filtered` de
- *   CrudPageUi); el hook solo la divide en páginas de `pageSize`.
- * - La página efectiva se ACOTA (clamp) a [1, pageCount] en cada render:
- *   si la lista encoge (búsqueda, eliminar la última fila), nunca queda
- *   una página vacía del tipo "41–50 de 38".
- * - La página vuelve a 1 SOLO cuando cambia `resetKey` (búsqueda/filtros).
- *   Un `reload()` o un refresco que mantiene `resetKey` NO la cambia, y no
- *   hay efectos que dependan de la identidad de `rows` (solo longitud/
- *   pageCount/resetKey): un array nuevo con el mismo contenido no resetea
- *   la página.
- * - Con 0 filas: pageCount 1 y from/to 0 (la lista vacía la maneja DataTable).
- *
- * Ejemplo:
- * const pag = usePagination(filtered, { pageSize: 10, resetKey: search });
- * <DataTable rows={pag.pageRows} ... />
- * <Pagination
- *   page={pag.page} pageCount={pag.pageCount} total={pag.total}
- *   from={pag.from} to={pag.to}
- *   onPrev={pag.goPrev} onNext={pag.goNext}
- *   label={`Paginación de ${title.toLowerCase()}`}
- * />
- */
+/* Divide una lista filtrada en páginas y acota la página si cambia su longitud.
+ * Solo un cambio de resetKey reinicia la navegación; una recarga conserva la página válida. */
 
 export function usePagination(rows = [], { pageSize = 10, resetKey } = {}) {
   const tamano = Math.max(1, pageSize);

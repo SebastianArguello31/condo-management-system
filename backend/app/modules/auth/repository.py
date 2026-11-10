@@ -1,3 +1,5 @@
+# Consultas de recuperación de cuentas y actualización de credenciales.
+# Los bloqueos de usuario coordinan operaciones concurrentes sobre sus tokens y contraseña.
 from app.core.db_helpers import query
 
 def lock_user_by_email(email, *, cursor):
@@ -57,6 +59,7 @@ def find_token_owner(token_hash, *, cursor):
         cursor=cursor,
     )
 
+# Marca como usado únicamente un token vigente y todavía pendiente; RETURNING confirma el consumo.
 def consume_reset_token(user_id, token_hash, *, cursor):
     return query(
         """
@@ -72,6 +75,7 @@ def consume_reset_token(user_id, token_hash, *, cursor):
         cursor=cursor,
     )
 
+# Incrementar session_version invalida los JWT emitidos con la contraseña anterior.
 def update_password(user_id, password_hash, *, cursor):
     query(
         """

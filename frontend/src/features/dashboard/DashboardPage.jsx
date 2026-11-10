@@ -9,17 +9,7 @@ import DateInput from "../../components/ui/DateInput";
 import CollapsiblePanel, { PanelToggle, useCollapsedPanels } from "./CollapsiblePanel";
 import "./dashboard.css";
 
-const ALL_STATES = [
-  "RECIBIDA",
-  "EN_REVISION",
-  "ASIGNADA",
-  "EN_PROCESO",
-  "EN_ESPERA",
-  "RESUELTA",
-  "CERRADA",
-  "RECHAZADA",
-  "CANCELADA",
-];
+const ALL_STATES = ["RECIBIDA", "EN_REVISION", "ASIGNADA", "EN_PROCESO", "EN_ESPERA", "RESUELTA", "CERRADA", "RECHAZADA", "CANCELADA",];
 
 const STATUS_COLORS = {
   RECIBIDA: "#64748b",
@@ -133,22 +123,9 @@ function normalizeData(result = {}) {
   };
 }
 
-function KpiCard({
-  color,
-  icon,
-  title,
-  value,
-  unit,
-  progress,
-  footer,
-  hint = "Detalle →",
-  onOpen,
-}) {
+function KpiCard({ color, icon, title, value, unit, progress, footer, hint = "Detalle →", onOpen, }) {
   return (
-    <article
-      className={`dash-kpi-card kpi-${color}`}
-      onClick={onOpen}
-    >
+    <article className={`dash-kpi-card kpi-${color}`} onClick={onOpen}>
       <div className="dash-kpi-header">
         <span className="dash-kpi-label">{title}</span>
         <span className="dash-kpi-icon-wrap">
@@ -162,17 +139,12 @@ function KpiCard({
       </div>
 
       <div className="dash-progress-track">
-        <div
-          className={`dash-progress-fill fill-${color}`}
-          style={{ width: `${percent(progress)}%` }}
-        />
+        <div className={`dash-progress-fill fill-${color}`} style={{ width: `${percent(progress)}%` }}/>
       </div>
 
       <div className="dash-kpi-footer">
         <span>{footer}</span>
-        <button
-          type="button"
-          className="dash-header-action-btn"
+        <button type="button" className="dash-header-action-btn"
           onClick={(event) => {
             event.stopPropagation();
             onOpen();
@@ -188,40 +160,18 @@ function KpiCard({
 function Panel({ id, icon, title, subtitle, extra, danger = false, panels, children }) {
   return (
     <div className="dash-col-6">
-      <CollapsiblePanel
-        id={id}
-        icon={icon}
-        title={title}
-        subtitle={subtitle}
-        danger={danger}
-        open={panels.isOpen(id)}
-        onToggle={() => panels.toggle(id)}
-        aside={extra}
-      >
+      <CollapsiblePanel id={id} icon={icon} title={title} subtitle={subtitle} danger={danger} open={panels.isOpen(id)} onToggle={() => panels.toggle(id)} aside={extra}>
         {children}
       </CollapsiblePanel>
     </div>
   );
 }
 
-function SelectFilter({
-  id,
-  label,
-  value,
-  onChange,
-  placeholder,
-  options,
-  idField,
-  renderLabel = (item) => item.nombre,
-}) {
+function SelectFilter({ id, label, value, onChange, placeholder, options, idField, renderLabel = (item) => item.nombre, }) {
   return (
     <div className="dash-filter-item">
       <label htmlFor={id}>{label}</label>
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
+      <select id={id} value={value} onChange={(event) => onChange(event.target.value)}>
         <option value="">{placeholder}</option>
         {options.map((item) => (
           <option key={item[idField]} value={item[idField]}>
@@ -317,11 +267,7 @@ function DetailTable({ type, rows, onNavigate }) {
                   <td>{row.resultado}</td>
                   {onNavigate && (
                     <td>
-                      <button
-                        type="button"
-                        className="dash-table-btn"
-                        onClick={onNavigate}
-                      >
+                      <button type="button" className="dash-table-btn" onClick={onNavigate}>
                         Ver incidencia ↗
                       </button>
                     </td>
@@ -341,24 +287,12 @@ function DetailTable({ type, rows, onNavigate }) {
                 </td>
                 <td>{row.tipo_incidencia}</td>
                 <td>
-                  <span
-                    className={`dash-badge badge-${(
-                      row.prioridad || "normal"
-                    ).toLowerCase()}`}
-                  >
+                  <span className={`dash-badge badge-${( row.prioridad || "normal").toLowerCase()}`}>
                     {row.prioridad}
                   </span>
                 </td>
                 <td>
-                  <span
-                    className="dash-status-dot"
-                    style={{
-                      display: "inline-block",
-                      marginRight: 6,
-                      background:
-                        STATUS_COLORS[row.estado] || "#94a3b8",
-                    }}
-                  />
+                  <span className="dash-status-dot" style={{ display: "inline-block", marginRight: 6, background: STATUS_COLORS[row.estado] || "#94a3b8", }}/>
                   {row.estado}
                 </td>
                 <td>
@@ -371,11 +305,7 @@ function DetailTable({ type, rows, onNavigate }) {
                 </td>
                 {onNavigate && (
                   <td>
-                    <button
-                      type="button"
-                      className="dash-table-btn"
-                      onClick={onNavigate}
-                    >
+                    <button type="button" className="dash-table-btn" onClick={onNavigate}>
                       Gestionar ↗
                     </button>
                   </td>
@@ -423,27 +353,16 @@ export default function DashboardPage({ user, onNavigate }) {
         { signal: controller.signal }
       );
 
-      if (
-        !controller.signal.aborted &&
-        currentRequest === requestId.current
-      ) {
+      if (!controller.signal.aborted && currentRequest === requestId.current) {
         setData(normalizeData(result));
       }
     } catch (err) {
-      if (
-        controller.signal.aborted ||
-        currentRequest !== requestId.current
-      ) return;
+      if (controller.signal.aborted || currentRequest !== requestId.current) return;
 
       setData(EMPTY_DATA);
-      setError(
-        err.message || "No se pudieron cargar los indicadores."
-      );
+      setError(err.message || "No se pudieron cargar los indicadores.");
     } finally {
-      if (
-        !controller.signal.aborted &&
-        currentRequest === requestId.current
-      ) {
+      if (!controller.signal.aborted && currentRequest === requestId.current) {
         setLoading(false);
       }
     }
@@ -467,9 +386,7 @@ export default function DashboardPage({ user, onNavigate }) {
       })
       .catch((err) => {
         if (!controller.signal.aborted) {
-          setError(
-            err.message || "No se pudieron cargar los filtros."
-          );
+          setError(rr.message || "No se pudieron cargar los filtros.");
         }
       });
 
@@ -540,9 +457,7 @@ export default function DashboardPage({ user, onNavigate }) {
         searchTerm: "",
       });
     } catch (err) {
-      setError(
-        err.message || "No se pudo cargar el detalle."
-      );
+      setError(err.message || "No se pudo cargar el detalle.");
     }
   }
 
@@ -645,12 +560,7 @@ export default function DashboardPage({ user, onNavigate }) {
 
   const chipDefinitions = [
     ["id_edificio", options.edificios, "id_edificio", "Edificio"],
-    [
-      "id_tipo_incidencia",
-      options.tipos_incidencia,
-      "id_tipo_incidencia",
-      "Tipo",
-    ],
+    ["id_tipo_incidencia", options.tipos_incidencia, "id_tipo_incidencia", "Tipo",],
     ["id_prioridad", options.prioridades, "id_prioridad", "Prioridad"],
     ["id_tecnico", options.tecnicos, "id_usuario", "Técnico"],
   ];
@@ -658,9 +568,7 @@ export default function DashboardPage({ user, onNavigate }) {
   for (const [key, entries, idField, label] of chipDefinitions) {
     if (!filters[key]) continue;
 
-    const entry = entries.find(
-      (item) => Number(item[idField]) === Number(filters[key])
-    );
+    const entry = entries.find((item) => Number(item[idField]) === Number(filters[key]));
     if (!entry) continue;
 
     activeChips.push({

@@ -1,12 +1,5 @@
-/* Login al kit (F2-9). Contrato INTACTO: ({ onLogin }) y POST
- * ${routes.auth}/login con { email: email.trim(), password }; el result
- * va directo a onLogin(result) — token, sesión y redirección/aterrizaje
- * por rol siguen en App.jsx, y el guard de 401 de api.js no considera al
- * login (ruta excluida). Validación en cliente con el schema `login`
- * (espejo del backend): errores por campo en Field (validate() + err.errors,
- * arrays → primer mensaje) y el resto (401, red) en Alert danger con foco.
- * Etiquetas con glifo a la izquierda: Field acepta label como ReactNode y
- * la variante de alineación va acotada a .login-panel en login.css. */
+/* Formulario de acceso con validación local y errores de la API.
+ * Entrega el resultado a onLogin para que App gestione la sesión y la navegación. */
 import { useEffect, useRef, useState } from "react";
 import { routes } from "../../services/routes";
 import { api } from "../../services/api";

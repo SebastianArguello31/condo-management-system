@@ -1,3 +1,5 @@
+# Operaciones de negocio para intervenciones técnicas.
+# Coordina las comprobaciones y el acceso a los repositorios antes de devolver el resultado.
 from decimal import Decimal
 
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
@@ -9,14 +11,10 @@ from app.modules.maintenance.repositories import interventions as intervention_r
 
 
 def _get_intervention_context(intervention_id, user, *, cursor, for_update=False):
-    intervention = intervention_repo.get_intervention(
-        intervention_id, cursor=cursor, for_update=for_update
-    )
+    intervention = intervention_repo.get_intervention(intervention_id, cursor=cursor, for_update=for_update)
     if intervention is None:
         raise NotFound("Intervención no encontrada")
-    incident = incident_services.get_incident_context(
-        intervention["id_incidencia"], user, for_update=for_update, cursor=cursor
-    )
+    incident = incident_services.get_incident_context(intervention["id_incidencia"], user, for_update=for_update, cursor=cursor)
     if user["rol"] == "TECNICO":
         if intervention["id_personal"] != user["id_usuario"]:
             raise Forbidden("Solo puedes consultar o modificar tu intervención")
@@ -24,18 +22,14 @@ def _get_intervention_context(intervention_id, user, *, cursor, for_update=False
             raise Forbidden("La incidencia ya no está asignada a tu usuario")
     return intervention, incident
 
-
 def list_consumptions(intervention_id, user):
     with transaction() as cursor:
         _get_intervention_context(intervention_id, user, cursor=cursor)
         return intervention_repo.list_consumptions(intervention_id, cursor=cursor)
 
-
 def consume(intervention_id, data, user):
     with transaction() as cursor:
-        intervention, incident = _get_intervention_context(
-            intervention_id, user, cursor=cursor, for_update=True
-        )
+        intervention, incident = _get_intervention_context(intervention_id, user, cursor=cursor, for_update=True)
         if incident["estado"] not in {"ASIGNADA", "EN_PROCESO", "EN_ESPERA"}:
             raise BadRequest("La incidencia no está en un estado que permita consumir insumos")
         item = inventory_repo.get_item(data["id_insumo"], cursor=cursor, for_update=True)
@@ -44,6 +38,7 @@ def consume(intervention_id, data, user):
         if not item["activo"]:
             raise BadRequest("El insumo está inactivo")
 
+        # Utiliza aritmética decimal para conservar la precisión de cantidades y costos.
         quantity = Decimal(data["cantidad"])
         updated = inventory_repo.change_stock(item["id_insumo"], -quantity, cursor=cursor)
         if updated is None:
@@ -75,28 +70,21 @@ def consume(intervention_id, data, user):
             "stock_resultante": updated["stock"],
         }
 
-
 def return_consumption(intervention_id, data, user):
     with transaction() as cursor:
-        _get_intervention_context(
-            intervention_id, user, cursor=cursor, for_update=True
-        )
+        _get_intervention_context(intervention_id, user, cursor=cursor, for_update=True)
         item = inventory_repo.get_item(data["id_insumo"], cursor=cursor, for_update=True)
         if item is None:
             raise NotFound("Insumo no encontrado")
+        # Utiliza aritmética decimal para conservar la precisión de cantidades y costos.
         quantity = Decimal(data["cantidad"])
-        consumed = inventory_repo.intervention_consumed(
-            item["id_insumo"], intervention_id, cursor=cursor
-        )
-        returned = inventory_repo.intervention_returned(
-            item["id_insumo"], intervention_id, cursor=cursor
-        )
+        consumed = inventory_repo.intervention_consumed(item["id_insumo"], intervention_id, cursor=cursor)
+        returned = inventory_repo.intervention_returned(item["id_insumo"], intervention_id, cursor=cursor)
+        # Descuenta las devoluciones anteriores para impedir reponer más de lo consumido.
         if quantity > consumed - returned:
             raise BadRequest("La devolución supera el consumo pendiente de devolver")
 
-        updated = inventory_repo.change_stock(
-            item["id_insumo"], quantity, cursor=cursor, allow_inactive=True
-        )
+        updated = inventory_repo.change_stock(item["id_insumo"], quantity, cursor=cursor, allow_inactive=True)
         if updated is None:
             raise BadRequest("No se pudo actualizar el stock")
         inventory_repo.insert_movement(

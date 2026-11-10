@@ -1,3 +1,5 @@
+# Esquemas de entrada para incidencias y seguimiento técnico.
+# Define los campos admitidos y sus restricciones antes de ejecutar las operaciones del servicio.
 from marshmallow import (ValidationError, fields, validate, validates_schema)
 
 from app.core.validation import BaseSchema, required_text

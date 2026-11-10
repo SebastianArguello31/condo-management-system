@@ -27,11 +27,7 @@ export default function Modal({
   }, []);
 
   return (
-    <dialog
-      ref={dialog}
-      className="mg-modal ui-modal"
-      data-backdrop={backdrop ? "true" : undefined}
-      aria-labelledby={headingId}
+    <dialog ref={dialog} className="mg-modal ui-modal" data-backdrop={backdrop ? "true" : undefined} aria-labelledby={headingId}
       onCancel={(event) => {
         event.preventDefault();
         if (!busy) onClose();
@@ -45,13 +41,7 @@ export default function Modal({
           <h2 id={headingId} className="ui-modal-title">{title}</h2>
           {description && <p className="ui-modal-desc">{description}</p>}
         </div>
-        <button
-          type="button"
-          className="mg-icon-button ui-modal-close"
-          aria-label="Cerrar ventana"
-          disabled={busy}
-          onClick={onClose}
-        >
+        <button type="button" className="mg-icon-button ui-modal-close" aria-label="Cerrar ventana" disabled={busy} onClick={onClose}>
           <Icon name="close" />
         </button>
       </header>

@@ -1,3 +1,5 @@
+# Operaciones de negocio para personal técnico y sus perfiles.
+# Coordina las comprobaciones y el acceso a los repositorios antes de devolver el resultado.
 from werkzeug.exceptions import NotFound
 
 from app.core.db_helpers import transaction

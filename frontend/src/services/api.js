@@ -1,3 +1,4 @@
+/* Cliente HTTP compartido: adjunta la sesión, serializa el cuerpo y normaliza los errores de la API. */
 import { API_BASE, routes } from "./routes";
 
 const SESSION_KEY = "condominio.accessToken";
@@ -66,6 +67,7 @@ export async function api(
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
 
+    /* Un error de una solicitud anterior no debe invalidar una sesión más reciente. */
     if (
       response.status === 401 &&
       path !== `${routes.auth}/login` &&

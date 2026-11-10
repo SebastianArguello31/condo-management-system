@@ -1,11 +1,4 @@
-/* ==========================================================================
- * validate(form, schema) → { campo: mensaje }
- * - Igual que BaseSchema.trim_strings del backend: recorta los strings
- *   (excepto password) antes de validar (no muta el form).
- * - Por campo corre las reglas en orden y reporta el PRIMER mensaje.
- * - Campos ausentes del form: undefined → las reglas de requerido()
- *   los marcan; el resto ignora.
- * ========================================================================== */
+/* Valida sin mutar el formulario: recorta textos salvo password y devuelve el primer error por campo. */
 
 export function validate(form, schema) {
   const errores = {};

@@ -1,3 +1,5 @@
+# Configura Flask-Limiter y la clave por correo para limitar recuperaciones.
+# El límite por dirección de correo complementa los límites por dirección IP.
 import hashlib
 import hmac
 
@@ -22,6 +24,7 @@ def recovery_email_key():
     normalized_email = email.strip().lower()
 
     secret = current_app.config["JWT_SECRET_KEY"].encode("utf-8")
+    # La clave HMAC permite agrupar solicitudes sin usar el correo en claro como clave de Redis.
     digest = hmac.new(
         secret,
         normalized_email.encode("utf-8"),

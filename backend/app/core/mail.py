@@ -1,3 +1,5 @@
+# Valida la configuración del enlace de recuperación y envía el correo por SMTP.
+# La conexión usa STARTTLS antes de autenticar al remitente y entregar el mensaje.
 import smtplib
 import ssl
 from email.message import EmailMessage

@@ -1,3 +1,5 @@
+# Esquemas de entrada para cuentas, roles y credenciales.
+# Define los campos admitidos y sus restricciones antes de ejecutar las operaciones del servicio.
 from marshmallow import fields, pre_load, validate
 
 from app.core.passwords import validate_password

@@ -10,10 +10,7 @@ export default function Timeline({ entries, className = "" }) {
     <ol className={["ui-timeline", className].filter(Boolean).join(" ")}>
       {entries.map((entry, index) => (
         <li key={entry.id ?? index} className="ui-timeline-entry">
-          <span
-            className={entry.tone ? `ui-timeline-dot ui-timeline-dot-${entry.tone}` : "ui-timeline-dot"}
-            aria-hidden="true"
-          />
+          <span className={entry.tone ? `ui-timeline-dot ui-timeline-dot-${entry.tone}` : "ui-timeline-dot"} aria-hidden="true"/>
           <p className="ui-timeline-time">{entry.time}</p>
           <p className="ui-timeline-title">{entry.title}</p>
           {entry.meta && <p className="ui-timeline-meta">{entry.meta}</p>}

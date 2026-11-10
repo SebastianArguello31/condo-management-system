@@ -1,12 +1,12 @@
+# Esquemas de entrada para residentes y sus perfiles.
+# Define los campos admitidos y sus restricciones antes de ejecutar las operaciones del servicio.
 from marshmallow import fields, validate
 
 from app.core.validation import BaseSchema, positive_id, required_text
 from .accounts import AccountSchema
 
-
 class ResidentCreateSchema(AccountSchema):
     id_unidad = positive_id()
-
 
 class ResidentUpdateSchema(BaseSchema):
     nombre = required_text()
@@ -15,7 +15,6 @@ class ResidentUpdateSchema(BaseSchema):
     telefono = required_text(40)
     activo = fields.Boolean(truthy={True}, falsy={False})
     id_unidad = positive_id()
-
 
 class ResidentProfileUpdateSchema(BaseSchema):
     nombre = required_text()

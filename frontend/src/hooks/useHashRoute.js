@@ -1,29 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-/* Router por hash (0 dependencias), sincronizado con location.hash.
- *
- * Reglas de parseo:
- * - Formato esperado: #/ruta?clave=valor&lista=a&lista=b
- * - Hash vacío, "#" o malformado (sin "/" inicial) → path "/" y {} params.
- * - Ruta y query se separan por la PRIMERA "?" (indexOf); el resto queda
- *   intacto dentro de los valores de la query.
- * - decodeURIComponent siempre con try/catch: si el valor está mal
- *   codificado se conserva crudo (nunca rompe el render).
- * - Claves repetidas llegan como array de strings ({ lista: ["a", "b"] }).
- *
- * Puede usarse en varios componentes a la vez: cada uno escucha "hashchange"
- * y mantiene su estado según el hash actual. Con { replace: true } se usa
- * history.replaceState (que no dispara "hashchange") y el hook lo vuelve a
- * disparar a mano para que TODAS las instancias montadas se actualicen por
- * el mismo canal.
- *
- * Ejemplo:
- * const { path, params, navigate } = useHashRoute();
- * // URL: #/incidencias?estado=RECIBIDA&tag=a&tag=b
- * // path === "/incidencias"; params === { estado: "RECIBIDA", tag: ["a", "b"] }
- * navigate("/incidencias", { estado: "RECIBIDA" });
- * navigate("/incidencia", { id: 7 }, { replace: true }); // sin entrada en el historial
- */
+/* Navegación por hash con parámetros repetidos como arrays y decodificación tolerante a errores.
+ * replaceState emite hashchange explícitamente para sincronizar todos los consumidores. */
 
 function safeDecode(value) {
   try {

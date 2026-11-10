@@ -1,24 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/* Mutación async con control de doble envío y error estructurado.
- *
- * Mientras hay una llamada en curso, las demás llamadas a `run` devuelven
- * esa misma promesa (una sola ejecución real). En éxito resuelve con el
- * dato que devuelva la API; en fallo guarda el error y lo lanza: el
- * llamador decide con try/catch. `error` es el objeto lanzado por api() y,
- * cuando el backend valida, lleva `error.errors` = { campo: [mensajes] }
- * (estructura consolidada en CP6).
- *
- * Ejemplo:
- * const { run, busy, error, reset } = useMutation(
- *   (body) => api(routes.units, { method: "POST", body })
- * );
- * try {
- *   await run(form);
- * } catch (err) {
- *   // err.errors → { campo: [mensajes] }; `error` queda seteado igualmente
- * }
- */
+/* Ejecuta una mutación y reutiliza su promesa mientras está en curso para evitar dobles envíos.
+ * Conserva el error y lo vuelve a lanzar para que el consumidor lo gestione. */
 
 export function useMutation(mutationFn) {
   const [busy, setBusy] = useState(false);

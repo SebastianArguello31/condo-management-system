@@ -1,29 +1,5 @@
-/* Incidencias — F2-5a (shell + listado + filtros al kit), F2-5b (creación
- * en IncidentsCreateModal; cierra B8) y F2-5c (detalle en
- * IncidentsDetailModal). Listado: un solo useQuery con signal (misma
- * Promise.all y mismos endpoints por rol) con loading → Skeleton, error
- * → ErrorState con Reintentar y reload() que conserva datos previos
- * (sin titilar); PageHeader por rol con meta "N incidencias · M
- * abiertas" ("abierta" = estado que NO es de cierre: RESUELTA/CERRADA/
- * RECHAZADA/CANCELADA), FilterBar (SearchInput por título/tipo + Select
- * de estado desde el catálogo /statuses, sembrado desde params.estado
- * del hash —sin escribir de vuelta— y "Limpiar filtros") y DataTable SIN
- * columna #ID (id solo rowKey) con estados de StatusBadge (presets
- * reales), prioridad con override de MÓDULO (sin presets nuevos en el
- * kit), "Reportada" con formatDate y acciones RowActions ("Detalle"
- * quiet sm, aria-label con el título).
- * DETALLE (F2-5c): "Detalle" guarda la fila en `selected` y monta
- * `IncidentsDetailModal` con los catálogos YA cargados (prioridades/
- * statuses/insumos), rol, idUsuario y onChanged={reload}; el padre RETIRÓ
- * el estado y los fetch del detalle legado (detail/nextStatus/
- * statusComment/history/assignments/interventions/interventionResult,
- * openDetail/updatePriority/changeStatus/addIntervention, el Modal
- * legado y la Alert de página, ya sin consumidores: cada acción reporta
- * DENTRO del modal o por Toast). B7 (detalle) queda POR VERIFICAR con
- * captura del dueño. La asignación de técnico (ADMIN, columna Técnico)
- * queda inline igual: POST /assignments con Number, Toast de éxito/
- * error, busy local. Cero window.confirm.
- */
+/* Listado de incidencias con filtros, asignación de técnicos y acceso a sus modales.
+ * El filtro inicial se toma del hash; los datos se consultan según el rol. */
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
@@ -31,19 +7,7 @@ import { useHashRoute } from "../../hooks/useHashRoute";
 import { useQuery } from "../../hooks/useQuery";
 import { usePagination } from "../../hooks/usePagination";
 import { formatDate } from "../../utils/format";
-import {
-  Button,
-  DataTable,
-  Field,
-  FilterBar,
-  PageHeader,
-  Pagination,
-  RowActions,
-  SearchInput,
-  Select,
-  StatusBadge,
-  useToast,
-} from "../../components/ui";
+import { Button, DataTable, Field, FilterBar, PageHeader, Pagination, RowActions, SearchInput, Select, StatusBadge, useToast, } from "../../components/ui";
 import { PRIORIDAD_TONO } from "./priorities";
 import IncidentsCreateModal from "./IncidentsCreateModal";
 import IncidentsDetailModal from "./IncidentsDetailModal";

@@ -1,3 +1,5 @@
+# Reglas de acceso y transición de estados de incidencias, sin consultas SQL.
+# Combina el rol, la propiedad del reporte y la asignación técnica para decidir permisos.
 from werkzeug.exceptions import BadRequest, Forbidden
 
 ALLOWED_TRANSITIONS = {
@@ -56,6 +58,7 @@ def get_allowed_statuses(incident, user):
         if current_status not in {"RECIBIDA", "EN_REVISION"}:
             allowed_statuses.clear()
 
+    # Sin responsable asignado no se ofrecen estados que requieren atención técnica.
     if incident["id_personal_asignado"] is None:
         allowed_statuses -= ASSIGNMENT_REQUIRED_STATUSES
 

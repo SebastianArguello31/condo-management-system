@@ -1,5 +1,6 @@
+# Consultas SQL de catálogos usados por el módulo para los indicadores.
+# Obtiene los datos que los servicios de analítica convierten en resúmenes y listados.
 from app.core.db_helpers import query
-
 
 def list_buildings(*, cursor):
     return query(
@@ -7,40 +8,37 @@ def list_buildings(*, cursor):
         many=True, cursor=cursor,
     )
 
-
 def list_types(*, cursor):
     return query(
         """
-        SELECT id_tipo_incidencia, nombre
-        FROM tipos_incidencia
-        WHERE activo = TRUE
-        ORDER BY nombre, id_tipo_incidencia
+            SELECT id_tipo_incidencia, nombre
+            FROM tipos_incidencia
+            WHERE activo = TRUE
+            ORDER BY nombre, id_tipo_incidencia
         """,
         many=True, cursor=cursor,
     )
-
 
 def list_priorities(*, cursor):
     return query(
         """
-        SELECT id_prioridad, nombre, nivel
-        FROM prioridades
-        WHERE activo = TRUE
-        ORDER BY nivel DESC, id_prioridad
+            SELECT id_prioridad, nombre, nivel
+            FROM prioridades
+            WHERE activo = TRUE
+            ORDER BY nivel DESC, id_prioridad
         """,
         many=True, cursor=cursor,
     )
-
 
 def list_technicians(*, cursor):
     # Solo nombre: el panel no necesita exponer correo ni teléfono.
     return query(
         """
-        SELECT u.id_usuario, u.nombre, u.apellido
-        FROM usuarios u
-        JOIN roles r ON r.id_rol = u.id_rol
-        WHERE r.nombre = 'TECNICO' AND u.activo = TRUE
-        ORDER BY u.apellido, u.nombre, u.id_usuario
+            SELECT u.id_usuario, u.nombre, u.apellido
+            FROM usuarios u
+            JOIN roles r ON r.id_rol = u.id_rol
+            WHERE r.nombre = 'TECNICO' AND u.activo = TRUE
+            ORDER BY u.apellido, u.nombre, u.id_usuario
         """,
         many=True, cursor=cursor,
     )

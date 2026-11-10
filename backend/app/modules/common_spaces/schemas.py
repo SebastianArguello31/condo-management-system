@@ -1,3 +1,5 @@
+# Esquemas de entrada para espacios comunes y políticas de uso.
+# Define los campos admitidos y sus restricciones antes de ejecutar las operaciones del servicio.
 from marshmallow import ValidationError, fields, validate, validates_schema
 
 from app.core.validation import BaseSchema, positive_id, required_text

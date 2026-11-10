@@ -1,3 +1,5 @@
+# Acceso SQL a incidencias.
+# Encapsula las consultas usadas por los servicios de este módulo.
 from app.core.db_helpers import query
 
 STATUS_ASSIGNMENT_JOINS = """
@@ -99,12 +101,12 @@ def get_incident(incident_id, *, cursor):
 def get_context(incident_id, *, cursor):
     return query(
         """
-        SELECT
-            i.id_incidencia,
-            i.id_reportante,
-            estado.nombre AS estado,
-            asignado.id_personal_asignado
-        FROM incidencias i
+            SELECT
+                i.id_incidencia,
+                i.id_reportante,
+                estado.nombre AS estado,
+                asignado.id_personal_asignado
+            FROM incidencias i
         """
         + STATUS_ASSIGNMENT_JOINS
         + " WHERE i.id_incidencia = %s",
@@ -126,12 +128,12 @@ def lock_incident(incident_id, *, for_update=False, cursor):
 def get_resident_link(user_id, unit_id, *, cursor):
     return query(
         """
-        SELECT id_residente
-        FROM residentes
-        WHERE id_usuario = %s
-          AND id_unidad = %s
-        LIMIT 1
-        FOR SHARE;
+            SELECT id_residente
+            FROM residentes
+            WHERE id_usuario = %s
+            AND id_unidad = %s
+            LIMIT 1
+            FOR SHARE;
         """,
         (user_id, unit_id),
         cursor=cursor,
@@ -140,20 +142,20 @@ def get_resident_link(user_id, unit_id, *, cursor):
 def insert_incident(data, user_id, priority, *, cursor):
     return query(
         """
-        INSERT INTO incidencias (
-            titulo,
-            descripcion,
-            id_unidad,
-            id_tipo_incidencia,
-            id_prioridad,
-            id_reportante,
-            fecha_limite
-        )
-        VALUES (
-            %s, %s, %s, %s, %s, %s,
-            CURRENT_TIMESTAMP + (%s * INTERVAL '1 hour')
-        )
-        RETURNING id_incidencia;
+            INSERT INTO incidencias (
+                titulo,
+                descripcion,
+                id_unidad,
+                id_tipo_incidencia,
+                id_prioridad,
+                id_reportante,
+                fecha_limite
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s,
+                CURRENT_TIMESTAMP + (%s * INTERVAL '1 hour')
+            )
+            RETURNING id_incidencia;
         """,
         (
             data["titulo"],
@@ -170,11 +172,11 @@ def insert_incident(data, user_id, priority, *, cursor):
 def update_priority(incident_id, priority, *, cursor):
     query(
         """
-        UPDATE incidencias
-        SET id_prioridad = %s,
-            fecha_limite = fecha_reporte + (%s * INTERVAL '1 hour'),
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id_incidencia = %s;
+            UPDATE incidencias
+            SET id_prioridad = %s,
+                fecha_limite = fecha_reporte + (%s * INTERVAL '1 hour'),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id_incidencia = %s;
         """,
         (priority["id_prioridad"], priority["tiempo_resolucion_horas"], incident_id,),
         cursor=cursor,
@@ -183,9 +185,9 @@ def update_priority(incident_id, priority, *, cursor):
 def touch_incident(incident_id, *, cursor):
     query(
         """
-        UPDATE incidencias
-        SET updated_at = CURRENT_TIMESTAMP
-        WHERE id_incidencia = %s;
+            UPDATE incidencias
+            SET updated_at = CURRENT_TIMESTAMP
+            WHERE id_incidencia = %s;
         """,
         (incident_id,),
         cursor=cursor,
@@ -194,17 +196,17 @@ def touch_incident(incident_id, *, cursor):
 def update_resolution_date(incident_id, previous_status, new_status, *, cursor):
     query(
         """
-        UPDATE incidencias
-        SET fecha_resolucion = CASE
-                WHEN %s IN ('RESUELTA', 'CERRADA')
-                    THEN COALESCE(fecha_resolucion, CURRENT_TIMESTAMP)
-                WHEN %s IN ('RESUELTA', 'CERRADA')
-                     AND %s = 'EN_PROCESO'
-                    THEN NULL
-                ELSE fecha_resolucion
-            END,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id_incidencia = %s;
+            UPDATE incidencias
+            SET fecha_resolucion = CASE
+                    WHEN %s IN ('RESUELTA', 'CERRADA')
+                        THEN COALESCE(fecha_resolucion, CURRENT_TIMESTAMP)
+                    WHEN %s IN ('RESUELTA', 'CERRADA')
+                        AND %s = 'EN_PROCESO'
+                        THEN NULL
+                    ELSE fecha_resolucion
+                END,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id_incidencia = %s;
         """,
         (new_status, previous_status, new_status, incident_id,),
         cursor=cursor,

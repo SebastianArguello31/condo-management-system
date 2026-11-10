@@ -1,3 +1,5 @@
+# Acceso SQL a especialidades del personal.
+# Encapsula las consultas usadas por los servicios de este módulo.
 """Consultas SQL de especialidades."""
 
 from app.core.db_helpers import query, update_record, delete_record
@@ -24,11 +26,11 @@ def find_specialties(user_id=None, *, cursor=None):
 def lock_specialties(ids, *, cursor):
     return query(
         """
-        SELECT id_especialidad, nombre, descripcion, activo
-        FROM especialidades
-        WHERE id_especialidad = ANY(%s)
-        ORDER BY id_especialidad
-        FOR SHARE;
+            SELECT id_especialidad, nombre, descripcion, activo
+            FROM especialidades
+            WHERE id_especialidad = ANY(%s)
+            ORDER BY id_especialidad
+            FOR SHARE;
         """,
         (sorted(set(ids)),),
         many=True,
@@ -38,9 +40,9 @@ def lock_specialties(ids, *, cursor):
 def insert_specialty(data, *, cursor):
     return query(
         """
-        INSERT INTO especialidades (nombre, descripcion, activo)
-        VALUES (%s, %s, %s)
-        RETURNING id_especialidad, nombre, descripcion, activo;
+            INSERT INTO especialidades (nombre, descripcion, activo)
+            VALUES (%s, %s, %s)
+            RETURNING id_especialidad, nombre, descripcion, activo;
         """,
         (data["nombre"], data.get("descripcion", ""), data.get("activo", True),),
         cursor=cursor,
@@ -61,9 +63,9 @@ def update_specialty(specialty_id, data, *, cursor):
 
     return query(
         """
-        SELECT id_especialidad, nombre, descripcion, activo
-        FROM especialidades
-        WHERE id_especialidad = %s;
+            SELECT id_especialidad, nombre, descripcion, activo
+            FROM especialidades
+            WHERE id_especialidad = %s;
         """,
         (specialty_id,),
         cursor=cursor,
@@ -77,10 +79,8 @@ def replace_user_specialties(user_id, ids, *, cursor):
 
     cursor.executemany(
         """
-        INSERT INTO usuario_especialidades (
-            id_usuario, id_especialidad
-        )
-        VALUES (%s, %s);
+            INSERT INTO usuario_especialidades (id_usuario, id_especialidad)
+            VALUES (%s, %s);
         """,
         [
             (user_id, item_id)
@@ -91,12 +91,10 @@ def replace_user_specialties(user_id, ids, *, cursor):
 def add_user_specialty(user_id, specialty_id, *, cursor):
     return query(
         """
-        INSERT INTO usuario_especialidades (
-            id_usuario, id_especialidad
-        )
-        VALUES (%s, %s)
-        ON CONFLICT (id_usuario, id_especialidad) DO NOTHING
-        RETURNING id_especialidad;
+            INSERT INTO usuario_especialidades (id_usuario, id_especialidad)
+            VALUES (%s, %s)
+            ON CONFLICT (id_usuario, id_especialidad) DO NOTHING
+            RETURNING id_especialidad;
         """,
         (user_id, specialty_id),
         cursor=cursor,
@@ -105,9 +103,9 @@ def add_user_specialty(user_id, specialty_id, *, cursor):
 def remove_user_specialty(user_id, specialty_id, *, cursor):
     return query(
         """
-        DELETE FROM usuario_especialidades
-        WHERE id_usuario = %s AND id_especialidad = %s
-        RETURNING id_especialidad;
+            DELETE FROM usuario_especialidades
+            WHERE id_usuario = %s AND id_especialidad = %s
+            RETURNING id_especialidad;
         """,
         (user_id, specialty_id),
         cursor=cursor,

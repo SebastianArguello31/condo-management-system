@@ -1,3 +1,5 @@
+# Abre conexiones PostgreSQL usando la configuración de la aplicación activa.
+# Los cursores devuelven filas como diccionarios para acceder por nombre de columna.
 import psycopg2
 from flask import current_app
 from psycopg2.extras import RealDictCursor

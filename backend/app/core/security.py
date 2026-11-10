@@ -1,3 +1,5 @@
+# Generación y comprobación de hashes bcrypt y tokens de acceso JWT.
+# Los tokens incluyen expiración y versión de sesión para permitir su invalidación.
 import bcrypt
 import jwt
 from flask import current_app
@@ -24,6 +26,7 @@ def verify_password(password, password_hash):
         return False
 
 def create_access_token(user_id, session_version=0):
+    # La comprobación exacta de tipo también excluye booleanos, que Python trata como enteros.
     if type(session_version) is not int or session_version < 0:
         raise ValueError("Versión de sesión inválida")
 
@@ -46,6 +49,7 @@ def create_access_token(user_id, session_version=0):
     )
 
 def decode_access_token(token):
+    # Fija el algoritmo aceptado y exige los campos usados para identificar y caducar la sesión.
     payload = jwt.decode(
         token,
         current_app.config["JWT_SECRET_KEY"],

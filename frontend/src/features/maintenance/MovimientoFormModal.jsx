@@ -1,47 +1,11 @@
-/* MovimientoFormModal — F2-10c (NUEVO): "Registrar movimiento" al kit
- * (FormModal), reemplaza el modal legado de MaintenancePage. Paridad de
- * campos: Tipo (Select con SOLO Entrada/Salida — constante de MÓDULO;
- * los tipos INICIAL/AJUSTE_ENTRADA, AJUSTE_SALIDA Y DEVOLUCIÓN siguen fuera del UI por la
- * reducción de Dev 2, el legado tampoco los ofrecía) con ENTRADA por
- * defecto, Cantidad y Motivo (textarea). Arriba, en SOLO LECTURA, la
- * "Existencia actual" de la FILA del listado con formatQuantityUnit (sin
- * GET extra), para evitar salidas que dejarían stock negativo; ese caso
- * NO se calcula en cliente: POST /maintenance/insumos/:id/entradas o
- * /salidas con el payload IDÉNTICO al del legado ({ cantidad del input,
- * motivo trim }) y el backend responde 400 con TEXTO EXACTO
- * ("El movimiento dejaría el stock en negativo" /
- * "No se pueden registrar movimientos para un insumo inactivo" —
- * backend/app/modules/maintenance/services/inventory.py) que se muestra
- * DENTRO del modal (Alert danger del FormModal con foco/scroll).
- * Validación en cliente PRIMERO: schema `movimientoCrear` (espejo EXACTO
- * de MovimientoSchema: cantidad requerida MAYOR que 0, máx. 3 decimales;
- * motivo requerido 3–500) y luego err.errors del backend (arrays →
- * string) → error DIRECTO al Field (lección F2-5b) + foco al PRIMER
- * .ui-control-invalid por contador `intento` (el error por campo se
- * limpia al editar ese campo). Números: type="number"
- * inputMode="decimal" min="0" step="any" — flechas de 1 en 1 (el
- * step="any" provisional de F2-10a queda definitivo al retirarse el
- * modal legado), decimales aceptados y precisión validada por el espejo
- * Y el backend. Convenciones §8-bis/§8-ter: pila .ui-form-stack total
- * control vía Field con name y autoComplete="off", cierre bloqueado
- * mientras busy, useMutation (doble clic = UN envío), botón SIEMPRE
- * activo salvo busy, cero window.confirm. Éxito: modal cierra + Toast
- * "Movimiento registrado." (decisión F2-10c) + onGuardado() = reload()
- * del listado sin titilar. Español neutro (tuteo). Cero CSS nuevo.
- */
+/* Registro de entradas o salidas de inventario con cantidad y motivo.
+ * El backend comprueba la disponibilidad de stock; sus errores se muestran en el modal. */
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useMutation } from "../../hooks/useMutation";
 import { validate, movimientoCrear } from "../../validations";
-import {
-  Field,
-  FormModal,
-  Input,
-  Select,
-  Textarea,
-  useToast,
-} from "../../components/ui";
+import { Field, FormModal, Input, Select, Textarea, useToast,} from "../../components/ui";
 import { formatQuantityUnit } from "./quantity";
 
 /* Select de tipo del UI (constante de módulo; el legado ofrecía los

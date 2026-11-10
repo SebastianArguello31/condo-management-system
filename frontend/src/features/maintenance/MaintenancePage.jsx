@@ -8,19 +8,7 @@ import InsumoFormModal from "./InsumoFormModal";
 import InsumoHistorialModal from "./InsumoHistorialModal";
 import MovimientoFormModal from "./MovimientoFormModal";
 import { formatQuantityUnit } from "./quantity";
-import {
-  Button,
-  Checkbox,
-  DataTable,
-  Field,
-  FilterBar,
-  PageHeader,
-  Pagination,
-  RowActions,
-  SearchInput,
-  Select,
-  StatusBadge,
-} from "../../components/ui";
+import { Button, Checkbox, DataTable, Field, FilterBar, PageHeader, Pagination, RowActions, SearchInput, Select, StatusBadge, } from "../../components/ui";
 
 const ESTADO_INSUMO = {
   bajo: {
@@ -64,12 +52,7 @@ export default function MaintenancePage({ user }) {
     if (bajoStockDesdeUrl) setBajoStock(true);
   }, [bajoStockDesdeUrl]);
 
-  const {
-    data: categorias = [],
-    loading: cargandoCategorias,
-    error: errorCategorias,
-    reload: reloadCategorias,
-  } = useQuery(
+  const { data: categorias = [], loading: cargandoCategorias, error: errorCategorias, reload: reloadCategorias,} = useQuery(
     (signal) => api(routes.maintenanceCategories, { signal }),
     []
   );
@@ -77,12 +60,7 @@ export default function MaintenancePage({ user }) {
   const claveFiltros =
     `${busquedaAplicada.trim()}|${categoria}|${bajoStock}`;
 
-  const {
-    data,
-    loading,
-    error: errorCarga,
-    reload,
-  } = useQuery(async (signal) => {
+  const { data, loading, error: errorCarga, reload, } = useQuery(async (signal) => {
     const filtros = new URLSearchParams();
 
     if (busquedaAplicada.trim()) {
@@ -143,9 +121,7 @@ export default function MaintenancePage({ user }) {
     setModal("history");
   }
 
-  const hayFiltros = Boolean(
-    busquedaAplicada.trim() || categoria || bajoStock
-  );
+  const hayFiltros = Boolean(busquedaAplicada.trim() || categoria || bajoStock);
   const vacioReal = !loading && !hayFiltros && items.length === 0;
   const conStockBajo = items.filter((item) => item.bajo_stock).length;
 

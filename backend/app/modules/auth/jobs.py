@@ -1,3 +1,5 @@
+# Encola y procesa el envío asíncrono de enlaces de recuperación mediante RQ.
+# El trabajo crea su propio contexto Flask para acceder a configuración y base de datos.
 from flask import current_app
 from redis import Redis
 from rq import Queue

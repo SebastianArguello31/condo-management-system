@@ -6,16 +6,7 @@
 import { useId } from "react";
 import "./ui.css";
 
-export default function SearchInput({
-  value,
-  onChange,
-  onClear,
-  placeholder = "Buscar…",
-  label = "Buscar",
-  id,
-  className = "",
-  ...rest
-}) {
+export default function SearchInput({ value, onChange, onClear, placeholder = "Buscar…", label = "Buscar", id, className = "", ...rest }) {
   const localId = useId();
   const inputId = id ?? localId;
 
@@ -25,12 +16,7 @@ export default function SearchInput({
         {label}
       </label>
       <div className="ui-search">
-        <input
-          type="search"
-          id={inputId}
-          className="ui-control"
-          value={value}
-          placeholder={placeholder}
+        <input type="search" id={inputId} className="ui-control" value={value} placeholder={placeholder}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Escape" && value && onClear) {

@@ -1,3 +1,5 @@
+# Acceso SQL a unidades habitacionales y sus tipos.
+# Encapsula las consultas usadas por los servicios de este módulo.
 from app.core.db_helpers import delete_record, query, update_record
 
 UNIT_SELECT = """
@@ -26,9 +28,9 @@ def get_unit(unit_id):
 def list_types():
     return query(
         """
-        SELECT id_tipo_unidad, nombre, descripcion
-        FROM tipo_unidad
-        ORDER BY id_tipo_unidad;
+            SELECT id_tipo_unidad, nombre, descripcion
+            FROM tipo_unidad
+            ORDER BY id_tipo_unidad;
         """,
         many=True,
     )
@@ -36,9 +38,9 @@ def list_types():
 def get_type(type_id):
     return query(
         """
-        SELECT id_tipo_unidad, nombre, descripcion
-        FROM tipo_unidad
-        WHERE id_tipo_unidad = %s;
+            SELECT id_tipo_unidad, nombre, descripcion
+            FROM tipo_unidad
+            WHERE id_tipo_unidad = %s;
         """,
         (type_id,),
     )
@@ -46,9 +48,9 @@ def get_type(type_id):
 def insert_type(data):
     return query(
         """
-        INSERT INTO tipo_unidad (nombre, descripcion)
-        VALUES (%s, %s)
-        RETURNING id_tipo_unidad, nombre, descripcion;
+            INSERT INTO tipo_unidad (nombre, descripcion)
+            VALUES (%s, %s)
+            RETURNING id_tipo_unidad, nombre, descripcion;
         """,
         (data["nombre"], data.get("descripcion", "")),
     )
@@ -73,21 +75,21 @@ def delete_type(type_id):
 def insert_unit(data):
     return query(
         """
-        INSERT INTO unidades (
-            codigo,
-            piso,
-            created_at,
-            id_edificio,
-            id_tipo_unidad
-        )
-        VALUES (%s, %s, CURRENT_TIMESTAMP, %s, %s)
-        RETURNING
-            id_unidad,
-            codigo,
-            piso,
-            created_at,
-            id_edificio,
-            id_tipo_unidad;
+            INSERT INTO unidades (
+                codigo,
+                piso,
+                created_at,
+                id_edificio,
+                id_tipo_unidad
+            )
+            VALUES (%s, %s, CURRENT_TIMESTAMP, %s, %s)
+            RETURNING
+                id_unidad,
+                codigo,
+                piso,
+                created_at,
+                id_edificio,
+                id_tipo_unidad;
         """,
         (data["codigo"], data.get("piso"), data["id_edificio"], data["id_tipo_unidad"],),
     )

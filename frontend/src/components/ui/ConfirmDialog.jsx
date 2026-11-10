@@ -48,11 +48,7 @@ export default function ConfirmDialog() {
           <Button variant="quiet" onClick={() => responderCon(false)} autoFocus={options.danger}>
             Cancelar
           </Button>
-          <Button
-            variant={options.danger ? "danger" : "primary"}
-            onClick={() => responderCon(true)}
-            autoFocus={!options.danger}
-          >
+          <Button variant={options.danger ? "danger" : "primary"} onClick={() => responderCon(true)} autoFocus={!options.danger}>
             {options.confirmLabel ?? "Confirmar"}
           </Button>
         </>

@@ -1,29 +1,5 @@
-/* ResidentsPage — F2-6b: Residentes al kit (ADMIN). Reemplaza al shell
- * legado (mg-* / residents) y RETIRA los consumidores de CreateAccount y
- * ResidentUnits (ambos archivos se eliminan; B2/B3 cierran en el crear del
- * kit, B5 en el modal de unidades).
- * Paridad con el legado:
- * - Listado GET /residents (una fila POR UNIDAD vinculada): fila por
- *   residente con deduplicado conservando la PRIMERA (el backend ordena
- *   por apellido, nombre y código de unidad); columnas Residente, Email,
- *   Teléfono, Unidades (conteo calculado del grupo), Estado y Acciones.
- * - Búsqueda en cliente por nombre, apellido, email y teléfono Y por
- *   unidad/edificio (evaluada contra TODAS las filas del residente; el
- *   placeholder lo promete), con botón "Actualizar" como la FilterBar de
- *   CrudPageUi.
- * - Crear con "Unidad inicial" (POST /residents con id_unidad Number;
- *   409 de vínculo duplicado mostrado DENTRO del modal) →
- *   ResidentCreateModal; "Ver unidades" → ResidentUnitsModal (:id/units).
- * - Activar/Desactivar: PATCH /residents/:id {activo} (mismo endpoint y
- *   payload del legado) con useConfirm (danger SOLO al desactivar),
- *   useMutation con dedupe y Toast; error por Toast danger.
- * Cambios por convención (§8-bis): PageHeader con meta de conteo,
- * useQuery con signal (Skeleton/ErrorState/EmptyState sin parpadeo),
- * DataTable sin columna ID, estado con StatusBadge override ACTIVA/
- * INACTIVA (estadoCuenta, única fuente de F2-6a), acciones con RowActions
- * y botón de crear solo texto. EmptyState DISTINTO para búsqueda sin
- * resultados y para sin residentes (cero window.confirm; español neutro).
- */
+/* Listado de residentes agrupado a partir de las filas de sus unidades.
+ * La búsqueda considera todas las unidades vinculadas, aunque se muestre una fila por persona. */
 import { useMemo, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
@@ -31,17 +7,7 @@ import { useQuery } from "../../hooks/useQuery";
 import { useMutation } from "../../hooks/useMutation";
 import { useConfirm } from "../../hooks/useConfirm";
 import { usePagination } from "../../hooks/usePagination";
-import {
-  Button,
-  DataTable,
-  FilterBar,
-  PageHeader,
-  Pagination,
-  RowActions,
-  SearchInput,
-  StatusBadge,
-  useToast,
-} from "../../components/ui";
+import { Button, DataTable, FilterBar, PageHeader, Pagination, RowActions, SearchInput, StatusBadge, useToast, } from "../../components/ui";
 import { estadoCuenta } from "./AccountDetailModal";
 import ResidentCreateModal from "./ResidentCreateModal";
 import ResidentUnitsModal from "./ResidentUnitsModal";

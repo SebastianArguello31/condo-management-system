@@ -1,3 +1,5 @@
+# Acceso SQL a reservas y sus estados.
+# Encapsula las consultas usadas por los servicios de este módulo.
 from app.core.db_helpers import query
 
 RESERVATION_SELECT = """
@@ -71,16 +73,16 @@ def list_reservations(*, user_id=None, space=None, status=None, reservation_date
 def has_overlap(data, *, cursor):
     result = query(
         """
-        SELECT r.id_reserva
-        FROM reservas r
-        JOIN estado_reservas er
-            ON er.id_estado_reserva = r.id_estado_reserva
-        WHERE r.id_espacio_comun = %s
-          AND r.fecha = %s
-          AND er.nombre IN ('PENDIENTE', 'CONFIRMADA')
-          AND r.hora_inicio < %s
-          AND r.hora_fin > %s
-        LIMIT 1;
+            SELECT r.id_reserva
+            FROM reservas r
+            JOIN estado_reservas er
+                ON er.id_estado_reserva = r.id_estado_reserva
+            WHERE r.id_espacio_comun = %s
+            AND r.fecha = %s
+            AND er.nombre IN ('PENDIENTE', 'CONFIRMADA')
+            AND r.hora_inicio < %s
+            AND r.hora_fin > %s
+            LIMIT 1;
         """,
         (data["id_espacio"], data["fecha"], data["hora_fin"], data["hora_inicio"],),
         cursor=cursor,
@@ -91,24 +93,24 @@ def has_overlap(data, *, cursor):
 def insert_reservation(data, user_id, cost, status_id, *, cursor):
     return query(
         """
-        INSERT INTO reservas (
-            fecha,
-            hora_inicio,
-            hora_fin,
-            cantidad_personas,
-            costo_total,
-            observaciones,
-            created_at,
-            id_espacio_comun,
-            id_usuario,
-            id_tipo_evento,
-            id_estado_reserva
-        )
-        VALUES (
-            %s, %s, %s, %s, %s, %s,
-            CURRENT_TIMESTAMP, %s, %s, %s, %s
-        )
-        RETURNING id_reserva;
+            INSERT INTO reservas (
+                fecha,
+                hora_inicio,
+                hora_fin,
+                cantidad_personas,
+                costo_total,
+                observaciones,
+                created_at,
+                id_espacio_comun,
+                id_usuario,
+                id_tipo_evento,
+                id_estado_reserva
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s,
+                CURRENT_TIMESTAMP, %s, %s, %s, %s
+            )
+            RETURNING id_reserva;
         """,
         (
             data["fecha"],
@@ -128,9 +130,9 @@ def insert_reservation(data, user_id, cost, status_id, *, cursor):
 def get_reservation_location(reservation_id, *, cursor):
     return query(
         """
-        SELECT id_espacio_comun
-        FROM reservas
-        WHERE id_reserva = %s;
+            SELECT id_espacio_comun
+            FROM reservas
+            WHERE id_reserva = %s;
         """,
         (reservation_id,),
         cursor=cursor,
@@ -139,10 +141,10 @@ def get_reservation_location(reservation_id, *, cursor):
 def lock_reservation(reservation_id, *, cursor):
     return query(
         """
-        SELECT id_reserva
-        FROM reservas
-        WHERE id_reserva = %s
-        FOR UPDATE;
+            SELECT id_reserva
+            FROM reservas
+            WHERE id_reserva = %s
+            FOR UPDATE;
         """,
         (reservation_id,),
         cursor=cursor,
@@ -151,18 +153,18 @@ def lock_reservation(reservation_id, *, cursor):
 def get_reservation_context(reservation_id, *, cursor):
     return query(
         """
-        SELECT
-            r.id_reserva,
-            r.id_usuario,
-            r.id_espacio_comun,
-            r.fecha,
-            r.hora_inicio,
-            r.hora_fin,
-            er.nombre AS estado
-        FROM reservas r
-        JOIN estado_reservas er
-            ON er.id_estado_reserva = r.id_estado_reserva
-        WHERE r.id_reserva = %s;
+            SELECT
+                r.id_reserva,
+                r.id_usuario,
+                r.id_espacio_comun,
+                r.fecha,
+                r.hora_inicio,
+                r.hora_fin,
+                er.nombre AS estado
+            FROM reservas r
+            JOIN estado_reservas er
+                ON er.id_estado_reserva = r.id_estado_reserva
+            WHERE r.id_reserva = %s;
         """,
         (reservation_id,),
         cursor=cursor,
@@ -171,9 +173,9 @@ def get_reservation_context(reservation_id, *, cursor):
 def update_status(reservation_id, status_id, *, cursor):
     query(
         """
-        UPDATE reservas
-        SET id_estado_reserva = %s
-        WHERE id_reserva = %s;
+            UPDATE reservas
+            SET id_estado_reserva = %s
+            WHERE id_reserva = %s;
         """,
         (status_id, reservation_id),
         cursor=cursor,

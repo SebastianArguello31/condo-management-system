@@ -1,8 +1,11 @@
+# Compone el panel general a partir de métricas de incidencias, intervenciones e inventario.
+# También ofrece catálogos de filtros y deriva consultas de detalle al servicio correspondiente.
 from app.core.db_helpers import transaction
 from app.modules.analytics.repositories import catalogs
 from app.modules.analytics.services import incidents, interventions, inventory
 
 def get_dashboard_overview(filters, user):
+    # Comparte el cursor entre las consultas necesarias para construir esta respuesta.
     with transaction() as cursor:
         incident_data = incidents.compute(filters, user, cursor=cursor)
         intervention_data = interventions.compute(filters, user, cursor=cursor)
@@ -61,8 +64,8 @@ def get_dashboard_overview(filters, user):
         },
     }
 
-
 def get_filter_options(user):
+    # Comparte el cursor entre las consultas necesarias para construir esta respuesta.
     with transaction() as cursor:
         options = {
             "edificios": catalogs.list_buildings(cursor=cursor),
@@ -78,42 +81,11 @@ def get_filter_options(user):
 
         return options
 
+def get_records(record_type, filters, user, *, status=None, limit=100,):
+    if record_type in ("incidencias", "incidencias_pendientes", "incidencias_resueltas",):
+        return incidents.list_records(record_type, filters, user, status=status, limit=limit,)
 
-def get_records(
-    record_type,
-    filters,
-    user,
-    *,
-    status=None,
-    limit=100,
-):
-    if record_type in (
-        "incidencias",
-        "incidencias_pendientes",
-        "incidencias_resueltas",
-    ):
-        return incidents.list_records(
-            record_type,
-            filters,
-            user,
-            status=status,
-            limit=limit,
-        )
+    if record_type in ("pendientes_intervencion", "intervenciones_realizadas",):
+        return interventions.list_records(record_type, filters, user, limit=limit,)
 
-    if record_type in (
-        "pendientes_intervencion",
-        "intervenciones_realizadas",
-    ):
-        return interventions.list_records(
-            record_type,
-            filters,
-            user,
-            limit=limit,
-        )
-
-    return inventory.list_records(
-        record_type,
-        filters,
-        user,
-        limit=limit,
-    )
+    return inventory.list_records(record_type, filters, user, limit=limit,)

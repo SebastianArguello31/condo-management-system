@@ -4,20 +4,9 @@
 import "./ui.css";
 import { useFieldControlProps } from "./Field";
 
-export default function Select({
-  id,
-  className = "",
-  children,
-  "aria-describedby": describedByProp,
-  "aria-invalid": invalidProp,
-  ...rest
-}) {
+export default function Select({ id, className = "", children, "aria-describedby": describedByProp, "aria-invalid": invalidProp, ...rest }) {
   const fieldProps = useFieldControlProps({ id, "aria-describedby": describedByProp, "aria-invalid": invalidProp });
-  const classes = [
-    "ui-control",
-    fieldProps["aria-invalid"] ? "ui-control-invalid" : "",
-    className,
-  ].filter(Boolean).join(" ");
+  const classes = ["ui-control", fieldProps["aria-invalid"] ? "ui-control-invalid" : "", className,].filter(Boolean).join(" ");
 
   return (
     <select {...rest} {...fieldProps} className={classes}>

@@ -9,13 +9,7 @@ import "./login.css";
 const EMAIL_SCHEMA = { email: login.email };
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
-export default function PasswordRecovery({
-  mode,
-  token,
-  onBack,
-  onRequestLink,
-  onCompleted,
-}) {
+export default function PasswordRecovery({ mode, token, onBack, onRequestLink, onCompleted, }) {
   const resetting = mode === "reset";
   const validToken =
     typeof token === "string" && TOKEN_PATTERN.test(token);

@@ -1,24 +1,7 @@
-/* IncidentsDetailModal — F2-5c: modal de DETALLE de incidencias al kit
- * (bug B7 por verificar; NO se declara cerrado sin captura del dueño).
- * Paridad con el detalle legado de IncidentsPage: un solo useQuery con
- * signal (GET /incidents/:id + /history + /assignments SOLO técnico/ADMIN
- * + /interventions, mismas condiciones por rol), loading → Skeleton,
- * error → ErrorState con Reintentar y defaults POR POSICIÓN. Skeleton y
- * ErrorState solo aparecen SIN datos: durante los reload posteriores a
- * una acción el contenido se CONSERVA montado (useQuery conserva datos
- * previos), para no re-fetchear los consumos de cada InterventionMaterials
- * ni perder el foco de los formularios. Acciones
- * con misma endpoints/payloads: PATCH /priority ({id_prioridad} number,
- * ADMIN), PATCH /status ({estado, comentario|null} ≤500, TÉCNICO, solo
- * estados_permitidos) y POST /interventions ({resultado} min 5, TÉCNICO).
- * Cada acción con su propio useMutation (dedupe)/busy y su error DENTRO
- * del modal (Alert por sección); éxito SIEMPRE por Toast y recarga del
- * detalle + onChanged (reload del listado sin titilar); el modal NO se
- * cierra por una acción y su footer solo trae "Cerrar".
- * `<InterventionMaterials>` (Dev 2) se usa SIN CAMBIOS, con las mismas
- * props y `onStockChanged={onChanged}` que el legado.
- */
+/* Detalle, historial y acciones de una incidencia según el rol del usuario.
+ * Las recargas conservan el contenido montado para mantener el foco y los consumos cargados. */
 import { useEffect, useState } from "react";
+import AttachmentRow from "./AttachmentRow";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useQuery } from "../../hooks/useQuery";
@@ -26,22 +9,7 @@ import { useMutation } from "../../hooks/useMutation";
 import { downloadAttachment } from "../../utils/downloadAttachment";
 import { formatDate, formatDateTime } from "../../utils/format";
 import { validate, incidenciaPrioridad, intervencionCrear, requerido, maximo } from "../../validations";
-import {
-  Alert,
-  Button,
-  DefinitionList,
-  ErrorState,
-  Field,
-  Modal,
-  Timeline,
-  Select,
-  Skeleton,
-  StatusBadge,
-  STATUS_PRESETS,
-  normalizeStatus,
-  Textarea,
-  useToast,
-} from "../../components/ui";
+import { Alert, Button, DefinitionList, ErrorState, Field, Modal, Timeline, Select, Skeleton, StatusBadge, STATUS_PRESETS, normalizeStatus, Textarea, useToast,} from "../../components/ui";
 import InterventionMaterials from "./InterventionMaterials";
 import { PRIORIDAD_TONO } from "./priorities";
 import PhoneLink from "../../components/ui/PhoneLink";
@@ -79,16 +47,7 @@ function normalizarErrores(errors) {
   );
 }
 
-export default function IncidentsDetailModal({
-  incidencia,
-  rol,
-  idUsuario,
-  prioridades = [],
-  statuses = [],
-  insumos = [],
-  onClose,
-  onChanged,
-}) {
+export default function IncidentsDetailModal({ incidencia, rol, idUsuario, prioridades = [], statuses = [], insumos = [], onClose, onChanged,}) {
   const isResident = rol === "RESIDENTE";
   const isTechnician = rol === "TECNICO";
   const isAdmin = rol === "ADMIN";
@@ -296,7 +255,7 @@ export default function IncidentsDetailModal({
               {
                 term: "Teléfono de contacto",
                 detail: (
-                  <PhoneLink value={detail.residente_telefono} />
+                  <PhoneLink value={detail.residente_telefono} showWhatsApp />
                 ),
               },
               ...(edificio ? [{ term: "Edificio", detail: edificio }] : []),
@@ -315,22 +274,13 @@ export default function IncidentsDetailModal({
               >
                 {descargaError}
               </Alert>
-              <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none" }}>
+              <ul className="incident-attachments" aria-label="Adjuntos de la incidencia">
                 {adjuntos.map((file) => (
-                  <li
+                  <AttachmentRow
                     key={file.id_adjuntos_incidencia}
-                    style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", paddingBlock: "var(--space-2)" }}
-                  >
-                    <span>{file.nombre_original}</span>
-                    <Button
-                      variant="quiet"
-                      size="sm"
-                      aria-label={`Descargar ${file.nombre_original}`}
-                      onClick={() => descargar(file)}
-                    >
-                      Descargar
-                    </Button>
-                  </li>
+                    name={file.nombre_original}
+                    onAction={() => descargar(file)}
+                  />
                 ))}
               </ul>
             </>

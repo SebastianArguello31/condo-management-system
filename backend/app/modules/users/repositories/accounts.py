@@ -1,3 +1,5 @@
+# Acceso SQL a cuentas, roles y credenciales.
+# Encapsula las consultas usadas por los servicios de este módulo.
 """Consultas SQL de cuentas."""
 
 from app.core.db_helpers import query, update_record, delete_record
@@ -36,20 +38,20 @@ def get_user(user_id, *, cursor=None):
 def get_login_user(email):
     return query(
         """
-        SELECT
-            u.id_usuario,
-            u.nombre,
-            u.apellido,
-            u.email,
-            u.telefono,
-            u.password_hash,
-            u.session_version,
-            u.activo,
-            u.id_rol,
-            r.nombre AS rol
-        FROM usuarios u
-        JOIN roles r ON r.id_rol = u.id_rol
-        WHERE lower(btrim(u.email)) = lower(btrim(%s));
+            SELECT
+                u.id_usuario,
+                u.nombre,
+                u.apellido,
+                u.email,
+                u.telefono,
+                u.password_hash,
+                u.session_version,
+                u.activo,
+                u.id_rol,
+                r.nombre AS rol
+            FROM usuarios u
+            JOIN roles r ON r.id_rol = u.id_rol
+            WHERE lower(btrim(u.email)) = lower(btrim(%s));
         """,
         (email,),
     )
@@ -61,6 +63,7 @@ def find_role(name, *, cursor):
     return query("SELECT id_rol, nombre FROM roles WHERE nombre = %s", (name,), cursor=cursor)
 
 def lock_users(ids, *, cursor):
+    # Ordena y elimina duplicados para que operaciones concurrentes bloqueen cuentas en el mismo orden.
     ids = sorted(set(ids))
 
     if not ids:
@@ -85,12 +88,12 @@ def lock_users(ids, *, cursor):
 def insert_user(data, role_id, *, cursor):
     row = query(
         """
-        INSERT INTO usuarios (
-            nombre, apellido, email, telefono,
-            password_hash, activo, id_rol
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        RETURNING id_usuario;
+            INSERT INTO usuarios (
+                nombre, apellido, email, telefono,
+                password_hash, activo, id_rol
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id_usuario;
         """,
         (
             data["nombre"],

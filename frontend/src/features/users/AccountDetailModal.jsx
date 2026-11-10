@@ -1,30 +1,5 @@
-/* AccountDetailModal + useCuentaAcceso — F2-6a (NUEVO, compartido por
- * Usuarios, Empleados y Administradores).
- *
- * DETALLE (componente por defecto): Modal del kit con backdrop (el modal
- * legado de ManagementPage era un <dialog open> sin backdrop ni foco —
- * bugs B1/B4; el cierre queda "por verificar con captura del dueño", NO
- * se declara cerrado). MISMO endpoint que el legado: GET /users/:id
- * (useQuery con signal); loading → Skeleton y error → ErrorState con
- * Reintentar solo SIN datos (el contenido se conserva montado en los
- * reload). Un solo h2 (el del Modal), contenido en DefinitionList
- * (nombre, email, teléfono, rol, estado con StatusBadge override y
- * "Creada" con formatDate — sin ISO crudo) y footer solo "Cerrar" (quiet,
- * patrón F2-3/F2-5c). Solo lectura: sin editar, sin eliminar, sin reset
- * de contraseña.
- *
- * ACCIONES DE ACCESO (useCuentaAcceso): hook compartido de las 3
- * pantallas para la columna Acciones con RowActions —
- * - abrirDetalle(row) guarda la fila y monta este modal; renderActions
- *   emite "Detalle" (Button quiet sm, aria-label con el nombre).
- * - alternar(row): PATCH /users/:id { activo: !row.activo } (MISMO
- *   endpoint y payload que el legado), con useConfirm (danger SOLO al
- *   desactivar), useMutation con dedupe y Toast de éxito; error por
- *   Toast danger. "Desactivar" queda deshabilitado sobre la propia
- *   cuenta del ADMIN con aria-label que lo explica.
- * El botón del toggle usa danger-ghost sm solo cuando desactiva
- * (destructiva §8-bis); activar es quiet sm.
- */
+/* Detalle de cuenta y acciones compartidas para activar o desactivar accesos.
+ * La acción de desactivar se bloquea sobre la propia cuenta del administrador. */
 import { useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
@@ -33,15 +8,7 @@ import { useMutation } from "../../hooks/useMutation";
 import { useConfirm } from "../../hooks/useConfirm";
 import { formatDate } from "../../utils/format";
 import { roleLabel } from "../../utils/roles";
-import {
-  Button,
-  DefinitionList,
-  ErrorState,
-  Modal,
-  Skeleton,
-  StatusBadge,
-  useToast,
-} from "../../components/ui";
+import { Button, DefinitionList, ErrorState, Modal, Skeleton, StatusBadge, useToast, } from "../../components/ui";
 import PhoneLink from "../../components/ui/PhoneLink";
 /* Presentación del ESTADO de una cuenta (decisión F2-6a): inicial mayús-
  * cula como texto del preset de especialidades; override ACTIVA

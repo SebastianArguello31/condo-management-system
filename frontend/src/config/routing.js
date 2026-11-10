@@ -1,3 +1,4 @@
+/* Catálogo de pantallas y grupos de navegación por rol; centraliza rutas y destinos iniciales. */
 import { lazy } from "react";
 
 import UsersPage from "../features/users/UsersPage";

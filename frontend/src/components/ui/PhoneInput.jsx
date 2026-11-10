@@ -1,11 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
-import {
-  getCountryCallingCode,
-} from "libphonenumber-js/max";
-import {
-  isValidPhone,
-  parsePhone,
-} from "../../utils/phone";
+import { getCountryCallingCode, } from "libphonenumber-js/max";
+import { isValidPhone, parsePhone, } from "../../utils/phone";
 import "./ui.css";
 
 const COUNTRY_NAMES = new Intl.DisplayNames(
@@ -13,15 +8,7 @@ const COUNTRY_NAMES = new Intl.DisplayNames(
   { type: "region" }
 );
 
-const COUNTRY_CODES = [
-  "PY",
-  "AR",
-  "BR",
-  "BO",
-  "UY",
-  "CL",
-  "PE",
-];
+const COUNTRY_CODES = ["PY", "AR", "BR", "BO", "UY", "CL", "PE",];
 
 const COUNTRIES = COUNTRY_CODES.map((code) => ({
   code,
@@ -157,40 +144,16 @@ export default function PhoneInput({
     onBlur?.(event);
   }
 
-  const invalid =
-    touched &&
-    Boolean(draft.trim()) &&
-    !isValidPhone(draft, country);
+  const invalid = touched && Boolean(draft.trim()) && !isValidPhone(draft, country);
 
   const hasError = Boolean(externalInvalid) || invalid;
 
-  const descriptionIds = [
-    describedBy,
-    helpId,
-    invalid ? errorId : null,
-  ].filter(Boolean).join(" ");
+  const descriptionIds = [describedBy, helpId, invalid ? errorId : null,].filter(Boolean).join(" ");
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "start",
-          gap: "var(--space-2)",
-        }}
-      >
-        <select
-          className="ui-control"
-          aria-label="País del teléfono"
-          value={country}
-          disabled={disabled || readOnly}
-          onChange={changeCountry}
-          style={{
-            flex: "1 1 170px",
-            minWidth: 0,
-          }}
-        >
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "start", gap: "var(--space-2)", }}>
+        <select className="ui-control" aria-label="País del teléfono" value={country} disabled={disabled || readOnly} onChange={changeCountry} style={{ flex: "1 1 170px", minWidth: 0, }}>
           {COUNTRIES.map((item) => (
             <option key={item.code} value={item.code}>
               {item.name} (+{item.callingCode})
@@ -215,15 +178,8 @@ export default function PhoneInput({
           onBlur={handleBlur}
           aria-invalid={hasError || undefined}
           aria-describedby={descriptionIds}
-          className={[
-            "ui-control",
-            hasError ? "ui-control-invalid" : "",
-            className,
-          ].filter(Boolean).join(" ")}
-          style={{
-            flex: "2 1 220px",
-            minWidth: 0,
-          }}
+          className={["ui-control", hasError ? "ui-control-invalid" : "", className,].filter(Boolean).join(" ")}
+          style={{ flex: "2 1 220px", minWidth: 0,}}
         />
       </div>
 
@@ -232,11 +188,7 @@ export default function PhoneInput({
       </p>
 
       {invalid && (
-        <p
-          id={errorId}
-          className="ui-field-error"
-          role="status"
-        >
+        <p id={errorId} className="ui-field-error" role="status">
           Ingresa un teléfono válido para el país seleccionado.
         </p>
       )}

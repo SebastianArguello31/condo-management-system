@@ -1,20 +1,5 @@
-/* AdminsPage — F2-6a: Administradores al kit. Crea cuentas
- * administradoras (POST /admins; MISMO payload que el legado: nombre,
- * apellido, email, telefono, password — el backend las registra con rol
- * ADMIN fijo, AdminCreateSchema NO recibe id_rol) y NO edita ni elimina
- * (criterio del análisis: sin editar cuentas, sin Eliminar, sin reset de
- * contraseña). Validación en cliente con `cuenta` (espejo EXACTO de
- * AccountSchema; NOTA: la decisión decía `cuentaAdmin`, pero ese schema
- * espeja UserCreateSchema del script con id_rol requerido — enviar id_rol
- * a POST /admins da 400 de campo desconocido; hay REPORTE en el plan).
- * Columnas Usuario/Email/Rol/Estado/Creada (formatDate) SIN columna ID;
- * estado con StatusBadge override (ACTIVA success+check / INACTIVA
- * muted). Acciones por fila: "Detalle" (el MISMO GET /users/:id del
- * legado, Modal + DefinitionList, footer "Cerrar") y Activar/Desactivar
- * (PATCH /users/:id {activo}, useConfirm danger solo al desactivar,
- * useMutation, Toast; deshabilitado sobre la cuenta propia). Carga con
- * useQuery + signal (Skeleton sin parpadeo de Reintentar; error →
- * ErrorState). Sin window.confirm. */
+/* Listado y creación de administradores con acciones compartidas de acceso.
+ * La creación usa el esquema cuenta: el endpoint asigna el rol sin recibir id_rol. */
 import { useState } from "react";
 import { routes } from "../../services/routes";
 import CrudPage from "../../components/CrudPage";
@@ -22,10 +7,7 @@ import { StatusBadge } from "../../components/ui";
 import { cuenta } from "../../validations";
 import { formatDate } from "../../utils/format";
 import { roleLabel } from "../../utils/roles";
-import AccountDetailModal, {
-  estadoCuenta,
-  useCuentaAcceso,
-} from "./AccountDetailModal";
+import AccountDetailModal, { estadoCuenta, useCuentaAcceso, } from "./AccountDetailModal";
 
 const fields = [
   { name: "nombre", label: "Nombre", required: true, maxLength: 150 },

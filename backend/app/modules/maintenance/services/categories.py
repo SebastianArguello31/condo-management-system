@@ -1,14 +1,14 @@
+# Operaciones de negocio para categorías de insumos.
+# Coordina las comprobaciones y el acceso a los repositorios antes de devolver el resultado.
 from psycopg2.errors import UniqueViolation
 from werkzeug.exceptions import BadRequest, Conflict, NotFound
 
 from app.core.db_helpers import transaction
 from app.modules.maintenance.repositories import categories as repo
 
-
 def list_categories(*, active=None):
     with transaction() as cursor:
         return repo.list_categories(active=active, cursor=cursor)
-
 
 def create_category(data):
     try:
@@ -16,7 +16,6 @@ def create_category(data):
             return repo.insert_category(data, cursor=cursor)
     except UniqueViolation:
         raise Conflict("Ya existe una categoría de insumo con ese nombre.") from None
-
 
 def update_category(category_id, data):
     if not data:
@@ -46,7 +45,6 @@ def update_category(category_id, data):
             )
     except UniqueViolation:
         raise Conflict("Ya existe una categoría de insumo con ese nombre.") from None
-
 
 def delete_category(category_id):
     with transaction() as cursor:

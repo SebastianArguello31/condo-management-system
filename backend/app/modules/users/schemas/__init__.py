@@ -1,3 +1,4 @@
+# Reexporta los esquemas de usuarios para ofrecer un punto común de importación.
 from .accounts import AccountSchema, AccessUpdateSchema, UserCreateSchema
 from .admins import AdminCreateSchema, AdminUpdateSchema
 from .employees import EmployeeCreateSchema, EmployeeProfileUpdateSchema, EmployeeUpdateSchema

@@ -1,3 +1,5 @@
+# Rutas HTTP para autenticación y recuperación de contraseñas.
+# Conecta las solicitudes con los servicios y declara la autenticación y los roles de cada operación.
 from flask import Blueprint, current_app, g, jsonify
 from redis.exceptions import RedisError
 from werkzeug.exceptions import ServiceUnavailable, Unauthorized
@@ -12,6 +14,7 @@ from app.modules.auth.services import authenticate_user, change_my_password, upd
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
+# La misma respuesta para cuentas existentes e inexistentes evita revelar qué correos están registrados.
 RECOVERY_MESSAGE = (
     "Si existe una cuenta habilitada con ese correo, "
     "recibirás un enlace para restablecer tu contraseña."

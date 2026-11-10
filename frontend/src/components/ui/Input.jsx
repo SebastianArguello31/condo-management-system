@@ -2,18 +2,8 @@ import "./ui.css";
 import { useFieldControlProps } from "./Field";
 import PhoneInput from "./PhoneInput";
 
-export default function Input({
-  id,
-  className = "",
-  "aria-describedby": describedByProp,
-  "aria-invalid": invalidProp,
-  ...rest
-}) {
-  const fieldProps = useFieldControlProps({
-    id,
-    "aria-describedby": describedByProp,
-    "aria-invalid": invalidProp,
-  });
+export default function Input({ id, className = "", "aria-describedby": describedByProp, "aria-invalid": invalidProp, ...rest}) {
+  const fieldProps = useFieldControlProps({id, "aria-describedby": describedByProp, "aria-invalid": invalidProp,});
 
   const isPhone =
     rest.name === "telefono" ||
@@ -21,12 +11,7 @@ export default function Input({
 
   if (isPhone) {
     return (
-      <PhoneInput
-        {...rest}
-        {...fieldProps}
-        autoComplete="tel"
-        className={className}
-      />
+      <PhoneInput {...rest} {...fieldProps} autoComplete="tel" className={className}/>
     );
   }
 
@@ -37,10 +22,6 @@ export default function Input({
   ].filter(Boolean).join(" ");
 
   return (
-    <input
-      {...rest}
-      {...fieldProps}
-      className={classes}
-    />
+    <input {...rest} {...fieldProps} className={classes}/>
   );
 }

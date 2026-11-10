@@ -5,7 +5,7 @@
  * validate() aplica trim() a los strings antes de evaluar (igual que el
  * pre_load de BaseSchema en el backend), salvo para password.
  * ========================================================================== */
-import { isValidPhone } from "../utils/phone";
+import { isValidPhone } from "../utils/phone.js";
 
 export const telefonoValido = () => (value) => {
   if (
@@ -71,17 +71,8 @@ export const entero = (min = 1) => (value) => {
   return null;
 };
 
-/* Decimal con `places` máximo de decimales, `min` (Range del backend) y
- * `minExclusivo` (Range min_inclusive=False: el valor debe ser MAYOR que
- * min). Origen: field.Decimal(validate.Range(min=…)) de marshmallow;
- * primera regla de pase para insumos: stock_minimo (places=3) y
- * costo_unitario (places=2) de backend/app/modules/maintenance/schemas.py.
- * Vacío pasa (el `requerido()` decide); se acepta notación científica (el
- * backend también: Decimal("1e3") == 1000). Mensajes alineados con el
- * helper `monto` de schemas.js ("Ingresa un número válido."/"No puede ser
- * menor que N."/"Máximo N decimales."); con exclusividad el 0 exacto
- * recibe su propio mensaje ("Debe ser mayor que N.") — agregarla NO
- * cambia a los llamadores existentes (parámetro opcional). */
+/* Valida precisión decimal y límites inclusivos o exclusivos; acepta notación científica.
+ * El valor vacío se delega a requerido(). */
 export const decimal = (places, min = 0, minExclusivo = false) => (value) => {
   const texto = String(value ?? "").trim();
   if (texto === "") return null;

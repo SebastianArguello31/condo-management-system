@@ -1,3 +1,5 @@
+# Alta interactiva de un administrador desde la consola.
+# Reutiliza los esquemas y servicios de cuentas para validar los datos antes de guardarlos.
 import sys
 from getpass import getpass
 from pathlib import Path
@@ -32,10 +34,7 @@ def main():
         app = create_app()
 
         with app.app_context():
-            role = query(
-                "SELECT id_rol FROM roles WHERE nombre = %s",
-                ("ADMIN",),
-            )
+            role = query("SELECT id_rol FROM roles WHERE nombre = %s", ("ADMIN",),)
 
             if role is None:
                 raise ValueError("Primero debes crear el rol ADMIN")

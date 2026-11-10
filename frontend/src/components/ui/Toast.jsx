@@ -34,10 +34,7 @@ export function ToastProvider({ children }) {
       toastId += 1;
       const id = toastId;
       setToasts((current) => [...current, { id, message: String(message), tone }]);
-      timersRef.current.set(
-        id,
-        window.setTimeout(() => dismiss(id), timeout)
-      );
+      timersRef.current.set(id, window.setTimeout(() => dismiss(id), timeout));
       return id;
     },
     [dismiss]
@@ -58,12 +55,7 @@ export function ToastProvider({ children }) {
   const fila = (toast) => (
     <div key={toast.id} className={`ui-toast ui-toast-${toast.tone}`}>
       <span>{toast.message}</span>
-      <button
-        type="button"
-        className="ui-toast-close"
-        aria-label="Cerrar aviso"
-        onClick={() => dismiss(toast.id)}
-      >
+      <button type="button" className="ui-toast-close" aria-label="Cerrar aviso" onClick={() => dismiss(toast.id)}>
         ×
       </button>
     </div>

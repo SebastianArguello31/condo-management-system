@@ -1,18 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useRef } from "react";
 
-/* Confirmación por promesa (reemplaza los window.confirm de la migración).
- * El componente visual (ConfirmDialog, CP4) se conecta usando
- * useConfirmResponder(): registra una función que recibe las opciones y
- * devuelve una promesa que resuelve true/false según la acción del usuario.
- * Hasta que exista ese componente, confirm() avisa por consola y resuelve
- * false: nunca queda colgado.
- *
- * Ejemplo:
- * const confirm = useConfirm();
- * if (await confirm({ title: "Eliminar", message: "No hay vuelta atrás.", danger: true })) {
- *   eliminar();
- * }
- */
+/* Confirmación asíncrona conectada al diálogo mediante useConfirmResponder.
+ * Sin un diálogo registrado, resuelve false para no dejar la llamada abierta. */
 
 const ConfirmContext = createContext(null);
 

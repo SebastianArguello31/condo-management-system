@@ -6,16 +6,7 @@ import { useMutation } from "../../hooks/useMutation";
 import { useConfirm } from "../../hooks/useConfirm";
 import { usePagination } from "../../hooks/usePagination";
 import { formatDate, formatTime } from "../../utils/format";
-import {
-  DataTable,
-  DefinitionList,
-  Modal,
-  PageHeader,
-  Pagination,
-  RowActions,
-  StatusBadge,
-  useToast,
-} from "../../components/ui";
+import { DataTable, DefinitionList, Modal, PageHeader, Pagination, RowActions, StatusBadge, useToast, } from "../../components/ui";
 import CreateReservation from "./CreateReservation";
 
 function puedeCancelar(estado) {

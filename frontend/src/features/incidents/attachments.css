@@ -1,0 +1,76 @@
+.incident-attachments {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.incident-attachment {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.incident-attachment-type {
+  display: grid;
+  place-items: center;
+  flex: 0 0 var(--control-h);
+  height: var(--control-h);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--ink-2);
+  font-size: var(--fs-11, 0.6875rem);
+  font-weight: 600;
+}
+
+.incident-attachment-info {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.incident-attachment-name {
+  overflow-wrap: anywhere;
+  font-size: var(--fs-13);
+  font-weight: 500;
+}
+
+.incident-attachment-meta {
+  color: var(--ink-2);
+  font-size: var(--fs-12, 0.75rem);
+}
+
+.incident-attachment-action {
+  flex-shrink: 0;
+  border-color: var(--line);
+  padding-inline: var(--space-3);
+}
+
+.incident-attachment-action-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.incident-attachment-remove {
+  border-color: transparent;
+  color: var(--ink-2);
+}
+
+.incident-attachment-remove:hover:enabled {
+  color: var(--accent);
+  border-color: var(--line);
+}
+
+@media (max-width: 640px) {
+  .incident-attachment { flex-wrap: wrap; }
+  .incident-attachment-info { flex-basis: calc(100% - var(--control-h) - var(--space-3)); }
+  .incident-attachment-action { margin-left: auto; }
+}

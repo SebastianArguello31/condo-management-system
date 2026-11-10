@@ -1,20 +1,5 @@
-/* EmployeesPage — F2-6a: Empleados al kit (bug B4 "por verificar con
- * captura del dueño"; NO se declara cerrado). Crea cuentas de personal
- * técnico (POST /employees con el payload del legado: campos de cuenta +
- * especialidad_ids como array de NÚMEROS, mínimo 1 — schemas espejo del
- * backend con validate(): cuentaEmpleado) y NO edita ni elimina (criterio
- * del análisis: sin editar cuentas, sin Eliminar, sin reset de
- * contraseña). Columnas Usuario/Email/Rol/Estado/Creada (formatDate) SIN
- * columna ID; especialidades del formulario como CHECKBOXES del catálogo
- * ACTIVO (tipo aditivo "checks" de CrudPageUi; mínimo 1) con ayuda "Marca
- * todas las especialidades que correspondan." y error por campo del
- * schema (español neutro). Estado con StatusBadge override (ACTIVA
- * success+check / INACTIVA muted). Acciones por fila: "Detalle" (el
- * MISMO GET /users/:id del legado, Modal + DefinitionList, footer
- * "Cerrar") y Activar/Desactivar (PATCH /users/:id {activo}, useConfirm
- * danger solo al desactivar, useMutation, Toast; deshabilitado sobre la
- * cuenta propia). Carga con useQuery + signal (Skeleton sin parpadeo de
- * Reintentar; error → ErrorState). Sin window.confirm. */
+/* Creación de técnicos con especialidades y gestión de sus accesos.
+ * Las especialidades seleccionadas se envían como identificadores numéricos. */
 import { useState } from "react";
 import { routes } from "../../services/routes";
 import CrudPage from "../../components/CrudPage";
@@ -22,10 +7,7 @@ import { StatusBadge } from "../../components/ui";
 import { cuentaEmpleado } from "../../validations";
 import { formatDate } from "../../utils/format";
 import { roleLabel } from "../../utils/roles";
-import AccountDetailModal, {
-  estadoCuenta,
-  useCuentaAcceso,
-} from "./AccountDetailModal";
+import AccountDetailModal, { estadoCuenta, useCuentaAcceso, } from "./AccountDetailModal";
 
 const fields = [
   { name: "nombre", label: "Nombre", required: true, maxLength: 150 },

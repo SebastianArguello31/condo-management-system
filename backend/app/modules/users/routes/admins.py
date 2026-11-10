@@ -1,3 +1,5 @@
+# Rutas HTTP para administradores.
+# Conecta las solicitudes con los servicios y declara la autenticación y los roles de cada operación.
 from flask import Blueprint, g, jsonify
 
 from app.core.decorators import role_required, token_required

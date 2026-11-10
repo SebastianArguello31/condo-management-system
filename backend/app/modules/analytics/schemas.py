@@ -1,3 +1,5 @@
+# Esquemas de entrada para indicadores del condominio.
+# Define los campos admitidos y sus restricciones antes de ejecutar las operaciones del servicio.
 from marshmallow import ValidationError, fields, validate, validates_schema
 
 from app.core.validation import BaseSchema
@@ -17,7 +19,6 @@ TIPOS_REGISTRO = [
     "insumos_mas_utilizados",
 ]
 
-
 class AnalyticsFilterSchema(BaseSchema):
     desde = fields.Date(allow_none=True)
     hasta = fields.Date(allow_none=True)
@@ -30,7 +31,6 @@ class AnalyticsFilterSchema(BaseSchema):
     def validar_periodo(self, data, **kwargs):
         if data.get("desde") and data.get("hasta") and data["desde"] > data["hasta"]:
             raise ValidationError("La fecha 'desde' no puede ser posterior a 'hasta'", "desde")
-
 
 class DrilldownSchema(AnalyticsFilterSchema):
     tipo_registro = fields.Str(required=True, validate=validate.OneOf(TIPOS_REGISTRO))

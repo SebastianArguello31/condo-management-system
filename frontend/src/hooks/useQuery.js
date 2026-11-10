@@ -1,28 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/* Consulta async con cancelación y control de carreras (respuestas obsoletas).
- *
- * Comportamientos:
- * - `fetcher` recibe (signal); la consulta anterior se aborta al cambiar
- *   deps, al hacer reload o al desmontar, y en ese caso NO se escribe estado.
- * - Cambio de deps → se DESCARTA la data anterior (queda undefined mientras
- *   carga la nueva, para no mezclar resultados de listados distintos).
- * - reload() → conserva la data previa mientras re-consulta (la lista no
- *   titila a vacío).
- * - enabled=false → inactivo: no consulta, aborta la que esté en vuelo y
- *   queda { data: undefined, loading: false, error: null }; reload() tampoco
- *   consulta. Al volver a true, consulta.
- * - En fallo conserva los datos previos y expone el error de la consulta.
- * - Hoy api() aún no acepta signal (se agrega en CP6); la protección contra
- *   respuestas obsoletas funciona igual: se compara signal.aborted tras cada
- *   respuesta.
- *
- * Ejemplo:
- * const { data, loading, error, reload } = useQuery(() => api(routes.units), [], {
- *   enabled: Boolean(idEdificio),
- * });
- * if (loading) return <p>Cargando…</p>;
- */
+/* Consulta cancelable con protección frente a respuestas obsoletas.
+ * Cambiar dependencias descarta los datos; reload los conserva. enabled=false cancela la consulta. */
 
 export function useQuery(fetcher, deps = [], { enabled = true } = {}) {
   const [state, setState] = useState({ data: undefined, loading: enabled, error: null });

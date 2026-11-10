@@ -1,3 +1,5 @@
+# Rutas HTTP para gestores.
+# Conecta las solicitudes con los servicios y declara la autenticación y los roles de cada operación.
 from flask import Blueprint, g, jsonify
 
 from app.core.decorators import role_required, token_required
@@ -20,9 +22,7 @@ def list_managers():
 def create_manager():
     data = read_json(ManagerCreateSchema())
 
-    return jsonify(
-        managers.create_manager(data, g.current_user["id_usuario"])
-    ), 201
+    return jsonify(managers.create_manager(data, g.current_user["id_usuario"])), 201
 
 @managers_bp.patch("/<int:user_id>")
 @token_required

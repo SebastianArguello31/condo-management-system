@@ -1,3 +1,5 @@
+# Acceso SQL a personal técnico y sus perfiles.
+# Encapsula las consultas usadas por los servicios de este módulo.
 """Consultas SQL de empleados."""
 
 from app.core.db_helpers import query

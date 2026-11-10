@@ -1,3 +1,5 @@
+# Operaciones de negocio para administradores.
+# Coordina las comprobaciones y el acceso a los repositorios antes de devolver el resultado.
 from werkzeug.exceptions import BadRequest
 from app.modules.users.repositories import accounts as accounts_repo
 from app.modules.users.schemas.accounts import UserCreateSchema

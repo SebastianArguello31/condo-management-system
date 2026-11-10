@@ -2,12 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 
-export default function InterventionMaterials({
-  intervention,
-  items,
-  canConsume,
-  onStockChanged,
-}) {
+export default function InterventionMaterials({ intervention, items, canConsume, onStockChanged,}) {
   const [consumptions, setConsumptions] = useState([]);
   const [idItem, setIdItem] = useState("");
   const [quantity, setQuantity] = useState("");

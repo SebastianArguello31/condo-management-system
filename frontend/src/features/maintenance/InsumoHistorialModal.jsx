@@ -1,48 +1,11 @@
-/* InsumoHistorialModal — F2-10c (NUEVO): "Historial" de movimientos del
- * insumo al kit (Modal del kit, reemplaza el modal legado de
- * MaintenancePage). Modal de LECTURA: un solo `<h2>` (el título del
- * Modal, "Movimientos · <nombre del insumo>", paridad del legado) y
- * footer con SOLO "Cerrar"; SIN busy global que bloquee botones (el
- * legado compartía el `busy` de la pantalla). Datos con useQuery + signal
- * (GET /maintenance/insumos/:id/movimientos con SOLO el param `tipo`,
- * vacío omitido — el param existe en el backend, igual que el legado):
- * loading SIN datos → Skeleton; error sin datos → ErrorState con
- * Reintentar LOCAL (reload(), que conserva contenido previo sin
- * titilar). Filtro por tipo en Select con SOLO los tipos PRESENTES en
- * los movimientos de ESE insumo, derivados de las cargas (la primera va
- * SIN filtrar; catálogo en ref acumulado que solo crece, como las
- * categorías del listado en F2-10a, para no reducirse al elegir un
- * tipo) con etiquetas MOVEMENT_LABELS y fallback al código; el Select
- * ofrece "Todos" + esos tipos, y si el insumo no tiene movimientos el
- * filtro NO se muestra. Cambiar filtro reconsulta al servidor con
- * ?tipo= (siempre en servidor, como el legado). Etiquetas históricas
- * (INICIAL/AJUSTE_ENTRADA, AJUSTE_SALIDA Y DEVOLUCION) permanecen en MOVEMENT_LABELS aunque un
- * flujo hoy no genere el tipo: solo aparecen si hay movimientos. Cada movimiento en Timeline del kit: tipo (etiqueta de
- * MOVEMENT_LABELS con FALLBACK al código si no está mapeado), fecha CON
- * HORA formatDateTime (utils/format; NUNCA formatDate ni ISO crudo:
- * el legado mostraba toLocaleString con hora), cantidad con
- * formatQuantityUnit y "Stock resultante" con formatQuantity (unidad del
- * insumo), motivo y responsable (nombre apellido) como detail, más
- * "Intervención #N" cuando el movimiento viene de una intervención.
- * Vacío EXPLÍCITO distinto: todos → "Sin movimientos registrados.";
- * filtrado → "Sin movimientos de este tipo.". Permisos intactos: el
- * trigger se muestra para ADMIN y TECNICO (ya filtrado en la pantalla).
- * Español neutro (tuteo). Cero window.confirm. Cero CSS nuevo.
- */
+/* Historial de movimientos del insumo con filtro por tipo en el servidor.
+ * Acumula los tipos recibidos para conservar las opciones al filtrar. */
 import { useRef, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useQuery } from "../../hooks/useQuery";
 import { formatDateTime } from "../../utils/format";
-import {
-  Button,
-  ErrorState,
-  Field,
-  Modal,
-  Select,
-  Skeleton,
-  Timeline,
-} from "../../components/ui";
+import { Button, ErrorState, Field, Modal, Select, Skeleton, Timeline, } from "../../components/ui";
 import { formatQuantity, formatQuantityUnit } from "./quantity";
 
 /* Etiquetas históricas de los tipos que puede traer el historial
@@ -73,12 +36,7 @@ export default function InsumoHistorialModal({ insumo, onClose }) {
    * endpoint también acepta desde/hasta/id_intervencion, que el UI no
    * ofrecía; la decisión de re-fetchear usa el filtro en deps para
    * cambiarlo de servidor en servidor). */
-  const {
-    data,
-    loading,
-    error: errorCarga,
-    reload,
-  } = useQuery(async (signal) => {
+  const { data, loading, error: errorCarga, reload,} = useQuery(async (signal) => {
     const params = new URLSearchParams();
     if (tipo) params.set("tipo", tipo);
     const suffix = params.toString() ? `?${params.toString()}` : "";

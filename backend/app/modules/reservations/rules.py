@@ -1,3 +1,5 @@
+# Reglas de reservas: acceso, cambios de estado, horario, anticipación y aforo.
+# Recibe la fecha y hora de referencia para validar sin depender del reloj local del proceso.
 from datetime import datetime, timedelta
 
 from werkzeug.exceptions import Conflict, Forbidden
@@ -96,6 +98,7 @@ def validate_creation(data, space, policy, now):
             f"{policy['dias_anticipacion_max']} días de anticipación"
         )
 
+    # Aplica el límite más restrictivo entre la capacidad física y el aforo de la política.
     capacity = min(space["capacidad"], policy["aforo_maximo"])
 
     if data["cantidad_personas"] > capacity:

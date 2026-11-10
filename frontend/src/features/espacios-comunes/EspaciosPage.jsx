@@ -1,21 +1,5 @@
-/* F2-7b — Espacios comunes + subvista de Políticas POR HASH (B6).
- * Cambio del listado: pasa de CrudPage modo ui (F2-7a) a composición del
- * kit (patrón Residentes, F2-6b), para cumplir el fix del dueño SIN tocar
- * CrudPageUi: el campo "Activo" NO existe en la creación (el POST no lo
- * acepta; el registro nace activo) y SÍ en la edición (PATCH con activo),
- * literal "fields según modo" (un solo EspacioFormModal con fields por
- * modo). Paridad idéntica a F2-7a: GET/POST /common-spaces y PATCH
- * /common-spaces/:id; sin eliminar; búsqueda por nombre/capacidad/
- * edificio; estado con StatusBadge override ACTIVA/INACTIVA; sin columna
- * ID; "Detalle" con el GET anidado + Modal + DefinitionList.
- * B6: la subvista se controla con useHashRoute sobre #/espacios
- * (param politicas=<id>) — el botón "Políticas" hace navigate y "Volver a
- * espacios" navega sin param; F5 conserva la subvista y "Atrás" del
- * navegador regresa al listado; id inexistente o inválido → EmptyState
- * con "Volver a espacios". Al entrar, el foco va al h1 de Políticas; al
- * volver, al contenedor del listado (el botón "Políticas" de la fila no
- * es trivial de ubicar desde la página). Los modales de la subvista no se
- * persisten en la URL (decisión del dueño). */
+/* Listado y formularios de espacios comunes.
+ * El parámetro politicas del hash conserva la subvista al recargar o navegar atrás. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
@@ -24,28 +8,8 @@ import { useQuery } from "../../hooks/useQuery";
 import { useMutation } from "../../hooks/useMutation";
 import { usePagination } from "../../hooks/usePagination";
 import { validate, espacioCrear } from "../../validations";
-import {
-  Button,
-  Checkbox,
-  DataTable,
-  DefinitionList,
-  EmptyState,
-  ErrorState,
-  Field,
-  FilterBar,
-  FormModal,
-  Input,
-  Modal,
-  PageHeader,
-  Pagination,
-  RowActions,
-  SearchInput,
-  Select,
-  Skeleton,
-  StatusBadge,
-  Textarea,
-  useToast,
-} from "../../components/ui";
+import { Button, Checkbox, DataTable, DefinitionList, EmptyState, ErrorState, Field, FilterBar, FormModal, Input, Modal, PageHeader,
+  Pagination, RowActions, SearchInput, Select, Skeleton, StatusBadge, Textarea, useToast, } from "../../components/ui";
 import SpacePolicies from "./SpacePolicies";
 
 const DESCRIPCION = "Administra los espacios comunes del condominio.";
