@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => {
     envDir: projectRoot,
 
     server: {
-      host: "127.0.0.1",
+      host: "0.0.0.0",
       port: frontendPort,
       strictPort: true,
       proxy: {
