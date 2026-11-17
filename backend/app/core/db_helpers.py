@@ -1,3 +1,5 @@
+# Utilidades de consultas y transacciones compartidas por los repositorios.
+# Un cursor recibido permite agrupar varias operaciones en una misma transacción.
 from contextlib import contextmanager
 from psycopg2 import sql
 from werkzeug.exceptions import BadRequest
@@ -9,6 +11,7 @@ def transaction():
     connection = get_connection()
 
     try:
+        # El contexto de psycopg2 confirma al salir o revierte la transacción si ocurre una excepción.
         with connection:
             with get_cursor(connection) as cursor:
                 yield cursor
@@ -27,6 +30,7 @@ def _execute(cursor, statement, params, many):
     return cursor.fetchone()
 
 def query(statement, params=(), *, many=False, cursor=None):
+    # Reutilizar el cursor evita confirmar por separado una operación del caso de uso.
     if cursor is not None:
         return _execute(cursor, statement, params, many)
 
@@ -41,6 +45,7 @@ def update_record(table, primary_key, record_id, data, allowed_fields, *, cursor
         if field not in allowed_fields:
             raise BadRequest(f"Campo no permitido: {field}")
 
+    # Los nombres SQL se escapan como identificadores; los valores viajan como parámetros.
     assignments = []
 
     for field in data:

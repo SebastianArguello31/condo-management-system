@@ -1,3 +1,5 @@
+# Esquemas de entrada para especialidades del personal.
+# Define los campos admitidos y sus restricciones antes de ejecutar las operaciones del servicio.
 from marshmallow import fields, validate
 from app.core.validation import BaseSchema, positive_id, required_text
 

@@ -1,3 +1,5 @@
+# Consultas SQL de incidencias para los indicadores.
+# Obtiene los datos que los servicios de analítica convierten en resúmenes y listados.
 from app.core.db_helpers import query
 from app.modules.incidents.repositories.incidents import STATUS_ASSIGNMENT_JOINS
 
@@ -16,11 +18,9 @@ INCIDENT_FROM = """
     LEFT JOIN espacios_comunes ec ON ec.id_espacio_comun = i.id_espacio_comun
 """ + STATUS_ASSIGNMENT_JOINS
 
-
 def sql_list(values):
     """Convierte constantes internas (nunca datos del usuario) en una lista SQL."""
     return ", ".join(f"'{value}'" for value in values)
-
 
 def date_range(column, filters):
     """Rango inclusivo por día: [desde 00:00, hasta + 1 día)."""
@@ -32,7 +32,6 @@ def date_range(column, filters):
         conditions.append(f"{column} < %s::date + 1")
         params.append(filters["hasta"])
     return conditions, params
-
 
 def build_incident_filters(filters, technician_id=None, *, date_column="i.fecha_reporte"):
     conditions, params = date_range(date_column, filters) if date_column else ([], [])
@@ -62,7 +61,6 @@ def build_incident_filters(filters, technician_id=None, *, date_column="i.fecha_
 
     return " AND ".join(conditions) or "TRUE", params
 
-
 def get_incident_kpis(filters, technician_id=None, *, cursor):
     where, params = build_incident_filters(filters, technician_id)
     return query(
@@ -90,7 +88,6 @@ def get_incident_kpis(filters, technician_id=None, *, cursor):
         tuple(params), cursor=cursor,
     )
 
-
 def get_incidents_by_status(filters, technician_id=None, *, cursor):
     where, params = build_incident_filters(filters, technician_id)
     return query(
@@ -103,7 +100,6 @@ def get_incidents_by_status(filters, technician_id=None, *, cursor):
         """,
         tuple(params), many=True, cursor=cursor,
     )
-
 
 def get_incidents_by_priority(filters, technician_id=None, *, cursor):
     where, params = build_incident_filters(filters, technician_id)
@@ -119,7 +115,6 @@ def get_incidents_by_priority(filters, technician_id=None, *, cursor):
         tuple(params), many=True, cursor=cursor,
     )
 
-
 def get_incidents_by_type(filters, technician_id=None, *, cursor):
     where, params = build_incident_filters(filters, technician_id)
     return query(
@@ -133,7 +128,6 @@ def get_incidents_by_type(filters, technician_id=None, *, cursor):
         """,
         tuple(params), many=True, cursor=cursor,
     )
-
 
 def get_incidents_timeline(filters, technician_id=None, *, cursor):
     """Reportadas por día de reporte y resueltas por día de resolución."""
@@ -167,7 +161,6 @@ def get_incidents_timeline(filters, technician_id=None, *, cursor):
         tuple(base_params + reported_params + resolved_params), many=True, cursor=cursor,
     )
 
-
 def get_resolution_times_by_priority(filters, technician_id=None, *, cursor):
     where, params = build_incident_filters(filters, technician_id)
     return query(
@@ -187,7 +180,6 @@ def get_resolution_times_by_priority(filters, technician_id=None, *, cursor):
         """,
         tuple(params), many=True, cursor=cursor,
     )
-
 
 def list_incidents(filters, technician_id=None, *, statuses=None, status=None, limit=100, cursor):
     where, params = build_incident_filters(filters, technician_id)

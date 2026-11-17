@@ -1,3 +1,5 @@
+# Operaciones de negocio para vínculos entre residentes y unidades.
+# Coordina las comprobaciones y el acceso a los repositorios antes de devolver el resultado.
 from werkzeug.exceptions import BadRequest, NotFound
 
 from app.core.db_helpers import transaction
@@ -31,9 +33,7 @@ def link_unit(user_id, unit_id, actor_id):
 
         residents_repo.add_resident_unit(user_id, unit_id, cursor=cursor)
 
-    return {
-        "message": "Unidad vinculada correctamente",
-    }
+    return {"message": "Unidad vinculada correctamente",}
 
 def unlink_unit(user_id, unit_id, actor_id):
     with transaction() as cursor:

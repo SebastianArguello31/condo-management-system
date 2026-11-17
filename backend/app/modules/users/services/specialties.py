@@ -1,3 +1,5 @@
+# Operaciones de negocio para especialidades del personal.
+# Coordina las comprobaciones y el acceso a los repositorios antes de devolver el resultado.
 from psycopg2.errors import ForeignKeyViolation
 from werkzeug.exceptions import BadRequest, Conflict, NotFound
 

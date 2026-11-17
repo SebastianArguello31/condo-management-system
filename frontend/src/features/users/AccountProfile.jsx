@@ -2,16 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useMutation, useQuery } from "../../hooks";
-import {
-  Alert,
-  Button,
-  ErrorState,
-  Field,
-  Input,
-  PageHeader,
-  Section,
-  useToast,
-} from "../../components/ui";
+import { Alert, Button, ErrorState, Field, Input, PageHeader, Section, useToast, } from "../../components/ui";
 import { perfilEmpleado, validate } from "../../validations";
 
 const CAMPOS = [

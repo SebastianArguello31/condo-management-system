@@ -1,3 +1,5 @@
+# Operaciones de negocio para espacios comunes y políticas de uso.
+# Coordina las comprobaciones y el acceso a los repositorios antes de devolver el resultado.
 from werkzeug.exceptions import BadRequest, Conflict, NotFound
 
 from app.core.db_helpers import transaction
@@ -34,6 +36,7 @@ def update_space(space_id, data):
     with transaction() as cursor:
         _lock_space(space_id, cursor=cursor)
 
+        # Impide reducir la capacidad por debajo del aforo de una política ya configurada.
         if "capacidad" in data:
             max_policy_capacity = policies_repo.get_max_policy_capacity(space_id, cursor=cursor)
 
@@ -60,6 +63,7 @@ def get_availability(space_id, start_date, end_date, event_type_id=None):
         if event_type_id is not None and not policies:
             raise Conflict("Sin política configurada para este espacio " "y tipo de evento")
 
+        # Devuelve tramos ocupados y políticas para que el cliente pueda representar la disponibilidad.
         occupied_slots = availability_repo.list_occupied_slots(space_id, start_date, end_date, cursor=cursor,)
 
         return {

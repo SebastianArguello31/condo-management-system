@@ -1,3 +1,5 @@
+# Operaciones de negocio para edificios y unidades habitacionales.
+# Coordina las comprobaciones y el acceso a los repositorios antes de devolver el resultado.
 from psycopg2.errors import ForeignKeyViolation
 from werkzeug.exceptions import Conflict, NotFound
 
@@ -22,9 +24,7 @@ def delete_building_type(type_id):
     try:
         deleted = buildings_repo.delete_type(type_id)
     except ForeignKeyViolation:
-        raise Conflict(
-            "El tipo de edificio tiene edificios asociados y no se puede eliminar."
-        ) from None
+        raise Conflict("El tipo de edificio tiene edificios asociados y no se puede eliminar.") from None
 
     if deleted is None:
         raise NotFound("Tipo de edificio no encontrado")
@@ -75,9 +75,7 @@ def delete_unit_type(type_id):
     try:
         deleted = units_repo.delete_type(type_id)
     except ForeignKeyViolation:
-        raise Conflict(
-            "El tipo de unidad tiene unidades asociadas y no se puede eliminar."
-        ) from None
+        raise Conflict("El tipo de unidad tiene unidades asociadas y no se puede eliminar.") from None
 
     if deleted is None:
         raise NotFound("Tipo de unidad no encontrado")

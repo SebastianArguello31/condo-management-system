@@ -2,13 +2,7 @@ import { useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useMutation } from "../../hooks";
-import {
-  Alert,
-  Button,
-  Field,
-  Input,
-  Section,
-} from "../../components/ui";
+import { Alert, Button, Field, Input, Section, } from "../../components/ui";
 
 const INITIAL_FORM = {
   current_password: "",
@@ -60,10 +54,7 @@ export default function ChangePasswordForm({ onChanged }) {
         "Debe ser diferente de la contraseña actual.";
     }
 
-    if (
-      !form.confirmation ||
-      form.confirmation !== form.password
-    ) {
+    if (!form.confirmation || form.confirmation !== form.password) {
       validation.confirmation = "Las contraseñas no coinciden.";
     }
 

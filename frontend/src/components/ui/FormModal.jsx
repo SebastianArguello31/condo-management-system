@@ -1,20 +1,5 @@
-/* FormModal (convenciones §2.18 y §2.20 del plan): Modal + <form> que fija
- * el patrón de los formularios en modal:
- * - El error de la acción se muestra DENTRO del modal: Alert tone danger
- *   (role="alert") al inicio del cuerpo, con foco y scroll al aparecer.
- * - El éxito lo informa el PADRE con Toast (aquí no hay Toast).
- * - Errores por campo: fieldErrors = { campo: mensaje }; los hijos los
- *   consultan con useFormFieldError(nombre) y los pintan en su Field.
- * - Cierre bloqueado mientras busy (×, Esc y Cancelar deshabilitados —
- *   Modal ya atrapa onCancel cuando busy).
- * - Footer estándar Cancelar/Guardar con spinner en el submit.
- * API: <FormModal title description open busy error fieldErrors submitLabel
- * cancelLabel onSubmit onClose showRequiredNote>children</FormModal>.
- * showRequiredNote (opcional, default false): línea de nota sobre los
- * campos "Los campos marcados con * son obligatorios." con id referenciado
- * por el <form> (aria-describedby); el padre decide cuándo (CrudPageUi la
- * activa si algún field es required).
- */
+/* Formulario en modal con errores de acción y por campo; bloquea el cierre durante el envío.
+ * El padre comunica el éxito. showRequiredNote añade la nota de campos obligatorios. */
 import { createContext, useContext, useEffect, useId, useRef } from "react";
 import Modal from "./Modal";
 import Button from "./Button";
@@ -60,9 +45,7 @@ export default function FormModal({
 
   return (
     <Modal title={title} description={description} busy={busy} onClose={onClose} backdrop>
-      <form
-        noValidate
-        aria-describedby={showRequiredNote ? notaId : undefined}
+      <form noValidate aria-describedby={showRequiredNote ? notaId : undefined}
         onSubmit={(event) => {
           event.preventDefault();
           if (busy) return;

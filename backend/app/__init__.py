@@ -1,3 +1,5 @@
+# Fábrica de la aplicación: reúne configuración, límites de solicitudes y rutas.
+# Centraliza la conversión de errores de validación, base de datos y HTTP a respuestas JSON.
 from flask import Blueprint, Flask, jsonify
 from marshmallow import ValidationError
 from psycopg2.errors import ForeignKeyViolation, UniqueViolation
@@ -35,10 +37,13 @@ def configure_app(app, config):
 
     app.url_map.strict_slashes = False
 
-    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
-    app.config["MAX_FORM_MEMORY_SIZE"] = 64 * 1024
+    # Limita el cuerpo completo y las partes de formularios para acotar las cargas de archivos.
+    # Tres videos de 25 MB más margen para el formulario multipart.
+    app.config["MAX_CONTENT_LENGTH"] = 76 * 1024 * 1024
+    # El parser lee bloques de 64 KiB y puede conservar bytes entre lecturas.
+    # Deja margen para ese buffer sin cambiar los límites de cada adjunto.
+    app.config["MAX_FORM_MEMORY_SIZE"] = 512 * 1024
     app.config["MAX_FORM_PARTS"] = 20
-
 
 def register_routes(app):
     api = Blueprint("api", __name__, url_prefix="/condominio")
@@ -57,9 +62,7 @@ def register_routes(app):
 def register_errors(app):
     @app.errorhandler(ValidationError)
     def handle_validation_error(error):
-        return jsonify(
-            error="Revisa los campos del formulario", errors=error.messages
-        ), 400
+        return jsonify(error="Revisa los campos del formulario", errors=error.messages), 400
 
     @app.errorhandler(UniqueViolation)
     def handle_duplicate_value(error):
@@ -76,9 +79,7 @@ def register_errors(app):
 
     @app.errorhandler(ForeignKeyViolation)
     def handle_invalid_reference(error):
-        return jsonify(
-            error=("La operación no es válida: existen registros relacionados o la referencia ya no existe.")
-        ), 409
+        return jsonify(error=("La operación no es válida: existen registros relacionados o la referencia ya no existe.")), 409
 
     @app.errorhandler(HTTPException)
     def handle_http_error(error):
@@ -89,8 +90,7 @@ def register_errors(app):
 
     @app.errorhandler(Exception)
     def handle_unexpected_error(error):
+        # Conserva el detalle en el registro del servidor; la respuesta no expone la excepción interna.
         app.logger.exception("Error no controlado")
 
-        return jsonify(
-            error="Ocurrió un error interno en el servidor"
-        ), 500
+        return jsonify(error="Ocurrió un error interno en el servidor"), 500

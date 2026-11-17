@@ -1,3 +1,5 @@
+# Rutas HTTP para incidencias y seguimiento técnico.
+# Conecta las solicitudes con los servicios y declara la autenticación y los roles de cada operación.
 from flask import Blueprint, g, jsonify, request, send_from_directory
 from werkzeug.exceptions import BadRequest
 

@@ -2,11 +2,9 @@
 
 Fuente de esta guía: el CÓDIGO REAL de `frontend/src` leído el 2026-10-24
 (`components/ui/*.jsx`, `hooks/*.js(x)`, `validations/*`, `utils/*`,
-`services/*`, `config/routing.js`). Nada aquí está inventado: si algo no
-está en el código, no aparece. Si cambias el kit, actualiza esta guía.
+`services/*`, `config/routing.js`). Esta referencia puede contener detalles anteriores a cambios posteriores. Contrasta las props con el componente vigente y actualiza la guía al cambiar el kit.
 
-Complementos: `docs/plan-refactor-frontend.md` (convenciones §2–§7) y
-`docs/convenciones-frontend.md` (reglas por pantalla).
+Complemento vigente: [convenciones frontend](convenciones-frontend.md). El [plan de refactorización](archivo/plan-refactor-frontend.md) se conserva como antecedente histórico.
 
 ## 0. Convenciones de import
 
@@ -105,10 +103,9 @@ de acciones de modal → Toast del padre; error de acción de modal → Alert
 | `glyph` | `"dot" \| "ring" \| "square" \| "diamond" \| "triangle" \| "check"` | no | preset | override |
 | `className` | string | no | `""` | |
 
-Presets (estados REALES; demasiado temprano para pintarla manualmente):
+Ejemplos de presets (consulta el catálogo completo en [StatusBadge.jsx](../../frontend/src/components/ui/StatusBadge.jsx)):
 `recibida` info/ring · `en-revision` info/ring · `asignada` info/dot ·
-`en-proceso` warning/triangle · `en-espera` warning/ring · `pendiente`
-warning/ring · `confirmada` success/square · `resuelta` success/square ·
+`en-proceso` warning/triangle · `en-espera` warning/ring · `confirmada` success/square · `resuelta` success/square ·
 `rechazada` danger/diamond · `cancelada` muted/dot · `cerrada` neutral/dot ·
 `finalizada` info/check. Estados fuera de la lista → neutral/dot.
 
@@ -228,7 +225,7 @@ Ambos se congelan con `prefers-reduced-motion` (ui.css).
 
 ```jsx
 <PageHeader title="Mis reservas"
-  meta={`${rows.length} reservas · ${pendientes} pendientes`}
+  meta={`${rows.length} reservas`}
   actions={<Button onClick={nueva}>Nueva reserva</Button>} />
 ```
 Accesibilidad: un único `h1` por página.
@@ -540,7 +537,7 @@ re-dispacha a mano — TODAS las instancias montadas se actualizan.
 const { path, params, navigate } = useHashRoute();
 // URL: #/incidencias?estado=RECIBIDA&tag=a&tag=b
 // path === "/incidencias"; params === { estado: "RECIBIDA", tag: ["a","b"] }
-navigate("/mis-reservas", { estado: "PENDIENTE" });
+navigate("/mis-reservas", { estado: "CONFIRMADA" });
 navigate("/mis-reservas", null, { replace: true });
 ```
 Notas: anclas internas (`#main-content`, sin `/`) NO son rutas — se conserva

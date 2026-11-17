@@ -1,7 +1,8 @@
+# Construye indicadores y listados de insumos y existencias.
+# Aplica el alcance del usuario y transforma los resultados del repositorio para la respuesta de la API.
 from app.core.db_helpers import transaction
 from app.modules.analytics.repositories import inventory as repo
 from app.modules.analytics.services.common import numeric_rows, technician_scope, to_number
-
 
 def compute(filters, user, *, cursor):
     scope = technician_scope(user)
@@ -27,11 +28,9 @@ def compute(filters, user, *, cursor):
         ),
     }
 
-
 def get_inventory_metrics(filters, user):
     with transaction() as cursor:
         return compute(filters, user, cursor=cursor)
-
 
 def list_records(record_type, filters, user, *, limit=100):
     with transaction() as cursor:

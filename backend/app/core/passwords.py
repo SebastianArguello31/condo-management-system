@@ -1,3 +1,5 @@
+# Reglas compartidas para contraseñas nuevas.
+# El máximo se mide en bytes UTF-8 para respetar el límite de bcrypt.
 from marshmallow import ValidationError
 
 def validate_password(password):

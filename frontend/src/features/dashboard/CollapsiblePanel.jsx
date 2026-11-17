@@ -72,17 +72,7 @@ export function PanelToggle({ open, onToggle, controls, label }) {
   );
 }
 
-export default function CollapsiblePanel({
-  id,
-  title,
-  icon,
-  subtitle,
-  aside,
-  danger = false,
-  open,
-  onToggle,
-  children,
-}) {
+export default function CollapsiblePanel({ id, title, icon, subtitle, aside, danger = false, open, onToggle, children,}) {
   const bodyId = `dash-panel-${id}`;
   return (
     <div className={`dash-card${open ? "" : " is-collapsed"}`}>

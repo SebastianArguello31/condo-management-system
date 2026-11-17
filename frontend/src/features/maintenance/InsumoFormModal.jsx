@@ -1,47 +1,11 @@
-/* InsumoFormModal — F2-10b (NUEVO): "Nuevo/Editar insumo" al kit en un
- * ÚNICO componente con dos modos (patrón EspacioFormModal de F2-7b /
- * ResidentCreateModal de F2-6b). Paridad del modal legado de
- * MaintenancePage: mismos campos (Nombre, Categoría desde el catálogo
- * activo de categorías de insumo; una categoría inactiva ya asignada se
- * conserva al editar otros campos), Unidad de medida,
- * Stock mínimo, Costo unitario (opcional), Descripción (textarea);
- * mismos endpoints (POST /maintenance/insumos y PATCH
- * /maintenance/insumos/:id) y MISMO payload que el legado (trim de
- * textos, descripcion vacía → null, stock_minimo/costo_unitario como
- * NÚMEROS válidos: el backend los carga como Decimal, acepta string y
- * número; costo vacío → 0, el mismo default del schema). `activo` NO se
- * expone ni se envía (el legado tampoco lo mandaba). Los valores
- * iniciales al editar se NORMALIZAN ("1.000" → 1, "1500.00" → 1500)
- * para no mostrar ceros sobrantes del as_string del backend; números
- * → type="number" con inputMode="decimal", min="0" y step="any"
- * (flechas de 1 en 1; el backend valida la precisión).
- * Convenciones §8-bis + §8-ter: pila .ui-form-stack en el cuerpo del
- * FormModal, todo control vía Field con name y autoComplete="off",
- * validación en cliente PRIMERO (validate + insumoCrear/insumoEditar,
- * espejo EXACTO de InsumoCreateSchema/InsumoUpdateSchema) y luego
- * err.errors del backend (arrays → string) → error DIRECTO al Field
- * (lección F2-5b: los Field son JSX inline, fuera del
- * FormErrorsContext), foco al PRIMER .ui-control-invalid por contador
- * `intento`, error de la acción DENTRO del modal (Alert danger del
- * FormModal con foco/scroll), cierre bloqueado mientras busy, botón
- * "Guardar" SIEMPRE activo (solo deshabilita el busy), dedupe con
- * useMutation (doble clic = UN POST/PATCH), cero window.confirm. Éxito:
- * Toast del modal + onGuardado() (reload del padre, sin titilar).
- * Español neutro (tuteo). Cero CSS nuevo.
- */
+/* Creación y edición de insumos con validación de cantidades y costos.
+ * Al editar, conserva la categoría asignada aunque esté inactiva. */
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useMutation } from "../../hooks/useMutation";
 import { validate, insumoCrear, insumoEditar } from "../../validations";
-import {
-  Field,
-  FormModal,
-  Input,
-  Select,
-  Textarea,
-  useToast,
-} from "../../components/ui";
+import { Field, FormModal, Input, Select, Textarea, useToast, } from "../../components/ui";
 
 const EMPTY_FORM = {
   nombre: "",

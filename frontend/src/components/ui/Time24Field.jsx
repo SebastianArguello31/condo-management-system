@@ -1,24 +1,10 @@
 import Field from "./Field";
 import Select from "./Select";
 
-const HOURS = Array.from(
-  { length: 24 },
-  (_, index) => String(index).padStart(2, "0")
-);
+const HOURS = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, "0"));
+const MINUTES = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, "0"));
 
-const MINUTES = Array.from(
-  { length: 60 },
-  (_, index) => String(index).padStart(2, "0")
-);
-
-export default function Time24Field({
-  label,
-  name,
-  value = "",
-  onChange,
-  error,
-  disabled = false,
-}) {
+export default function Time24Field({label, name, value = "", onChange, error, disabled = false,}) {
   const [hour = "", minute = ""] = value.split(":");
 
   function update(nextHour, nextMinute) {
@@ -33,34 +19,14 @@ export default function Time24Field({
   }
 
   return (
-    <fieldset
-      disabled={disabled}
-      style={{
-        border: 0,
-        padding: 0,
-        margin: 0,
-        minWidth: 0,
-      }}
-    >
+    <fieldset disabled={disabled} style={{border: 0, padding: 0, margin: 0, minWidth: 0, }}>
       <legend className="ui-field-label">
         {label} · 24 horas
       </legend>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-          gap: "var(--space-3)",
-        }}
-      >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "var(--space-3)", }}>
         <Field label="Hora" required error={error}>
-          <Select
-            name={`${name}_hora`}
-            value={hour}
-            onChange={(event) =>
-              update(event.target.value, minute)
-            }
-          >
+          <Select name={`${name}_hora`} value={hour} onChange={(event) => update(event.target.value, minute)}>
             <option value="">HH</option>
             {HOURS.map((item) => (
               <option key={item} value={item}>
@@ -71,13 +37,7 @@ export default function Time24Field({
         </Field>
 
         <Field label="Minutos" required>
-          <Select
-            name={`${name}_minutos`}
-            value={minute}
-            onChange={(event) =>
-              update(hour, event.target.value)
-            }
-          >
+          <Select name={`${name}_minutos`} value={minute} onChange={(event) => update(hour, event.target.value)}>
             <option value="">mm</option>
             {MINUTES.map((item) => (
               <option key={item} value={item}>

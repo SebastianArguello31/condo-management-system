@@ -40,9 +40,9 @@ Ciclo habitual para clonar, actualizar, guardar y subir tus avances.
 | :--- | :--- | :--- |
 | **Clonar proyecto** | `git clone <URL>` | Descarga un repositorio de GitHub a tu equipo. |
 | **Ver estado** | `git status` | Muestra qué archivos modificaste o añadiste. |
-| **Preparar cambios** | `git add .` o `git add <archivo>` | Prepara todos los cambios para guardarlos. |
+| **Preparar cambios** | `git add .` o `git add <archivo>` | Prepara todos los cambios (`.`) o solo el archivo indicado. |
 | **Guardar cambios** | `git commit -m "msj"` | Guarda una versión en el historial con un mensaje. |
-| **Descargar cambios** | `git pull origin main` | Trae y fusiona las novedades del servidor remoto. |
+| **Descargar cambios** | `git pull origin main` | Trae `main` y la fusiona en tu rama actual; comprueba antes `git branch --show-current`. |
 | **Subir cambios** | `git push origin <rama>` | Sube tus commits locales a GitHub. |
 
 ---
@@ -72,7 +72,7 @@ git branch -d feature/login
 
 ## 4. Convenio de Commits (Mensajes Claros)
 
-Escribir mensajes estandarizados facilita entender qué cambió en el proyecto.  
+Escribir mensajes estandarizados facilita entender qué cambió en el proyecto.
 **Formato:** `<tipo>: <descripción breve>`
 
 | Tipo | Cuándo usarlo | Ejemplo de comando |
@@ -95,7 +95,7 @@ Usa prefijos al nombrar tus ramas para mantener el repositorio ordenado:
 
 ### Reglas esenciales para trabajar en equipo:
 1. **Commits pequeños:** Guarda progresos pequeños que funcionen en lugar de un commit enorme al final del día.
-2. **Sincronización:** Ejecuta `git pull` antes de comenzar a trabajar para tener siempre la última versión.
+2. **Sincronización:** Revisa `git status` y la rama actual antes de actualizar. Guarda o resuelve los cambios locales y utiliza `git pull --ff-only` para actualizar desde la rama remota configurada sin crear una fusión automática.
 3. **No subas archivos sensibles:** NUNCA subas claves, contraseñas o archivos `.env`.
 
 ---
@@ -124,10 +124,12 @@ Ocurre cuando dos personas modifican la misma línea en el mismo archivo.
 
 ## 7. Deshacer Cambios Simples
 
-Comandos rápidos para cuando te equivocas antes de hacer commit:
+Antes de descartar, revisa `git diff`. `git restore` elimina cambios sin preparar del archivo y normalmente no permite recuperarlos desde Git. `git restore --staged` conserva el contenido local y solo lo retira del área de preparación.
+
+Comandos:
 
 ```bash
-# Descartar las modificaciones de un archivo local (volver al último commit)
+# Descartar las modificaciones de un archivo local (restaurar desde el índice; normalmente coincide con el último commit)
 git restore nombre_archivo.js
 
 # Quitar un archivo del área de preparación (unstage)

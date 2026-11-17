@@ -1,19 +1,5 @@
-/* Insignia de estado: glifo de forma propia + texto (nunca solo color).
- * K3: presets alineados a los estados REALES del backend:
- * - incidencias (backend/app/modules/incidents/rules.py:4-12): RECIBIDA,
- *   EN_REVISION, ASIGNADA, EN_PROCESO, EN_ESPERA, RESUELTA, CERRADA,
- *   RECHAZADA, CANCELADA;
- * - reservas (catálogo estado_reservas, database/seed.sql:528-556; las
- *   transiciones están en backend/app/modules/reservations/rules.py:6-9):
- *   PENDIENTE, CONFIRMADA, RECHAZADA, CANCELADA y FINALIZADA ("el uso
- *   reservado del espacio finalizó").
- * La presentación normaliza guiones bajos a espacios ("EN_PROCESO" →
- * "EN PROCESO"). tone y glyph se deducen del preset; aceptan override para
- * estados fuera de estos módulos. glifos: dot, ring, square, diamond,
- * triangle y check (aditivo F2-3: el tick se dibuja con el border-trick,
- * para FINALIZADA). tone: neutral | info | success | warning | danger |
- * muted.
- */
+/* Representa el estado con texto, color y forma.
+ * Los presets normalizan el estado; tone y glyph permiten ajustar la presentación. */
 import "./ui.css";
 
 const PRESETS = {

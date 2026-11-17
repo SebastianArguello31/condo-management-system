@@ -1,12 +1,5 @@
-/* Menú de acciones de fila (K6): disparador COMPACTO con icono de tres puntos
- * (aria-label "Más acciones"), alineado a la derecha (justify-content y menú
- * con right: 0). Patrón recomendado en listados y fichas: UNA acción
- * principal como enlace/botón de texto junto al menú, y el resto de las
- * acciones secundarias (ver, asignar, eliminar…) dentro del menú. Ítems
- * navegables por teclado: flechas mueven, Home/End extremos, Esc cierra y
- * devuelve el foco al botón, Tab cierra, clic fuera cierra.
- * actions: [{ label, onSelect, disabled?, danger? }]
- */
+/* Menú de acciones secundarias con navegación por teclado y cierre al pulsar fuera.
+ * Al cerrar con Escape, devuelve el foco al disparador. */
 import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import "./ui.css";
@@ -70,13 +63,7 @@ export default function RowActionsMenu({ actions = [], className = "" }) {
 
   return (
     <div className={["ui-row-actions", className].filter(Boolean).join(" ")} ref={root}>
-      <button
-        type="button"
-        ref={trigger}
-        className="ui-row-actions-trigger"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label="Más acciones"
+      <button type="button" ref={trigger} className="ui-row-actions-trigger" aria-haspopup="menu" aria-expanded={open} aria-label="Más acciones"
         onClick={() => setOpen((v) => !v)}
         onKeyDown={(event) => {
           if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -90,11 +77,7 @@ export default function RowActionsMenu({ actions = [], className = "" }) {
       {open && (
         <div role="menu" ref={menu} className="ui-menu" onKeyDown={(event) => focusItems(event)}>
           {actions.map((action, index) => (
-            <button
-              type="button"
-              key={action.label ?? index}
-              role="menuitem"
-              tabIndex={-1}
+            <button type="button" key={action.label ?? index} role="menuitem" tabIndex={-1}
               className={["ui-menuitem", action.danger ? "ui-menuitem-danger" : ""]
                 .filter(Boolean)
                 .join(" ")}

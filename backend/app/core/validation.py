@@ -1,3 +1,5 @@
+# Esquemas y campos reutilizables para validar las entradas de la API.
+# La lectura de JSON exige un objeto y admite actualizaciones parciales explícitas.
 from flask import request
 from marshmallow import Schema, fields, pre_load, validate
 from werkzeug.exceptions import BadRequest
@@ -8,6 +10,7 @@ class BaseSchema(Schema):
         if not isinstance(data, dict):
             return data
 
+        # Normaliza los textos sin recortar espacios que puedan formar parte de la contraseña.
         return {
             key: (
                 value.strip()

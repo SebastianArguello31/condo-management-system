@@ -1,3 +1,5 @@
+# Acceso SQL a edificios y sus tipos.
+# Encapsula las consultas usadas por los servicios de este módulo.
 from app.core.db_helpers import delete_record, query, update_record
 
 BUILDING_SELECT = """
@@ -22,9 +24,9 @@ def get_building(building_id):
 def list_types():
     return query(
         """
-        SELECT id_tipo_edificio, nombre, descripcion
-        FROM tipo_edificio
-        ORDER BY id_tipo_edificio;
+            SELECT id_tipo_edificio, nombre, descripcion
+            FROM tipo_edificio
+            ORDER BY id_tipo_edificio;
         """,
         many=True,
     )
@@ -32,9 +34,9 @@ def list_types():
 def get_type(type_id):
     return query(
         """
-        SELECT id_tipo_edificio, nombre, descripcion
-        FROM tipo_edificio
-        WHERE id_tipo_edificio = %s;
+            SELECT id_tipo_edificio, nombre, descripcion
+            FROM tipo_edificio
+            WHERE id_tipo_edificio = %s;
         """,
         (type_id,),
     )
@@ -42,9 +44,9 @@ def get_type(type_id):
 def insert_type(data):
     return query(
         """
-        INSERT INTO tipo_edificio (nombre, descripcion)
-        VALUES (%s, %s)
-        RETURNING id_tipo_edificio, nombre, descripcion;
+            INSERT INTO tipo_edificio (nombre, descripcion)
+            VALUES (%s, %s)
+            RETURNING id_tipo_edificio, nombre, descripcion;
         """,
         (data["nombre"], data.get("descripcion", "")),
     )
@@ -69,19 +71,19 @@ def delete_type(type_id):
 def insert_building(data):
     return query(
         """
-        INSERT INTO edificios (
-            nombre,
-            direccion,
-            created_at,
-            id_tipo_edificio
-        )
-        VALUES (%s, %s, CURRENT_TIMESTAMP, %s)
-        RETURNING
-            id_edificio,
-            nombre,
-            direccion,
-            created_at,
-            id_tipo_edificio;
+            INSERT INTO edificios (
+                nombre,
+                direccion,
+                created_at,
+                id_tipo_edificio
+            )
+            VALUES (%s, %s, CURRENT_TIMESTAMP, %s)
+            RETURNING
+                id_edificio,
+                nombre,
+                direccion,
+                created_at,
+                id_tipo_edificio;
         """,
         (data["nombre"], data.get("direccion"), data["id_tipo_edificio"],),
     )

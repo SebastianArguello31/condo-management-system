@@ -1,22 +1,50 @@
--- Datos iniciales y de demostración.
+-- ============================================================
+-- SEED COMPLETO - SISTEMA DE GESTIÓN DE CONDOMINIOS
 --
 -- Requisitos:
---   1. Esquema base instalado.
---   2. Migraciones aplicadas hasta head.
+--   schema.sql instalado y migraciones aplicadas hasta head.
+--   Head revisado: f3499c9b0871.
 --
--- Comportamiento:
---   - Inserta registros faltantes.
---   - Conserva identificadores y datos existentes.
---   - No reactiva registros desactivados.
---   - No crea usuarios ni contraseñas.
---   - Ante un error, revierte toda la carga.
+-- Incluye:
+--   Roles ADMIN, GESTOR, RESIDENTE y TECNICO.
+--   Catálogos de edificios, unidades, incidencias y reservas.
+--   Cargos, especialidades y categorías de insumos.
+--   Edificios, unidades, espacios y políticas de demostración.
+--   Insumos de demostración con stock cero.
+--
+-- Conserva los registros existentes y sus identificadores.
+-- No modifica contraseñas, sesiones ni registros operativos.
+-- No reactiva registros desactivados.
+-- Costos y tarifas de demostración expresados en guaraníes.
+-- ============================================================
 
 BEGIN;
 
 SET LOCAL lock_timeout = '10s';
 
--- Algunas tablas no tienen restricciones únicas por nombre.
--- Estos bloqueos evitan escrituras concurrentes durante la carga.
+-- ============================================================
+-- 1. VERIFICAR MIGRACIONES
+-- ============================================================
+
+DO $$
+BEGIN
+    IF to_regclass('alembic_version') IS NULL THEN
+        RAISE EXCEPTION
+            'Falta alembic_version. Aplica las migraciones antes del seed.';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM alembic_version
+        WHERE version_num = 'f3499c9b0871'
+    ) THEN
+        RAISE EXCEPTION
+            'Este seed requiere el head f3499c9b0871. Ejecuta alembic upgrade head.';
+    END IF;
+END;
+$$;
+
+-- Evita inserciones concurrentes mientras se resuelven nombres.
 LOCK TABLE
     roles,
     tipo_edificio,
@@ -25,38 +53,200 @@ LOCK TABLE
     estados_incidencia,
     prioridades,
     cargos_personal,
+    especialidades,
     tipos_evento,
     estado_reservas,
-    especialidades,
+    categorias_insumo,
     edificios,
     unidades,
     espacios_comunes,
-    politicas_reserva
+    politicas_reserva,
+    insumos
 IN SHARE ROW EXCLUSIVE MODE;
 
 -- ============================================================
--- 1. VALIDACIONES PREVIAS
+-- 2. CATÁLOGOS
+-- Tabla temporal: desaparece al confirmar la transacción.
 -- ============================================================
 
--- Los catálogos deben tener nombres no ambiguos.
--- No se eliminan ni fusionan duplicados automáticamente.
+CREATE TEMP TABLE seed_catalogos (
+    tabla TEXT NOT NULL,
+    nombre TEXT NOT NULL,
+    descripcion TEXT NOT NULL,
+    PRIMARY KEY (tabla, nombre)
+) ON COMMIT DROP;
+
+INSERT INTO seed_catalogos (tabla, nombre, descripcion)
+VALUES
+    -- ROLES
+    ('roles', 'ADMIN',
+     'Administra usuarios, configuración y operaciones del sistema.'),
+    ('roles', 'GESTOR',
+     'Gestiona asignaciones de mantenimiento, inventario y reservas; consulta indicadores según los permisos del backend.'),
+    ('roles', 'RESIDENTE',
+     'Reporta incidencias y gestiona sus propias solicitudes y reservas.'),
+    ('roles', 'TECNICO',
+     'Atiende incidencias asignadas y registra trabajos de mantenimiento.'),
+
+    -- TIPOS DE EDIFICIO
+    ('tipo_edificio', 'Residencial',
+     'Edificio destinado principalmente a viviendas.'),
+    ('tipo_edificio', 'Comercial',
+     'Edificio destinado principalmente a locales comerciales.'),
+    ('tipo_edificio', 'Mixto',
+     'Edificio con viviendas y espacios comerciales.'),
+    ('tipo_edificio', 'Administrativo',
+     'Edificio destinado a oficinas y administración.'),
+
+    -- TIPOS DE UNIDAD
+    ('tipo_unidad', 'Departamento',
+     'Unidad habitacional dentro de un edificio.'),
+    ('tipo_unidad', 'Casa',
+     'Vivienda individual dentro del condominio.'),
+    ('tipo_unidad', 'Local comercial',
+     'Unidad destinada a actividades comerciales.'),
+    ('tipo_unidad', 'Oficina',
+     'Unidad destinada a actividades profesionales.'),
+    ('tipo_unidad', 'Cochera',
+     'Unidad destinada al estacionamiento de vehículos.'),
+    ('tipo_unidad', 'Depósito',
+     'Unidad destinada al almacenamiento.'),
+
+    -- TIPOS DE INCIDENCIA
+    ('tipos_incidencia', 'Agua',
+     'Pérdidas de agua, cañerías, grifería y suministro.'),
+    ('tipos_incidencia', 'Electricidad',
+     'Problemas en instalaciones eléctricas e iluminación.'),
+    ('tipos_incidencia', 'Desagüe',
+     'Obstrucciones, filtraciones y problemas de drenaje.'),
+    ('tipos_incidencia', 'Infraestructura',
+     'Daños en paredes, techos, pisos y estructuras.'),
+    ('tipos_incidencia', 'Ascensores',
+     'Fallas de funcionamiento en ascensores.'),
+    ('tipos_incidencia', 'Accesos',
+     'Problemas con puertas, portones, cerraduras e intercomunicadores.'),
+    ('tipos_incidencia', 'Limpieza',
+     'Necesidades de limpieza y retiro de residuos.'),
+    ('tipos_incidencia', 'Áreas verdes',
+     'Mantenimiento de jardines, árboles y sistemas de riego.'),
+    ('tipos_incidencia', 'Seguridad',
+     'Problemas en cámaras, alarmas y equipos de seguridad.'),
+    ('tipos_incidencia', 'Otros',
+     'Otros problemas de mantenimiento.'),
+
+    -- ESTADOS DE INCIDENCIA
+    ('estados_incidencia', 'RECIBIDA',
+     'Solicitud recibida y pendiente de revisión.'),
+    ('estados_incidencia', 'EN_REVISION',
+     'La administración está evaluando la solicitud.'),
+    ('estados_incidencia', 'ASIGNADA',
+     'La solicitud tiene personal responsable asignado.'),
+    ('estados_incidencia', 'EN_PROCESO',
+     'Se están realizando trabajos para resolver el problema.'),
+    ('estados_incidencia', 'EN_ESPERA',
+     'Pendiente de información, materiales o acceso.'),
+    ('estados_incidencia', 'RESUELTA',
+     'Los trabajos finalizaron y el problema fue resuelto.'),
+    ('estados_incidencia', 'CERRADA',
+     'Se confirmó el cierre de la solicitud.'),
+    ('estados_incidencia', 'RECHAZADA',
+     'La solicitud fue evaluada y no corresponde atenderla.'),
+    ('estados_incidencia', 'CANCELADA',
+     'La solicitud fue cancelada.'),
+
+    -- CARGOS DEL PERSONAL
+    -- Los cargos no conceden permisos: estos dependen del rol.
+    ('cargos_personal', 'Encargado de mantenimiento',
+     'Coordina y supervisa las tareas de mantenimiento.'),
+    ('cargos_personal', 'Plomero',
+     'Atiende instalaciones de agua, cañerías y desagües.'),
+    ('cargos_personal', 'Electricista',
+     'Atiende instalaciones y equipos eléctricos.'),
+    ('cargos_personal', 'Técnico de ascensores',
+     'Realiza mantenimiento especializado de ascensores.'),
+    ('cargos_personal', 'Personal de limpieza',
+     'Realiza limpieza y gestión de residuos.'),
+    ('cargos_personal', 'Jardinero',
+     'Realiza mantenimiento de jardines y áreas verdes.'),
+    ('cargos_personal', 'Personal de seguridad',
+     'Realiza vigilancia y control de accesos.'),
+    ('cargos_personal', 'Mantenimiento general',
+     'Realiza reparaciones generales de mantenimiento.'),
+
+    -- ESPECIALIDADES: MIGRACIÓN 003
+    ('especialidades', 'Plomería',
+     'Agua, cañerías y desagües.'),
+    ('especialidades', 'Electricidad',
+     'Instalaciones eléctricas e iluminación.'),
+    ('especialidades', 'Ascensores',
+     'Mantenimiento de ascensores.'),
+    ('especialidades', 'Limpieza',
+     'Limpieza y gestión de residuos.'),
+    ('especialidades', 'Jardinería',
+     'Mantenimiento de áreas verdes.'),
+    ('especialidades', 'Seguridad',
+     'Sistemas de seguridad y accesos.'),
+    ('especialidades', 'Mantenimiento general',
+     'Reparaciones generales.'),
+
+    -- TIPOS DE EVENTO
+    ('tipos_evento', 'Reunión familiar',
+     'Encuentro privado de familiares y allegados.'),
+    ('tipos_evento', 'Cumpleaños',
+     'Celebración de cumpleaños.'),
+    ('tipos_evento', 'Asamblea de residentes',
+     'Reunión para tratar asuntos del condominio.'),
+    ('tipos_evento', 'Actividad deportiva',
+     'Encuentro o actividad deportiva.'),
+    ('tipos_evento', 'Actividad recreativa',
+     'Actividad de entretenimiento o convivencia.'),
+    ('tipos_evento', 'Otro',
+     'Evento que no corresponde a las categorías anteriores.'),
+
+    -- ESTADOS DE RESERVA
+    ('estado_reservas', 'PENDIENTE',
+     'Reserva solicitada y pendiente de evaluación.'),
+    ('estado_reservas', 'CONFIRMADA',
+     'La solicitud de reserva fue aprobada.'),
+    ('estado_reservas', 'RECHAZADA',
+     'La solicitud de reserva no fue aprobada.'),
+    ('estado_reservas', 'CANCELADA',
+     'La reserva fue cancelada.'),
+    ('estado_reservas', 'FINALIZADA',
+     'El uso reservado del espacio finalizó.'),
+
+    -- CATEGORÍAS DE INSUMOS: MIGRACIÓN 010 DE INVENTARIO
+    ('categorias_insumo', 'GENERAL',
+     'Insumos de uso general.'),
+    ('categorias_insumo', 'PLOMERIA',
+     'Materiales para agua, cañerías y desagües.'),
+    ('categorias_insumo', 'ELECTRICIDAD',
+     'Materiales eléctricos e iluminación.'),
+    ('categorias_insumo', 'LIMPIEZA',
+     'Productos y materiales de limpieza.'),
+    ('categorias_insumo', 'JARDINERIA',
+     'Materiales para jardines y áreas verdes.'),
+    ('categorias_insumo', 'PINTURA',
+     'Pinturas y materiales para acabados.'),
+    ('categorias_insumo', 'FERRETERIA',
+     'Elementos de fijación, sellado y reparación.'),
+    ('categorias_insumo', 'SEGURIDAD',
+     'Materiales para sistemas de seguridad.'),
+    ('categorias_insumo', 'PROTECCION PERSONAL',
+     'Elementos de protección para el personal.');
+
+-- Validar nombres e insertar únicamente registros faltantes.
 DO $$
 DECLARE
-    tabla TEXT;
-    nombre_duplicado TEXT;
+    v_tabla TEXT;
+    v_duplicado TEXT;
+    v_no_canonico TEXT;
+    v_tiene_activo BOOLEAN;
 BEGIN
-    FOREACH tabla IN ARRAY ARRAY[
-        'roles',
-        'tipo_edificio',
-        'tipo_unidad',
-        'tipos_incidencia',
-        'estados_incidencia',
-        'prioridades',
-        'cargos_personal',
-        'tipos_evento',
-        'estado_reservas',
-        'especialidades'
-    ]
+    FOR v_tabla IN
+        SELECT DISTINCT tabla
+        FROM seed_catalogos
+        ORDER BY tabla
     LOOP
         EXECUTE format(
             'SELECT lower(btrim(nombre))
@@ -64,82 +254,95 @@ BEGIN
              GROUP BY lower(btrim(nombre))
              HAVING count(*) > 1
              LIMIT 1',
-            tabla
+            v_tabla
         )
-        INTO nombre_duplicado;
+        INTO v_duplicado;
 
-        IF nombre_duplicado IS NOT NULL THEN
+        IF v_duplicado IS NOT NULL THEN
             RAISE EXCEPTION
-                'Nombre duplicado en el catálogo %: %. Corrige los registros antes de ejecutar el seed.',
-                tabla,
-                nombre_duplicado;
+                'Nombre duplicado en %: %. Corrige el catálogo.',
+                v_tabla, v_duplicado;
+        END IF;
+
+        -- El backend compara estos códigos de forma exacta.
+        IF v_tabla IN (
+            'roles',
+            'estados_incidencia',
+            'estado_reservas'
+        ) THEN
+            EXECUTE format(
+                'SELECT e.nombre
+                 FROM %I e
+                 JOIN pg_temp.seed_catalogos d
+                   ON lower(btrim(e.nombre)) = lower(btrim(d.nombre))
+                 WHERE d.tabla = $1
+                   AND e.nombre <> d.nombre
+                 LIMIT 1',
+                v_tabla
+            )
+            INTO v_no_canonico
+            USING v_tabla;
+
+            IF v_no_canonico IS NOT NULL THEN
+                RAISE EXCEPTION
+                    'Código no canónico en %: %. Revisa espacios y mayúsculas.',
+                    v_tabla, v_no_canonico;
+            END IF;
+        END IF;
+
+        v_tiene_activo := v_tabla IN (
+            'tipos_incidencia',
+            'especialidades',
+            'tipos_evento',
+            'categorias_insumo'
+        );
+
+        IF v_tiene_activo THEN
+            EXECUTE format(
+                'INSERT INTO %I (nombre, descripcion, activo)
+                 SELECT d.nombre, d.descripcion, TRUE
+                 FROM pg_temp.seed_catalogos d
+                 WHERE d.tabla = $1
+                   AND NOT EXISTS (
+                       SELECT 1 FROM %I e
+                       WHERE lower(btrim(e.nombre)) =
+                             lower(btrim(d.nombre))
+                   )',
+                v_tabla, v_tabla
+            )
+            USING v_tabla;
+        ELSE
+            EXECUTE format(
+                'INSERT INTO %I (nombre, descripcion)
+                 SELECT d.nombre, d.descripcion
+                 FROM pg_temp.seed_catalogos d
+                 WHERE d.tabla = $1
+                   AND NOT EXISTS (
+                       SELECT 1 FROM %I e
+                       WHERE lower(btrim(e.nombre)) =
+                             lower(btrim(d.nombre))
+                   )',
+                v_tabla, v_tabla
+            )
+            USING v_tabla;
         END IF;
     END LOOP;
 END;
 $$;
 
--- El backend utiliza estos nombres como códigos exactos.
--- Una variante con espacios o distinta capitalización no debe
--- impedir silenciosamente la creación del código esperado.
+-- ============================================================
+-- 3. PRIORIDADES
+-- ============================================================
+
 DO $$
 BEGIN
     IF EXISTS (
-        SELECT 1
-        FROM roles existente
-        JOIN (
-            VALUES
-                ('ADMIN'),
-                ('RESIDENTE'),
-                ('TECNICO')
-        ) AS esperado(nombre)
-            ON lower(btrim(existente.nombre)) =
-               lower(esperado.nombre)
-        WHERE existente.nombre <> esperado.nombre
+        SELECT lower(btrim(nombre))
+        FROM prioridades
+        GROUP BY lower(btrim(nombre))
+        HAVING count(*) > 1
     ) THEN
-        RAISE EXCEPTION
-            'Hay roles con nombres no canónicos. Los códigos requeridos son ADMIN, RESIDENTE y TECNICO.';
-    END IF;
-
-    IF EXISTS (
-        SELECT 1
-        FROM estados_incidencia existente
-        JOIN (
-            VALUES
-                ('RECIBIDA'),
-                ('EN_REVISION'),
-                ('ASIGNADA'),
-                ('EN_PROCESO'),
-                ('EN_ESPERA'),
-                ('RESUELTA'),
-                ('CERRADA'),
-                ('RECHAZADA'),
-                ('CANCELADA')
-        ) AS esperado(nombre)
-            ON lower(btrim(existente.nombre)) =
-               lower(esperado.nombre)
-        WHERE existente.nombre <> esperado.nombre
-    ) THEN
-        RAISE EXCEPTION
-            'Hay estados de incidencia con espacios o capitalización distintos de los códigos requeridos.';
-    END IF;
-
-    IF EXISTS (
-        SELECT 1
-        FROM estado_reservas existente
-        JOIN (
-            VALUES
-                ('PENDIENTE'),
-                ('CONFIRMADA'),
-                ('RECHAZADA'),
-                ('CANCELADA'),
-                ('FINALIZADA')
-        ) AS esperado(nombre)
-            ON lower(btrim(existente.nombre)) =
-               lower(esperado.nombre)
-        WHERE existente.nombre <> esperado.nombre
-    ) THEN
-        RAISE EXCEPTION
-            'Hay estados de reserva con espacios o capitalización distintos de los códigos requeridos.';
+        RAISE EXCEPTION 'Hay prioridades con nombres duplicados.';
     END IF;
 
     IF EXISTS (
@@ -154,458 +357,66 @@ BEGIN
 END;
 $$;
 
--- ============================================================
--- 2. ROLES
--- ============================================================
-
-INSERT INTO roles (nombre, descripcion)
-SELECT datos.nombre, datos.descripcion
-FROM (
-    VALUES
-        (
-            'ADMIN',
-            'Administra usuarios, edificios, unidades y solicitudes.'
-        ),
-        (
-            'RESIDENTE',
-            'Reporta problemas y consulta sus propias solicitudes.'
-        ),
-        (
-            'TECNICO',
-            'Personal encargado de mantenimiento y servicios.'
-        )
-) AS datos(nombre, descripcion)
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM roles existente
-    WHERE existente.nombre = datos.nombre
-);
-
--- ============================================================
--- 3. TIPOS DE EDIFICIO
--- ============================================================
-
-INSERT INTO tipo_edificio (nombre, descripcion)
-SELECT datos.nombre, datos.descripcion
-FROM (
-    VALUES
-        (
-            'Residencial',
-            'Edificio destinado principalmente a viviendas.'
-        ),
-        (
-            'Comercial',
-            'Edificio destinado principalmente a locales comerciales.'
-        ),
-        (
-            'Mixto',
-            'Edificio con viviendas y espacios comerciales.'
-        ),
-        (
-            'Administrativo',
-            'Edificio destinado a oficinas y administración.'
-        )
-) AS datos(nombre, descripcion)
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM tipo_edificio existente
-    WHERE lower(btrim(existente.nombre)) =
-          lower(btrim(datos.nombre))
-);
-
--- ============================================================
--- 4. TIPOS DE UNIDAD
--- ============================================================
-
-INSERT INTO tipo_unidad (nombre, descripcion)
-SELECT datos.nombre, datos.descripcion
-FROM (
-    VALUES
-        (
-            'Departamento',
-            'Unidad habitacional dentro de un edificio.'
-        ),
-        (
-            'Casa',
-            'Vivienda individual dentro del condominio.'
-        ),
-        (
-            'Local comercial',
-            'Unidad destinada a actividades comerciales.'
-        ),
-        (
-            'Oficina',
-            'Unidad destinada a actividades profesionales.'
-        ),
-        (
-            'Cochera',
-            'Unidad destinada al estacionamiento de vehículos.'
-        ),
-        (
-            'Depósito',
-            'Unidad destinada al almacenamiento.'
-        )
-) AS datos(nombre, descripcion)
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM tipo_unidad existente
-    WHERE lower(btrim(existente.nombre)) =
-          lower(btrim(datos.nombre))
-);
-
--- ============================================================
--- 5. TIPOS DE INCIDENCIA
--- ============================================================
-
-INSERT INTO tipos_incidencia (nombre, descripcion, activo)
-SELECT datos.nombre, datos.descripcion, TRUE
-FROM (
-    VALUES
-        (
-            'Agua',
-            'Pérdidas de agua, cañerías, grifería y suministro.'
-        ),
-        (
-            'Electricidad',
-            'Problemas en instalaciones eléctricas e iluminación.'
-        ),
-        (
-            'Desagüe',
-            'Obstrucciones, filtraciones y problemas de drenaje.'
-        ),
-        (
-            'Infraestructura',
-            'Daños en paredes, techos, pisos y otras estructuras.'
-        ),
-        (
-            'Ascensores',
-            'Fallas de funcionamiento en ascensores.'
-        ),
-        (
-            'Accesos',
-            'Problemas con puertas, portones, cerraduras e intercomunicadores.'
-        ),
-        (
-            'Limpieza',
-            'Necesidades de limpieza y retiro de residuos.'
-        ),
-        (
-            'Áreas verdes',
-            'Mantenimiento de jardines, árboles y sistemas de riego.'
-        ),
-        (
-            'Seguridad',
-            'Problemas en cámaras, alarmas y otros equipos de seguridad.'
-        ),
-        (
-            'Otros',
-            'Otros problemas de mantenimiento.'
-        )
-) AS datos(nombre, descripcion)
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM tipos_incidencia existente
-    WHERE lower(btrim(existente.nombre)) =
-          lower(btrim(datos.nombre))
-);
-
--- ============================================================
--- 6. ESTADOS DE INCIDENCIA
--- ============================================================
-
-INSERT INTO estados_incidencia (nombre, descripcion)
-SELECT datos.nombre, datos.descripcion
-FROM (
-    VALUES
-        (
-            'RECIBIDA',
-            'Solicitud recibida y pendiente de revisión.'
-        ),
-        (
-            'EN_REVISION',
-            'La administración está evaluando la solicitud.'
-        ),
-        (
-            'ASIGNADA',
-            'La solicitud tiene personal responsable asignado.'
-        ),
-        (
-            'EN_PROCESO',
-            'Se están realizando trabajos para resolver el problema.'
-        ),
-        (
-            'EN_ESPERA',
-            'La atención está pendiente de información, materiales o acceso.'
-        ),
-        (
-            'RESUELTA',
-            'Los trabajos finalizaron y el problema fue resuelto.'
-        ),
-        (
-            'CERRADA',
-            'Se confirmó el cierre de la solicitud.'
-        ),
-        (
-            'RECHAZADA',
-            'La solicitud fue evaluada y no corresponde atenderla.'
-        ),
-        (
-            'CANCELADA',
-            'La solicitud fue cancelada.'
-        )
-) AS datos(nombre, descripcion)
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM estados_incidencia existente
-    WHERE existente.nombre = datos.nombre
-);
-
--- ============================================================
--- 7. PRIORIDADES
--- ============================================================
-
 INSERT INTO prioridades (
-    nombre,
-    nivel,
-    tiempo_resolucion_horas,
-    activo
+    nombre, nivel, tiempo_resolucion_horas, activo
 )
-SELECT
-    datos.nombre,
-    datos.nivel,
-    datos.horas,
-    TRUE
+SELECT d.nombre, d.nivel, d.horas, TRUE
 FROM (
     VALUES
         ('Baja',    1, 168),
         ('Normal',  2,  72),
         ('Alta',    3,  24),
         ('Urgente', 4,   4)
-) AS datos(nombre, nivel, horas)
+) AS d(nombre, nivel, horas)
 WHERE NOT EXISTS (
     SELECT 1
-    FROM prioridades existente
-    WHERE lower(btrim(existente.nombre)) =
-          lower(btrim(datos.nombre))
+    FROM prioridades p
+    WHERE lower(btrim(p.nombre)) = lower(btrim(d.nombre))
 );
 
 -- ============================================================
--- 8. CARGOS DEL PERSONAL
+-- 4. EDIFICIOS DE DEMOSTRACIÓN
+-- Se conservan los edificios creados por la migración 006.
 -- ============================================================
 
-INSERT INTO cargos_personal (nombre, descripcion)
-SELECT datos.nombre, datos.descripcion
-FROM (
-    VALUES
-        (
-            'Encargado de mantenimiento',
-            'Coordina y supervisa las tareas de mantenimiento.'
-        ),
-        (
-            'Plomero',
-            'Atiende instalaciones de agua, cañerías y desagües.'
-        ),
-        (
-            'Electricista',
-            'Atiende instalaciones y equipos eléctricos.'
-        ),
-        (
-            'Técnico de ascensores',
-            'Realiza mantenimiento especializado de ascensores.'
-        ),
-        (
-            'Personal de limpieza',
-            'Realiza limpieza y gestión de residuos.'
-        ),
-        (
-            'Jardinero',
-            'Realiza mantenimiento de jardines y áreas verdes.'
-        ),
-        (
-            'Personal de seguridad',
-            'Realiza vigilancia y control de accesos.'
-        ),
-        (
-            'Mantenimiento general',
-            'Realiza reparaciones y tareas generales de mantenimiento.'
-        )
-) AS datos(nombre, descripcion)
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM cargos_personal existente
-    WHERE lower(btrim(existente.nombre)) =
-          lower(btrim(datos.nombre))
-);
-
--- ============================================================
--- 9. ESPECIALIDADES
--- ============================================================
-
-INSERT INTO especialidades (nombre, descripcion, activo)
-SELECT datos.nombre, datos.descripcion, TRUE
-FROM (
-    VALUES
-        (
-            'Plomería',
-            'Agua, cañerías y desagües.'
-        ),
-        (
-            'Electricidad',
-            'Instalaciones eléctricas e iluminación.'
-        ),
-        (
-            'Ascensores',
-            'Mantenimiento de ascensores.'
-        ),
-        (
-            'Limpieza',
-            'Limpieza y gestión de residuos.'
-        ),
-        (
-            'Jardinería',
-            'Mantenimiento de áreas verdes.'
-        ),
-        (
-            'Seguridad',
-            'Sistemas de seguridad y accesos.'
-        ),
-        (
-            'Mantenimiento general',
-            'Reparaciones generales.'
-        )
-) AS datos(nombre, descripcion)
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM especialidades existente
-    WHERE lower(btrim(existente.nombre)) =
-          lower(btrim(datos.nombre))
-);
-
--- ============================================================
--- 10. TIPOS DE EVENTO
--- ============================================================
-
-INSERT INTO tipos_evento (nombre, descripcion, activo)
-SELECT datos.nombre, datos.descripcion, TRUE
-FROM (
-    VALUES
-        (
-            'Reunión familiar',
-            'Encuentro privado de familiares y allegados.'
-        ),
-        (
-            'Cumpleaños',
-            'Celebración de cumpleaños.'
-        ),
-        (
-            'Asamblea de residentes',
-            'Reunión de residentes para tratar asuntos del condominio.'
-        ),
-        (
-            'Actividad deportiva',
-            'Encuentro o actividad deportiva.'
-        ),
-        (
-            'Actividad recreativa',
-            'Actividad de entretenimiento o convivencia.'
-        ),
-        (
-            'Otro',
-            'Evento que no corresponde a las categorías anteriores.'
-        )
-) AS datos(nombre, descripcion)
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM tipos_evento existente
-    WHERE lower(btrim(existente.nombre)) =
-          lower(btrim(datos.nombre))
-);
-
--- ============================================================
--- 11. ESTADOS DE RESERVA
--- ============================================================
-
-INSERT INTO estado_reservas (nombre, descripcion)
-SELECT datos.nombre, datos.descripcion
-FROM (
-    VALUES
-        (
-            'PENDIENTE',
-            'Reserva solicitada y pendiente de evaluación.'
-        ),
-        (
-            'CONFIRMADA',
-            'La solicitud de reserva fue aprobada.'
-        ),
-        (
-            'RECHAZADA',
-            'La solicitud de reserva no fue aprobada.'
-        ),
-        (
-            'CANCELADA',
-            'La reserva fue cancelada.'
-        ),
-        (
-            'FINALIZADA',
-            'El uso reservado del espacio finalizó.'
-        )
-) AS datos(nombre, descripcion)
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM estado_reservas existente
-    WHERE existente.nombre = datos.nombre
-);
-
--- ============================================================
--- 12. EDIFICIOS DE DEMOSTRACIÓN
--- ============================================================
-
--- Los edificios se identifican por su nombre dentro de este seed.
 DO $$
 BEGIN
     IF EXISTS (
         SELECT lower(btrim(nombre))
         FROM edificios
-        WHERE lower(btrim(nombre)) IN (
-            'torre norte',
-            'torre sur'
-        )
+        WHERE lower(btrim(nombre)) IN ('torre norte', 'torre sur')
         GROUP BY lower(btrim(nombre))
         HAVING count(*) > 1
     ) THEN
         RAISE EXCEPTION
-            'Hay varios edificios llamados Torre Norte o Torre Sur. No se pueden resolver sus relaciones de forma inequívoca.';
+            'Hay edificios duplicados llamados Torre Norte o Torre Sur.';
     END IF;
 END;
 $$;
 
 INSERT INTO edificios (
-    nombre,
-    direccion,
-    created_at,
-    id_tipo_edificio
+    nombre, direccion, created_at, id_tipo_edificio
 )
 SELECT
-    datos.nombre,
-    datos.direccion,
+    d.nombre,
+    d.direccion,
     CURRENT_TIMESTAMP,
-    te.id_tipo_edificio
+    t.id_tipo_edificio
 FROM (
     VALUES
         ('Torre Norte', 'Av. de la Integración 1200'),
         ('Torre Sur', 'Av. de la Integración 1250')
-) AS datos(nombre, direccion)
-JOIN tipo_edificio te
-    ON lower(btrim(te.nombre)) = 'residencial'
+) AS d(nombre, direccion)
+JOIN tipo_edificio t
+    ON lower(btrim(t.nombre)) = 'residencial'
 WHERE NOT EXISTS (
     SELECT 1
-    FROM edificios existente
-    WHERE lower(btrim(existente.nombre)) =
-          lower(btrim(datos.nombre))
+    FROM edificios e
+    WHERE lower(btrim(e.nombre)) = lower(btrim(d.nombre))
 );
 
 -- ============================================================
--- 13. UNIDADES DE DEMOSTRACIÓN
+-- 5. UNIDADES DE DEMOSTRACIÓN
 -- ============================================================
 
 DO $$
@@ -613,12 +424,8 @@ BEGIN
     IF EXISTS (
         SELECT u.id_edificio, lower(btrim(u.codigo))
         FROM unidades u
-        JOIN edificios e
-            ON e.id_edificio = u.id_edificio
-        WHERE lower(btrim(e.nombre)) IN (
-            'torre norte',
-            'torre sur'
-        )
+        JOIN edificios e ON e.id_edificio = u.id_edificio
+        WHERE lower(btrim(e.nombre)) IN ('torre norte', 'torre sur')
           AND lower(btrim(u.codigo)) IN (
               '101', '102', '201', '202', '301', '302'
           )
@@ -626,24 +433,20 @@ BEGIN
         HAVING count(*) > 1
     ) THEN
         RAISE EXCEPTION
-            'Hay códigos de unidades de demostración duplicados dentro de un edificio.';
+            'Hay unidades de demostración duplicadas dentro de un edificio.';
     END IF;
 END;
 $$;
 
 INSERT INTO unidades (
-    codigo,
-    piso,
-    created_at,
-    id_edificio,
-    id_tipo_unidad
+    codigo, piso, created_at, id_edificio, id_tipo_unidad
 )
 SELECT
-    datos.codigo,
-    datos.piso,
+    d.codigo,
+    d.piso,
     CURRENT_TIMESTAMP,
     e.id_edificio,
-    tu.id_tipo_unidad
+    t.id_tipo_unidad
 FROM (
     VALUES
         ('101', '1'),
@@ -652,123 +455,110 @@ FROM (
         ('202', '2'),
         ('301', '3'),
         ('302', '3')
-) AS datos(codigo, piso)
+) AS d(codigo, piso)
 CROSS JOIN edificios e
-JOIN tipo_unidad tu
-    ON lower(btrim(tu.nombre)) = 'departamento'
-WHERE lower(btrim(e.nombre)) IN (
-    'torre norte',
-    'torre sur'
-)
+JOIN tipo_unidad t
+    ON lower(btrim(t.nombre)) = 'departamento'
+WHERE lower(btrim(e.nombre)) IN ('torre norte', 'torre sur')
   AND NOT EXISTS (
       SELECT 1
-      FROM unidades existente
-      WHERE existente.id_edificio = e.id_edificio
-        AND lower(btrim(existente.codigo)) =
-            lower(btrim(datos.codigo))
+      FROM unidades u
+      WHERE u.id_edificio = e.id_edificio
+        AND lower(btrim(u.codigo)) = lower(btrim(d.codigo))
   );
 
 -- ============================================================
--- 14. ESPACIOS COMUNES DE DEMOSTRACIÓN
+-- 6. ESPACIOS COMUNES Y POLÍTICAS DE RESERVA
+-- Compatible con la unicidad (espacio, evento) de migración 006.
+-- Las políticas existentes conservan sus valores.
 -- ============================================================
+
+CREATE TEMP TABLE seed_espacios (
+    nombre TEXT PRIMARY KEY,
+    descripcion TEXT NOT NULL,
+    capacidad INTEGER NOT NULL,
+    dias_min INTEGER NOT NULL,
+    dias_max INTEGER NOT NULL,
+    duracion INTEGER NOT NULL,
+    apertura TIME NOT NULL,
+    cierre TIME NOT NULL,
+    costo NUMERIC NOT NULL,
+    deposito NUMERIC NOT NULL,
+    penalizacion NUMERIC NOT NULL
+) ON COMMIT DROP;
+
+INSERT INTO seed_espacios
+VALUES
+    (
+        'Salón de eventos',
+        'Espacio para reuniones y celebraciones de residentes.',
+        40, 1, 30, 5, '08:00', '22:00',
+        50000, 100000, 20000
+    ),
+    (
+        'Terraza con parrilla',
+        'Terraza equipada para reuniones familiares.',
+        20, 1, 15, 4, '09:00', '21:00',
+        30000, 60000, 15000
+    ),
+    (
+        'Gimnasio',
+        'Espacio para actividades físicas de los residentes.',
+        15, 1, 7, 2, '07:00', '20:00',
+        20000, 40000, 10000
+    );
 
 DO $$
 BEGIN
     IF EXISTS (
         SELECT ec.id_edificio, lower(btrim(ec.nombre))
         FROM espacios_comunes ec
-        JOIN edificios e
-            ON e.id_edificio = ec.id_edificio
-        WHERE lower(btrim(e.nombre)) IN (
-            'torre norte',
-            'torre sur'
-        )
-          AND lower(btrim(ec.nombre)) IN (
-              'salón de eventos',
-              'terraza con parrilla',
-              'gimnasio'
-          )
+        JOIN edificios e ON e.id_edificio = ec.id_edificio
+        JOIN seed_espacios d
+          ON lower(btrim(d.nombre)) = lower(btrim(ec.nombre))
+        WHERE lower(btrim(e.nombre)) IN ('torre norte', 'torre sur')
         GROUP BY ec.id_edificio, lower(btrim(ec.nombre))
         HAVING count(*) > 1
     ) THEN
         RAISE EXCEPTION
-            'Hay espacios comunes de demostración duplicados dentro de un edificio.';
+            'Hay espacios comunes de demostración duplicados.';
     END IF;
 END;
 $$;
 
 INSERT INTO espacios_comunes (
-    nombre,
-    descripcion,
-    capacidad,
-    activo,
-    id_edificio
+    nombre, descripcion, capacidad, activo, id_edificio
 )
 SELECT
-    datos.nombre,
-    datos.descripcion,
-    datos.capacidad,
+    d.nombre,
+    d.descripcion,
+    d.capacidad,
     TRUE,
     e.id_edificio
-FROM (
-    VALUES
-        (
-            'Salón de eventos',
-            'Espacio para reuniones y celebraciones de residentes.',
-            40
-        ),
-        (
-            'Terraza con parrilla',
-            'Terraza equipada para reuniones familiares.',
-            20
-        ),
-        (
-            'Gimnasio',
-            'Espacio para actividades físicas de los residentes.',
-            15
-        )
-) AS datos(nombre, descripcion, capacidad)
+FROM seed_espacios d
 CROSS JOIN edificios e
-WHERE lower(btrim(e.nombre)) IN (
-    'torre norte',
-    'torre sur'
-)
+WHERE lower(btrim(e.nombre)) IN ('torre norte', 'torre sur')
   AND NOT EXISTS (
       SELECT 1
-      FROM espacios_comunes existente
-      WHERE existente.id_edificio = e.id_edificio
-        AND lower(btrim(existente.nombre)) =
-            lower(btrim(datos.nombre))
+      FROM espacios_comunes ec
+      WHERE ec.id_edificio = e.id_edificio
+        AND lower(btrim(ec.nombre)) = lower(btrim(d.nombre))
   );
 
--- ============================================================
--- 15. POLÍTICAS DE RESERVA DE DEMOSTRACIÓN
--- ============================================================
-
--- Las tarifas se conservan respecto al seed anterior.
--- Solo se crean políticas para espacios y eventos activos.
--- Las políticas existentes no se modifican.
 DO $$
 BEGIN
     IF EXISTS (
         SELECT 1
         FROM espacios_comunes ec
-        JOIN edificios e
-            ON e.id_edificio = ec.id_edificio
-        WHERE lower(btrim(e.nombre)) IN (
-            'torre norte',
-            'torre sur'
-        )
-          AND lower(btrim(ec.nombre)) IN (
-              'salón de eventos',
-              'terraza con parrilla',
-              'gimnasio'
-          )
+        JOIN edificios e ON e.id_edificio = ec.id_edificio
+        JOIN seed_espacios d
+          ON lower(btrim(d.nombre)) = lower(btrim(ec.nombre))
+        WHERE lower(btrim(e.nombre)) IN ('torre norte', 'torre sur')
           AND ec.activo
           AND ec.capacidad < 1
     ) THEN
         RAISE EXCEPTION
-            'Un espacio activo de demostración tiene una capacidad menor que uno.';
+            'Un espacio común activo tiene capacidad menor que uno.';
     END IF;
 END;
 $$;
@@ -787,74 +577,255 @@ INSERT INTO politicas_reserva (
     id_tipo_evento
 )
 SELECT
-    datos.dias_min,
-    datos.dias_max,
-    datos.duracion,
-    datos.apertura::TIME,
-    datos.cierre::TIME,
-    datos.costo,
-    LEAST(datos.aforo, ec.capacidad),
-    datos.deposito,
-    datos.penalizacion,
+    d.dias_min,
+    d.dias_max,
+    d.duracion,
+    d.apertura,
+    d.cierre,
+    d.costo,
+    LEAST(d.capacidad, ec.capacidad),
+    d.deposito,
+    d.penalizacion,
     ec.id_espacio_comun,
     te.id_tipo_evento
-FROM (
-    VALUES
-        (
-            'Salón de eventos',
-            1, 30, 5,
-            '08:00', '22:00',
-            50000, 40, 100000, 20000
-        ),
-        (
-            'Terraza con parrilla',
-            1, 15, 4,
-            '09:00', '21:00',
-            30000, 20, 60000, 15000
-        ),
-        (
-            'Gimnasio',
-            1, 7, 2,
-            '07:00', '20:00',
-            20000, 15, 40000, 10000
-        )
-) AS datos(
-    espacio,
-    dias_min,
-    dias_max,
-    duracion,
-    apertura,
-    cierre,
-    costo,
-    aforo,
-    deposito,
-    penalizacion
-)
+FROM seed_espacios d
 JOIN espacios_comunes ec
-    ON lower(btrim(ec.nombre)) =
-       lower(btrim(datos.espacio))
+    ON lower(btrim(ec.nombre)) = lower(btrim(d.nombre))
 JOIN edificios e
     ON e.id_edificio = ec.id_edificio
 CROSS JOIN tipos_evento te
-WHERE lower(btrim(e.nombre)) IN (
-    'torre norte',
-    'torre sur'
-)
+WHERE lower(btrim(e.nombre)) IN ('torre norte', 'torre sur')
   AND ec.activo
   AND te.activo
-  AND lower(btrim(te.nombre)) IN (
-      'reunión familiar',
-      'cumpleaños',
-      'asamblea de residentes',
-      'actividad deportiva',
-      'actividad recreativa',
-      'otro'
+  AND EXISTS (
+      SELECT 1
+      FROM seed_catalogos sc
+      WHERE sc.tabla = 'tipos_evento'
+        AND lower(btrim(sc.nombre)) = lower(btrim(te.nombre))
   )
   AND NOT EXISTS (
       SELECT 1
-      FROM politicas_reserva existente
-      WHERE existente.id_espacio_comun = ec.id_espacio_comun
-        AND existente.id_tipo_evento = te.id_tipo_evento
+      FROM politicas_reserva p
+      WHERE p.id_espacio_comun = ec.id_espacio_comun
+        AND p.id_tipo_evento = te.id_tipo_evento
   );
 
+-- ============================================================
+-- 7. INSUMOS: MIGRACIONES 009 Y 010
+--
+-- categoria almacena el nombre del catálogo, no un ID.
+-- stock y stock_minimo admiten cantidades decimales.
+-- Stock inicial cero: las entradas se registran con responsable
+-- desde la aplicación, generando movimientos_insumo.
+-- ============================================================
+
+CREATE TEMP TABLE seed_insumos (
+    nombre TEXT PRIMARY KEY,
+    descripcion TEXT NOT NULL,
+    categoria TEXT NOT NULL,
+    unidad_medida TEXT NOT NULL,
+    costo_unitario NUMERIC NOT NULL,
+    stock_minimo NUMERIC NOT NULL
+) ON COMMIT DROP;
+
+INSERT INTO seed_insumos
+VALUES
+    ('Cinta de teflón',
+     'Rollo para sellado de conexiones roscadas.',
+     'PLOMERIA', 'rollo', 5000, 10),
+
+    ('Tubo PVC 1/2 pulgada',
+     'Tubo para reparación de instalaciones de agua.',
+     'PLOMERIA', 'metro', 8000, 10),
+
+    ('Codo PVC 1/2 pulgada',
+     'Accesorio para conexión de tuberías.',
+     'PLOMERIA', 'unidad', 3000, 10),
+
+    ('Llave de paso 1/2 pulgada',
+     'Válvula de corte para instalaciones de agua.',
+     'PLOMERIA', 'unidad', 25000, 3),
+
+    ('Adhesivo para PVC',
+     'Envase de adhesivo para uniones de PVC.',
+     'PLOMERIA', 'envase', 18000, 3),
+
+    ('Lámpara LED 12 W',
+     'Lámpara para iluminación de áreas comunes.',
+     'ELECTRICIDAD', 'unidad', 15000, 10),
+
+    ('Cinta aisladora',
+     'Rollo de cinta para aislamiento eléctrico.',
+     'ELECTRICIDAD', 'rollo', 8000, 5),
+
+    ('Cable eléctrico 2,5 mm²',
+     'Conductor para reparación de instalaciones eléctricas.',
+     'ELECTRICIDAD', 'metro', 6000, 20),
+
+    ('Tomacorriente',
+     'Tomacorriente de reposición.',
+     'ELECTRICIDAD', 'unidad', 18000, 5),
+
+    ('Interruptor de luz',
+     'Interruptor simple de reposición.',
+     'ELECTRICIDAD', 'unidad', 15000, 5),
+
+    ('Detergente líquido',
+     'Producto para limpieza general.',
+     'LIMPIEZA', 'litro', 12000, 10),
+
+    ('Lavandina',
+     'Producto para limpieza y desinfección.',
+     'LIMPIEZA', 'litro', 7000, 10),
+
+    ('Desinfectante para pisos',
+     'Producto para limpieza de pisos y superficies.',
+     'LIMPIEZA', 'litro', 15000, 10),
+
+    ('Bolsa para residuos 100 litros',
+     'Bolsa de gran capacidad para áreas comunes.',
+     'LIMPIEZA', 'unidad', 2500, 50),
+
+    ('Paño de microfibra',
+     'Paño reutilizable para limpieza.',
+     'LIMPIEZA', 'unidad', 10000, 10),
+
+    ('Fertilizante para jardín',
+     'Fertilizante para mantenimiento de áreas verdes.',
+     'JARDINERIA', 'kilogramo', 18000, 5),
+
+    ('Tierra abonada',
+     'Sustrato para mantenimiento de jardines.',
+     'JARDINERIA', 'kilogramo', 3000, 20),
+
+    ('Conector para manguera',
+     'Accesorio para conexiones del sistema de riego.',
+     'JARDINERIA', 'unidad', 12000, 4),
+
+    ('Pintura látex blanca',
+     'Pintura para mantenimiento de paredes interiores.',
+     'PINTURA', 'litro', 35000, 10),
+
+    ('Rodillo para pintura',
+     'Rodillo para aplicación de pintura.',
+     'PINTURA', 'unidad', 25000, 3),
+
+    ('Lija para pared',
+     'Hoja de lija para preparación de superficies.',
+     'PINTURA', 'unidad', 4000, 10),
+
+    ('Tornillo con tarugo 6 mm',
+     'Conjunto para fijación en paredes.',
+     'FERRETERIA', 'unidad', 1000, 50),
+
+    ('Silicona selladora',
+     'Cartucho de sellador para juntas.',
+     'FERRETERIA', 'cartucho', 28000, 4),
+
+    ('Lubricante multiuso',
+     'Aerosol para mantenimiento de mecanismos.',
+     'FERRETERIA', 'envase', 30000, 3),
+
+    ('Conector RJ45',
+     'Conector para cableado de red y cámaras.',
+     'SEGURIDAD', 'unidad', 2500, 20),
+
+    ('Cable UTP categoría 6',
+     'Cable para mantenimiento de sistemas de cámaras.',
+     'SEGURIDAD', 'metro', 5000, 30),
+
+    ('Guantes de trabajo',
+     'Guantes para tareas generales de mantenimiento.',
+     'PROTECCION PERSONAL', 'par', 20000, 5),
+
+    ('Gafas de protección',
+     'Protección ocular para tareas de mantenimiento.',
+     'PROTECCION PERSONAL', 'unidad', 25000, 3),
+
+    ('Mascarilla para polvo',
+     'Protección para tareas con presencia de polvo.',
+     'PROTECCION PERSONAL', 'unidad', 8000, 10),
+
+    ('Precinto plástico',
+     'Elemento para sujeción y organización.',
+     'GENERAL', 'unidad', 500, 100);
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT lower(btrim(i.nombre))
+        FROM insumos i
+        JOIN seed_insumos d
+          ON lower(btrim(d.nombre)) = lower(btrim(i.nombre))
+        GROUP BY lower(btrim(i.nombre))
+        HAVING count(*) > 1
+    ) THEN
+        RAISE EXCEPTION
+            'Hay insumos de demostración con nombres duplicados.';
+    END IF;
+END;
+$$;
+
+INSERT INTO insumos (
+    nombre,
+    descripcion,
+    categoria,
+    unidad_medida,
+    costo_unitario,
+    stock,
+    stock_minimo,
+    activo
+)
+SELECT
+    d.nombre,
+    d.descripcion,
+    c.nombre,
+    d.unidad_medida,
+    d.costo_unitario,
+    0,
+    d.stock_minimo,
+    TRUE
+FROM seed_insumos d
+JOIN categorias_insumo c
+    ON lower(btrim(c.nombre)) = lower(btrim(d.categoria))
+WHERE c.activo
+  AND NOT EXISTS (
+      SELECT 1
+      FROM insumos i
+      WHERE lower(btrim(i.nombre)) = lower(btrim(d.nombre))
+  );
+
+-- ============================================================
+-- 8. COMPROBAR ROLES OBLIGATORIOS
+-- ============================================================
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM (
+            VALUES
+                ('ADMIN'),
+                ('GESTOR'),
+                ('RESIDENTE'),
+                ('TECNICO')
+        ) AS requerido(nombre)
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM roles r
+            WHERE r.nombre = requerido.nombre
+        )
+    ) THEN
+        RAISE EXCEPTION
+            'Falta uno de los roles obligatorios del sistema.';
+    END IF;
+END;
+$$;
+
 COMMIT;
+
+-- Consulta de verificación.
+SELECT id_rol, nombre, descripcion
+FROM roles
+WHERE nombre IN ('ADMIN', 'GESTOR', 'RESIDENTE', 'TECNICO')
+ORDER BY nombre;

@@ -1,11 +1,5 @@
-/* ==========================================================================
- * Guía de UI viva (CP3 + CP4) — ruta SOLO DEV: #/ui (solo ADMIN).
- * Importada dinámicamente desde config/routing.js bajo import.meta.env.DEV:
- * en producción la rama desaparece y el módulo NO entra al bundle.
- * Sustituye al arnés ui-smoke.jsx (eliminado en CP6b). Une una sección por
- * componente con todos sus estados; los avisos de la consola usan el
- * prefijo [ui-guide] como ayuda durante la revisión.
- * ========================================================================== */
+/* Guía visual del kit, cargada dinámicamente en la ruta de desarrollo #/ui.
+ * Reúne ejemplos de componentes y sus estados. */
 
 import { useRef, useState } from "react";
 import {

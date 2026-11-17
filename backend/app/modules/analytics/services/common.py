@@ -1,10 +1,10 @@
+# Funciones compartidas para alcance por técnico y formato de indicadores.
+# Normaliza valores Decimal y calcula porcentajes, incluidos los casos sin datos.
 from decimal import Decimal
-
 
 def technician_scope(user):
     """Un técnico solo ve datos de sus asignaciones; el admin ve todo."""
     return user["id_usuario"] if user["rol"] == "TECNICO" else None
-
 
 def to_number(value):
     if value is None:
@@ -12,7 +12,6 @@ def to_number(value):
     if isinstance(value, Decimal):
         return float(value)
     return value
-
 
 def numeric_rows(rows, *keys):
     """Convierte Decimal a número para que el JSON sea homogéneo (Flask los serializa como texto)."""
@@ -22,12 +21,10 @@ def numeric_rows(rows, *keys):
             row[key] = to_number(row.get(key))
     return rows
 
-
 def with_percentage(rows, total, key="total"):
     for row in rows:
         row["porcentaje"] = percentage(row[key], total)
     return rows
-
 
 def percentage(part, total):
     return round(part * 100 / total, 1) if total else 0.0

@@ -1,4 +1,5 @@
 const paths = {
+  download: "M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5",
   mail: "M3 5h18v14H3V5Zm0 1 9 7 9-7",
   lock: "M5 10h14v11H5V10Zm3 0V6a4 4 0 0 1 8 0v4m-4 5v2",
   eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z",

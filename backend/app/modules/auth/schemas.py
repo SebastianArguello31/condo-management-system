@@ -1,3 +1,5 @@
+# Esquemas de entrada para autenticación y recuperación de contraseñas.
+# Define los campos admitidos y sus restricciones antes de ejecutar las operaciones del servicio.
 from marshmallow import Schema, fields, validate
 
 from app.core.passwords import validate_password

@@ -29,6 +29,7 @@ class TestAuthentication(unittest.TestCase):
             "id_usuario": 7,
             "email": "persona@example.com",
             "activo": True,
+            "session_version": 3,
             "password_hash": self.hash_prueba,
         }
 
@@ -51,6 +52,9 @@ class TestAuthentication(unittest.TestCase):
             resultado["access_token"]
         )
         self.assertEqual(contenido["sub"], "7")
+        self.assertEqual(contenido["ver"], 3)
+        self.assertNotIn("session_version", resultado["user"])
+        self.assertEqual(self.usuario["session_version"], 3)
 
     def test_login_rechaza_password_incorrecta(self):
         with patch.object(
@@ -119,18 +123,20 @@ class TestAuthentication(unittest.TestCase):
             (
                 {
                     "sub": "7",
+                    "ver": 0,
                     "iat": ahora - timedelta(hours=2),
                     "exp": ahora - timedelta(hours=1),
                 },
                 secreto,
             ),
             (
-                {"sub": "7", "iat": ahora},
+                {"sub": "7", "ver": 0, "iat": ahora},
                 secreto,
             ),
             (
                 {
                     "sub": "7",
+                    "ver": 0,
                     "iat": ahora,
                     "exp": ahora + timedelta(hours=1),
                 },
@@ -148,3 +154,24 @@ class TestAuthentication(unittest.TestCase):
 
                 with self.assertRaises(jwt.InvalidTokenError):
                     security.decode_access_token(token)
+
+    def test_rechaza_versiones_de_sesion_invalidas(self):
+        for version in (True, False, -1, 1.5, "0", None):
+            with self.subTest(version=version):
+                with self.assertRaises(ValueError):
+                    security.create_access_token(7, version)
+                ahora = datetime.now(timezone.utc)
+                token = jwt.encode({
+                    "sub": "7", "iat": ahora,
+                    "exp": ahora + timedelta(hours=1), "ver": version,
+                }, self.aplicacion.config["JWT_SECRET_KEY"], algorithm="HS256")
+                with self.assertRaises(jwt.InvalidTokenError):
+                    security.decode_access_token(token)
+
+    def test_rechaza_token_anterior_sin_version(self):
+        ahora = datetime.now(timezone.utc)
+        token = jwt.encode({
+            "sub": "7", "iat": ahora, "exp": ahora + timedelta(hours=1),
+        }, self.aplicacion.config["JWT_SECRET_KEY"], algorithm="HS256")
+        with self.assertRaises(jwt.MissingRequiredClaimError):
+            security.decode_access_token(token)

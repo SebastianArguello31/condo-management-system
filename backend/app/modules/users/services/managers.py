@@ -1,3 +1,5 @@
+# Operaciones de negocio para gestores.
+# Coordina las comprobaciones y el acceso a los repositorios antes de devolver el resultado.
 from app.core.db_helpers import transaction
 
 from .accounts import create_account, list_accounts, lock_management, prepare_account_data, update_managed_account

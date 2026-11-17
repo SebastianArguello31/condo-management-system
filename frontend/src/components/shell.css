@@ -1,11 +1,4 @@
-/* ==========================================================================
- * shell.css — estructura del shell AppShell (F2-12a: 100 % tokens).
- * Única fuente visual: styles/tokens.css. Sin hex ni px sueltos; excepciones
- * del plan documentadas: líneas de 1px/2px, el breakpoint del drawer
- * (760px, deuda F2-11 — convenciones §3) y las anchuras fijas del sidebar
- * heredadas (246/220/250px, sin token equivalente en la escala de espaciado).
- * El CSS de las pantallas sigue en styles/users-ui.css (limpieza en F2-11).
- * ========================================================================== */
+/* Estructura del menú lateral y de la navegación móvil de AppShell. */
 
 /* Tokens de compatibilidad heredados del CSS legado (el shell ya no les
  * pone hex): los declaraba users-ui.css y los consumía solo el propio
@@ -83,14 +76,44 @@ nav.shell-navigation {
 }
 .shell-nav-group { margin-bottom: var(--space-4); }
 .shell-nav-group:last-child { margin-bottom: 0; }
-.shell-nav-group > p {
+.shell-nav-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 40px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
   color: var(--ink-3);
   font-size: var(--fs-12);
   line-height: var(--lh-12);
   font-weight: 600;
-  margin: var(--space-3);
+  text-align: left;
+  cursor: pointer;
 }
-.shell-nav-group > button {
+.shell-nav-toggle:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+.shell-nav-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.shell-nav-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  transition: transform var(--motion-fast) ease;
+}
+.shell-nav-chevron.is-expanded { transform: rotate(90deg); }
+.shell-nav-items[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .shell-nav-chevron { transition: none; }
+}
+.shell-nav-items > button {
   display: flex;
   align-items: center;
   width: 100%;
@@ -112,18 +135,18 @@ nav.shell-navigation {
   transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease,
     border-color var(--motion-fast) ease;
 }
-.shell-nav-group > button > svg { flex-shrink: 0; }
-.shell-nav-group > button > span {
+.shell-nav-items > button > svg { flex-shrink: 0; }
+.shell-nav-items > button > span {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.shell-nav-group > button:hover { background: var(--bg); }
+.shell-nav-items > button:hover { background: var(--bg); }
 
 /* Ítem activo (convenciones §3): sin tinte ni punto; aria-current="page" +
  * línea de 2px a la izquierda (--brand), color --brand y peso 600. Sin
  * compensación de padding: la línea de 2px ya existe (transparente) en
  * todos los ítems, así que el texto no se corre. */
-.shell-nav-group > button.is-current {
+.shell-nav-items > button.is-current {
   border-left-color: var(--brand);
   color: var(--brand);
   font-weight: 600;

@@ -4,10 +4,7 @@ import CrudPage from "../../components/CrudPage";
 import { StatusBadge } from "../../components/ui";
 import { cuenta } from "../../validations";
 import { formatDate } from "../../utils/format";
-import AccountDetailModal, {
-  estadoCuenta,
-  useCuentaAcceso,
-} from "./AccountDetailModal";
+import AccountDetailModal, { estadoCuenta, useCuentaAcceso, } from "./AccountDetailModal";
 
 const fields = [
   { name: "nombre", label: "Nombre", required: true, maxLength: 150 },

@@ -1,3 +1,5 @@
+# Autentica cuentas y permite modificar el perfil o la contraseña del usuario actual.
+# Las respuestas públicas excluyen el hash de contraseña y la versión interna de sesión.
 from marshmallow import ValidationError
 from werkzeug.exceptions import Unauthorized
 
@@ -12,6 +14,7 @@ DUMMY_PASSWORD_HASH = hash_password("contrasena-simulada-para-autenticacion")
 
 def authenticate_user(email, password):
     user = get_login_user(email.strip().lower())
+    # Verifica también un hash simulado cuando no existe la cuenta para reducir diferencias de tiempo.
     stored_hash = user["password_hash"] if user else DUMMY_PASSWORD_HASH
     valid_password = verify_password(password, stored_hash)
 
@@ -50,38 +53,17 @@ def update_my_profile(user_id, data):
 
 def change_my_password(user_id, current_password, password):
     with transaction() as cursor:
-        user = auth_repo.lock_user_credentials(
-            user_id,
-            cursor=cursor,
-        )
+        user = auth_repo.lock_user_credentials(user_id, cursor=cursor,)
 
         if not user or not user["activo"]:
             raise Unauthorized("Tu sesión ya no es válida.")
 
-        if not verify_password(
-            current_password,
-            user["password_hash"],
-        ):
-            raise ValidationError({
-                "current_password": [
-                    "La contraseña actual no es correcta."
-                ]
-            })
+        if not verify_password(current_password, user["password_hash"],):
+            raise ValidationError({"current_password": ["La contraseña actual no es correcta."]})
 
         if verify_password(password, user["password_hash"]):
-            raise ValidationError({
-                "password": [
-                    "La nueva contraseña debe ser diferente de la actual."
-                ]
-            })
+            raise ValidationError({"password": ["La nueva contraseña debe ser diferente de la actual."]})
 
-        auth_repo.update_password(
-            user_id,
-            hash_password(password),
-            cursor=cursor,
-        )
+        auth_repo.update_password(user_id, hash_password(password), cursor=cursor,)
 
-        auth_repo.invalidate_pending_tokens(
-            user_id,
-            cursor=cursor,
-        )
+        auth_repo.invalidate_pending_tokens(user_id, cursor=cursor,)

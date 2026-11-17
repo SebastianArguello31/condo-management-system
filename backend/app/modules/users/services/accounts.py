@@ -1,3 +1,5 @@
+# Operaciones de negocio para cuentas, roles y credenciales.
+# Coordina las comprobaciones y el acceso a los repositorios antes de devolver el resultado.
 from psycopg2.errors import ForeignKeyViolation
 from werkzeug.exceptions import BadRequest, Conflict, Forbidden, NotFound
 
@@ -40,6 +42,7 @@ def lock_management(cursor, actor_id, user_id=None, role=None):
     if user_id is not None:
         ids.append(user_id)
 
+    # Revalida al administrador dentro de la transacción, bajo bloqueo, antes de modificar la cuenta destino.
     accounts = accounts_repo.lock_users(ids, cursor=cursor)
 
     actor = accounts.get(actor_id)
@@ -93,6 +96,7 @@ def delete_account(user_id, actor_id, role=None):
 
             accounts_repo.delete_user(user_id, cursor=cursor)
 
+    # Los registros vinculados impiden borrar la cuenta; la desactivación conserva su historial.
     except ForeignKeyViolation:
         raise Conflict(
             "La cuenta tiene registros relacionados. "

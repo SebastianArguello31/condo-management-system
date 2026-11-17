@@ -1,20 +1,5 @@
-/* SpacePolicies — F2-7b: Políticas de reserva al kit (CrudPage modo ui)
- * como subvista POR HASH de Espacios (B6): el id del espacio se lee del
- * URL (#/espacios?politicas=<id>; EspaciosPage lo extrae con useHashRoute
- * y pasa `idEspacio` + `onVolver` como props). Paridad con el legado:
- * endpoint anidado /common-spaces/:id/policies, updateMethod="PUT"
- * (PUT .../policies/:pid con cuerpo completo), DELETE con useConfirm
- * danger + Toast (CrudPageUi built-in, cero window.confirm), lookup de
- * tipos de evento como constante de MÓDULO (GET
- * /reservations/event-types) y payloads idénticos al legado (select →
- * Number, horas "HH:MM" textuales, montos con Number()). Validación en
- * cliente con politicaCrear(espacio.capacidad) (espejo de PolicySchema;
- * el espacio trae la capacidad desde GET /common-spaces/:id para la regla
- * de pantalla "aforo ≤ capacidad"). Estados de subvista: id inválido o
- * espacio inexistente (404) → EmptyState con "Volver a espacios"; carga →
- * Skeleton; error → ErrorState con Reintentar. Al entrar el foco va al h1
- * del PageHeader (título de la subvista). Los modales abiertos NO se
- * persisten en la URL (se pierden al navegar, decisión del dueño). */
+/* Políticas del espacio seleccionado con validación de horarios y aforo.
+ * La edición envía el cuerpo completo mediante PUT; los modales no se guardan en la URL. */
 import { useEffect, useRef } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";

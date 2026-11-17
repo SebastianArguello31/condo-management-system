@@ -1,40 +1,12 @@
-/* ResidentUnitsModal — F2-6b (NUEVO): "Ver unidades" del residente al kit
- * (B5). Reemplaza al legado ResidentUnits.jsx (retirado) y a su Modal con
- * <dialog open> sin backdrop/foco: UN solo h2 (el título del Modal, con el
- * nombre del residente una sola vez — sin descripción repetida y sin h2
- * internos; secciones con h3 propios). Mismos endpoints del legado: GET
- * /units + GET /users/:id/units en una consulta con signal, vincular POST
- * /users/:id/units {id_unidad} y desvincular DELETE /users/:id/units/:id.
- * - "Unidades vinculadas": lista con "Desvincular" (danger-ghost sm) y
- *   useConfirm danger (cero window.confirm); EmptyState breve sin unidades.
- * - "Vincular unidad": Select de disponibles (todas − vinculadas, mismas
- *   etiquetas "Edificio · código"); el botón SIEMPRE activo: sin unidad
- *   elegida → error de campo al enviar; sin disponibles → texto de ayuda.
- * - Error de la acción DENTRO del modal (Alert de la pantalla, incluido el
- *   400 "Debes activar al residente..." sobre un inactivo); éxito por
- *   Toast + reload de vinculadas (sin titilar) + onChanged (reload del
- *   listado del padre, sin titilar).
- * Reporte (sin tocar backend): el endpoint de vincular responde éxito
- * aunque ON CONFLICT DO NOTHING no inserte (resident_units.py); como el
- * Select omite las ya vinculadas, la UI no puede provocarlo.
- */
+/* Consulta, vinculación y desvinculación de unidades de un residente.
+ * El selector excluye unidades ya vinculadas y las acciones refrescan el modal y el listado. */
 import { useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useQuery } from "../../hooks/useQuery";
 import { useMutation } from "../../hooks/useMutation";
 import { useConfirm } from "../../hooks/useConfirm";
-import {
-  Alert,
-  Button,
-  EmptyState,
-  ErrorState,
-  Field,
-  Modal,
-  Select,
-  Skeleton,
-  useToast,
-} from "../../components/ui";
+import { Alert, Button, EmptyState, ErrorState, Field, Modal, Select, Skeleton, useToast,} from "../../components/ui";
 
 /* Titulares de sección (h3): el <h2> es SOLO el del Modal (patrón F2-5c). */
 const TITULO_SECCION = {

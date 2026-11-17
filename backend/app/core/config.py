@@ -1,3 +1,5 @@
+# Carga el archivo .env del proyecto y expone la configuración de Flask.
+# Agrupa conexión a PostgreSQL, Redis, sesiones JWT y entrega de correo SMTP.
 import os
 from pathlib import Path
 from dotenv import load_dotenv

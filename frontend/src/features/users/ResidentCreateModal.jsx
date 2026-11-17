@@ -1,34 +1,12 @@
-/* ResidentCreateModal — F2-6b (NUEVO): creación de residentes al kit.
- * Retira el uso de CreateAccount en Residentes (el componente queda sin
- * consumidores y se elimina; los bugs B2 y B3 cierran POR DISEÑO: los
- * inputs llevan name + autoComplete y el error vive DENTRO del modal).
- * Paridad con el creador legado: mismos campos (nombre, apellido, email,
- * teléfono, contraseña y "Unidad inicial" como Select de GET /units con
- * etiqueta "Edificio · código"), mismo endpoint POST /residents y mismo
- * payload (strings con trim, password SIN trim, id_unidad Number). Cambios
- * por convención (§8-bis): FormModal con el error de la acción DENTRO
- * (Alert danger con foco/scroll; 400/409 con err.errors por campo
- * normalizado), éxito por Toast + reload() del padre sin titilar,
- * validación en cliente con validate() + cuentaResidente y nota de
- * campos obligatorios activada. El error por campo va DIRECTO a cada
- * Field (los Field son JSX inline, FUERA del FormErrorsContext — lección
- * F2-5b; NO useFormFieldError aquí). Español neutro (el "Primero
- * registrá..." del legado pasa a "Primero registra...").
- */
+/* Creación de un residente con su unidad inicial.
+ * Los errores se pasan directamente a cada Field; los hijos se definen fuera del contexto del modal. */
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useMutation } from "../../hooks/useMutation";
 import { useQuery } from "../../hooks/useQuery";
 import { validate, cuentaResidente } from "../../validations";
-import {
-  ErrorState,
-  Field,
-  FormModal,
-  Input,
-  Select,
-  useToast,
-} from "../../components/ui";
+import { ErrorState, Field, FormModal, Input, Select, useToast, } from "../../components/ui";
 
 const EMPTY_FORM = {
   nombre: "",

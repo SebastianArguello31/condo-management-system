@@ -1,36 +1,11 @@
-/* F2-4 — Mi perfil (técnico) migrado al kit (plantilla §8-ter, formulario
- * INLINE, no modal). Quedan SOLO datos personales + especialidades de solo
- * lectura: la lista de "Incidencias asignadas" vive en #/incidencias
- * (misma fuente GET /incidents; el backend ya filtra technician_id) y se
- * saca del perfil junto con su fetch, cerrando la parte del B7 en Mi
- * perfil.
- * Datos: useQuery única (PATCH /employees/me y especialidades embebidas,
- * con signal); el form se sincroniza desde data solo cuando llega el
- * perfil. Validación en cliente: perfilEmpleado (validations/, espejo de
- * EmployeeProfileUpdateSchema — email REQUERIDO). err.errors (arrays) se
- * normaliza a UN mensaje por campo; error de la ACCIÓN en Alert danger y
- * éxito por Toast. Badge activo/inactivo: StatusBadge con override tone/
- * glyph. Especialidades en lista simple (.ui-specialty-list, ronda 1) con
- * su estado en StatusBadge; la nota de ayuda en .ui-specialty-note.
- * onProfileUpdated se conserva (App.jsx actualiza el shell). */
+/* Edición del perfil técnico y consulta de sus especialidades.
+ * onProfileUpdated comunica los datos guardados a la cabecera de la aplicación. */
 import { useEffect, useState } from "react";
 
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useMutation, useQuery } from "../../hooks";
-import {
-  Alert,
-  Button,
-  EmptyState,
-  ErrorState,
-  Field,
-  Input,
-  PageHeader,
-  Section,
-  Skeleton,
-  StatusBadge,
-  useToast,
-} from "../../components/ui";
+import { Alert, Button, EmptyState, ErrorState, Field, Input, PageHeader, Section, Skeleton, StatusBadge, useToast, } from "../../components/ui";
 import { perfilEmpleado, validate } from "../../validations";
 
 const CAMPOS = [

@@ -1,11 +1,7 @@
+# Consultas SQL de intervenciones técnicas para los indicadores.
+# Obtiene los datos que los servicios de analítica convierten en resúmenes y listados.
 from app.core.db_helpers import query
-from app.modules.analytics.repositories.incidents import (
-    INCIDENT_FROM,
-    CURRENT_STATUS,
-    build_incident_filters,
-    date_range,
-    sql_list,
-)
+from app.modules.analytics.repositories.incidents import INCIDENT_FROM, CURRENT_STATUS, build_incident_filters, date_range, sql_list
 from app.modules.incidents.rules import INTERVENTION_STATUSES
 
 # Incidencias en un estado que admite intervención, pero sin ninguna registrada.

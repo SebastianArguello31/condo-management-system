@@ -139,12 +139,7 @@ function CrudPageLegacy({
           value = value.trim();
         }
 
-        if (
-          field.required &&
-          field.type !== "checkbox" &&
-          !(field.type === "password" && editingId !== null) &&
-          (value === "" || (Array.isArray(value) && value.length === 0))
-        ) {
+        if (field.required && field.type !== "checkbox" && !(field.type === "password" && editingId !== null) && (value === "" || (Array.isArray(value) && value.length === 0))) {
           throw new Error(`Completa el campo ${field.label}`);
         }
 
@@ -180,9 +175,7 @@ function CrudPageLegacy({
         await load();
       } catch (error) {
         setReady(false);
-        setError(
-          `Los cambios se guardaron, pero no se pudo actualizar la lista: ${error.message}`
-        );
+        setError(`Los cambios se guardaron, pero no se pudo actualizar la lista: ${error.message}`);
       }
     } catch (error) {
       setError(error.message);
@@ -210,9 +203,7 @@ function CrudPageLegacy({
         await load();
       } catch (error) {
         setReady(false);
-        setError(
-          `Se eliminó el registro, pero no se pudo actualizar la lista: ${error.message}`
-        );
+        setError(`Se eliminó el registro, pero no se pudo actualizar la lista: ${error.message}`);
       }
     } catch (error) {
       setError(error.message);
@@ -253,11 +244,7 @@ function CrudPageLegacy({
                 <span>{field.label}{field.required ? " *" : ""}</span>
 
                 {field.type === "select" || field.type === "multiselect" ? (
-                  <select
-                    multiple={field.type === "multiselect"}
-                    disabled={isFieldDisabled(field, editingRow)}
-                    required={field.required}
-                    value={form[field.name]}
+                  <select multiple={field.type === "multiselect"} disabled={isFieldDisabled(field, editingRow)} required={field.required} value={form[field.name]}
                     onChange={(event) =>
                       setForm({
                         ...form,
@@ -270,19 +257,13 @@ function CrudPageLegacy({
                     {field.type !== "multiselect" && <option value="">Seleccionar...</option>}
 
                     {(options[field.lookup] || []).map((option) => (
-                      <option
-                        key={option[field.optionId]}
-                        value={option[field.optionId]}
-                      >
+                      <option key={option[field.optionId]} value={option[field.optionId]}>
                         {option[field.optionLabel || "nombre"]}
                       </option>
                     ))}
                   </select>
                 ) : field.type === "checkbox" ? (
-                  <input
-                    type="checkbox"
-                    disabled={isFieldDisabled(field, editingRow)}
-                    checked={Boolean(form[field.name])}
+                  <input type="checkbox" disabled={isFieldDisabled(field, editingRow)} checked={Boolean(form[field.name])}
                     onChange={(event) =>
                       setForm({
                         ...form,
@@ -291,26 +272,20 @@ function CrudPageLegacy({
                     }
                   />
                 ) : field.type === "textarea" ? (
-                  <textarea required={field.required} maxLength={field.maxLength} rows={3}
-                    disabled={isFieldDisabled(field, editingRow)}
+                  <textarea required={field.required} maxLength={field.maxLength} rows={3} disabled={isFieldDisabled(field, editingRow)}
                     value={form[field.name]} onChange={(event) =>
                       setForm({ ...form, [field.name]: event.target.value })} />
                 ) : (
-                  <input
-                    type={field.type || "text"}
+                  <input 
+                  type={field.type || "text"} 
                     disabled={isFieldDisabled(field, editingRow)}
-                    required={
-                      field.required &&
-                      !(field.type === "password" && editingId !== null)
-                    }
+                    required={field.required && !(field.type === "password" && editingId !== null)}
                     minLength={field.type === "password" ? 8 : undefined}
                     min={field.min}
                     max={field.max}
                     step={field.step}
                     maxLength={field.maxLength}
-                    autoComplete={
-                      field.type === "password" ? "new-password" : undefined
-                    }
+                    autoComplete={field.type === "password" ? "new-password" : undefined}
                     placeholder={
                       field.type === "password" && editingId !== null
                         ? "Vacío para conservar la contraseña"
@@ -339,11 +314,7 @@ function CrudPageLegacy({
             </button>
 
             {(
-              <button
-                type="button"
-                className="mg-secondary"
-                onClick={resetForm}
-              >
+              <button type="button" className="mg-secondary" onClick={resetForm}>
                 Cancelar
               </button>
             )}

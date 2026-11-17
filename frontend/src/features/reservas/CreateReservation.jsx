@@ -7,19 +7,7 @@ import { validate, reservaCrear } from "../../validations";
 import { formatDate, formatTime } from "../../utils/format";
 import DateInput from "../../components/ui/DateInput";
 import Time24Field from "../../components/ui/Time24Field";
-import {
-  Alert,
-  Button,
-  DefinitionList,
-  EmptyState,
-  ErrorState,
-  Field,
-  FormModal,
-  Input,
-  Select,
-  Textarea,
-  useToast,
-} from "../../components/ui";
+import { Alert, Button, DefinitionList, EmptyState, ErrorState, Field, FormModal, Input, Select, Textarea, useToast,} from "../../components/ui";
 
 function normalizarErrores(errors) {
   return Object.fromEntries(
@@ -32,11 +20,7 @@ function normalizarErrores(errors) {
   );
 }
 
-export default function CreateReservation({
-  spaces,
-  events,
-  onCreated,
-}) {
+export default function CreateReservation({ spaces, events, onCreated, }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({});
   const [camposErr, setCamposErr] = useState(null);
@@ -44,9 +28,7 @@ export default function CreateReservation({
   const [intento, setIntento] = useState(0);
   const notify = useToast();
 
-  const completo = Boolean(
-    form.id_espacio && form.fecha && form.id_tipo_evento
-  );
+  const completo = Boolean(form.id_espacio && form.fecha && form.id_tipo_evento);
 
   const {
     data: disponibilidad,

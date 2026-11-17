@@ -1,42 +1,12 @@
-/* F2-4 — Mi perfil (residente) migrado al kit (plantilla §8-ter, formulario
- * INLINE, no modal). Queda SOLO datos personales + mis unidades: los
- * historiales viven en sus pantallas propias (#/incidencias "Mis
- * incidencias" y #/mis-reservas "Mis reservas", misma fuente de datos que
- * tenía el perfil: GET /incidents y GET /reservations ya filtran por rol en
- * el backend).
- * Datos: useQuery única (perfil + unidades, con signal); reload() tras
- * guardar conserva datos previos (sin titilar); el form se sincroniza desde
- * data solo cuando llega el objeto de perfil (nunca hay reload mientras se
- * escribe). PATCH con useMutation (dedupe, busy en el botón).
- * Validación en cliente: perfilResidente (validations/, espejo de
- * ResidentProfileUpdateSchema — email OPCIONAL; si queda vacío se OMITE, el
- * PATCH es partial y no puede borrar el email). err.errors (arrays) se
- * normaliza a UN mensaje por campo; el error de la ACCIÓN va en Alert
- * danger con foco de lectura a nivel pantalla y el ÉXITO en Toast. Badge
- * activo/inactivo: StatusBadge con override tone/glyph (sin presets
- * nuevos). Unidades en DataTable (sin columna #ID; rowKey estable).
- * onProfileUpdated se conserva: App.jsx usa el perfil guardado para
- * actualizar el nombre del shell. */
+/* Perfil del residente y consulta de sus unidades vinculadas.
+ * El correo vacío se omite en la actualización parcial para conservar el valor registrado. */
 import { useEffect, useState } from "react";
 
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useMutation, useQuery } from "../../hooks";
 import { usePagination } from "../../hooks/usePagination";
-import {
-  Alert,
-  Button,
-  DataTable,
-  ErrorState,
-  Field,
-  Input,
-  PageHeader,
-  Pagination,
-  Section,
-  Skeleton,
-  StatusBadge,
-  useToast,
-} from "../../components/ui";
+import { Alert, Button, DataTable, ErrorState, Field, Input, PageHeader, Pagination, Section, Skeleton, StatusBadge, useToast, } from "../../components/ui";
 import { perfilResidente, validate } from "../../validations";
 
 const CAMPOS = [

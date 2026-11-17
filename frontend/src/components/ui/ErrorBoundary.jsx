@@ -41,10 +41,7 @@ export default class ErrorBoundary extends Component {
     if (this.state.error) {
       return (
         <div>
-          <ErrorState
-            title="La pantalla no se pudo mostrar"
-            description="Ya quedó registrado el problema. Puedes regresar a tu pantalla de inicio e intentar de nuevo."
-          />
+          <ErrorState title="La pantalla no se pudo mostrar" description="Ya quedó registrado el problema. Puedes regresar a tu pantalla de inicio e intentar de nuevo."/>
           <div style={{ marginTop: "var(--space-3)" }}>
             <Button variant="quiet" onClick={this.volverAlInicio}>
               Volver al inicio

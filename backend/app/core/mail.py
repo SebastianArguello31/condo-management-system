@@ -1,9 +1,11 @@
+# Valida la configuración del enlace de recuperación y envía el correo por SMTP.
+# La conexión usa STARTTLS antes de autenticar al remitente y entregar el mensaje.
 import smtplib
 import ssl
 from email.message import EmailMessage
 from urllib.parse import urlencode, urlsplit
 
-from flask import current_app
+from flask import current_app, render_template
 
 def validate_reset_mail_config():
     config = current_app.config
@@ -54,6 +56,10 @@ def send_password_reset_email(recipient, token):
         f"Abre este enlace:\n{link}\n\n"
         "El enlace vence en 30 minutos y permite un solo uso.\n"
         "Si no solicitaste este cambio, puedes ignorar este correo.\n"
+    )
+    message.add_alternative(
+        render_template("emails/password_reset.html", reset_link=link),
+        subtype="html",
     )
 
     context = ssl.create_default_context()

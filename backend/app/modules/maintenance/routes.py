@@ -1,3 +1,5 @@
+# Rutas HTTP para mantenimiento e inventario de insumos.
+# Conecta las solicitudes con los servicios y declara la autenticación y los roles de cada operación.
 from flask import Blueprint, g, jsonify, request
 from werkzeug.exceptions import BadRequest
 
@@ -14,7 +16,6 @@ from app.modules.maintenance.schemas import (
     MovimientoSchema,
 )
 from app.modules.maintenance.services import categories, inventory, interventions
-
 
 maintenance_bp = Blueprint("maintenance", __name__, url_prefix="/maintenance",)
 
@@ -41,10 +42,7 @@ def create_category():
 @token_required
 @role_required("ADMIN")
 def update_category(category_id):
-    data = read_json(
-        CategoriaInsumoUpdateSchema(),
-        partial=True,
-    )
+    data = read_json(CategoriaInsumoUpdateSchema(), partial=True,)
     return jsonify(categories.update_category(category_id, data))
 
 @maintenance_bp.delete("/categories/<int:category_id>")
@@ -82,22 +80,13 @@ def list_items():
 @token_required
 @role_required("ADMIN", "GESTOR")
 def create_item():
-    return jsonify(
-        inventory.create_item(
-            read_json(InsumoCreateSchema())
-        )
-    ), 201
+    return jsonify(inventory.create_item(read_json(InsumoCreateSchema()))), 201
 
 @maintenance_bp.patch("/insumos/<int:item_id>")
 @token_required
 @role_required("ADMIN", "GESTOR")
 def update_item(item_id):
-    return jsonify(
-        inventory.update_item(
-            item_id,
-            read_json(InsumoUpdateSchema(), partial=True),
-        )
-    )
+    return jsonify(inventory.update_item(item_id, read_json(InsumoUpdateSchema(), partial=True),))
 
 @maintenance_bp.post("/insumos/<int:item_id>/existencias-iniciales")
 @token_required

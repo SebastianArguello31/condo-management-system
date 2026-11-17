@@ -1,20 +1,14 @@
+# Operaciones de negocio para reservas de espacios comunes.
+# Coordina las comprobaciones y el acceso a los repositorios antes de devolver el resultado.
 from app.modules.reservations.repositories import context as context_repo
 from werkzeug.exceptions import BadRequest, Conflict, Forbidden, NotFound
 
 from app.core.db_helpers import transaction
 from app.modules.reservations.repositories import (reservations as reservation_repo)
-from app.modules.reservations.rules import (
-    require_role,
-    get_user_filter,
-    validate_access,
-    validate_status_change,
-    validate_creation,
-)
-
+from app.modules.reservations.rules import require_role, get_user_filter, validate_access, validate_status_change, validate_creation
 
 def list_event_types():
     return context_repo.list_event_types()
-
 
 def list_reservations(user, space=None, status=None, reservation_date=None, resident_id=None):
     user_id = get_user_filter(user, resident_id)
@@ -34,7 +28,6 @@ def list_reservations(user, space=None, status=None, reservation_date=None, resi
             cursor=cursor,
         )
 
-
 def get_reservation(reservation_id, user):
     require_role(user, "ADMIN", "GESTOR", "RESIDENTE")
 
@@ -47,11 +40,11 @@ def get_reservation(reservation_id, user):
 
     return reservation
 
-
 def create_reservation(data, user):
     require_role(user, "RESIDENTE")
 
     with transaction() as cursor:
+        # Serializa las reservas del mismo espacio antes de comprobar cruces e insertar el nuevo horario.
         space = context_repo.lock_space(data["id_espacio"], cursor=cursor)
 
         if space is None:
@@ -84,6 +77,7 @@ def create_reservation(data, user):
         if status is None:
             raise Conflict("Falta configurar el estado PENDIENTE")
 
+        # Usa el reloj de PostgreSQL como referencia común para las restricciones temporales.
         now = context_repo.get_current_time(cursor=cursor)
         validate_creation(data, space, policy, now)
 
@@ -99,7 +93,6 @@ def create_reservation(data, user):
         )
 
         return reservation_repo.get_reservation(result["id_reserva"], cursor=cursor)
-
 
 def update_reservation_status(reservation_id, new_status, user):
     require_role(user, "ADMIN", "GESTOR", "RESIDENTE")
@@ -136,6 +129,7 @@ def update_reservation_status(reservation_id, new_status, user):
         if status is None:
             raise Conflict(f"Falta configurar el estado {new_status}")
 
+        # Usa el reloj de PostgreSQL como referencia común para las restricciones temporales.
         now = context_repo.get_current_time(cursor=cursor)
 
         validate_status_change(reservation, new_status, user, now)

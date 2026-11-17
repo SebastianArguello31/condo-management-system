@@ -1,12 +1,4 @@
-/*==========================================================================
- Login (F2-9): rediseño sobre tokens (única fuente: styles/tokens.css).
- Sin hex ni px sueltos (excepción del plan: líneas de 1px/2px), radios ≤
- 8px, sin sombras decorativas ni gradientes; transiciones solo
- color/opacidad (ya definidas en ui.css). Único breakpoint: 640px.
- Nota para F2-11: las clases .login-container/.login-form de index.css
- están muertas (cero consumidores; solo lectura de grep) — aquí no se
- tocan y quedan anotadas en el plan para la limpieza final.
- ==========================================================================*/
+/* Estilos del formulario de acceso, basados en los tokens compartidos. */
 
 .login-page {
   min-height: 100vh;
@@ -57,18 +49,7 @@
   color: var(--ink-2);
 }
 
-/* Etiquetas del kit con glifo + texto + asterisco EN UNA SOLA FILA,
- * alineados a la izquierda. Ronda 1 del dueño: la ronda inicial solo
- * declaraba display/align-items/gap — al volver a un CONTENEDOR flex
- * (inline-flex) el único `flex-direction` que afectaba al label era el
- * legacy `column` de index.css:104-108 (K1 de ui.css solo lo neutralizaba
- * vía display: block, que NO declara flex-direction), y el align-items
- * propio lo centraba → etiqueta apilada y centrada (captura). Ahora se
- * declaran TODAS las propiedades de fila (0,2,0 gana a .ui-field-label y
- * al `label` legacy por propiedad). Seguro: el asterisco queda en la
- * misma fila (margin token compensa el gap flex para separarlo
- * --space-1 del texto, como pidió el equipo); .ui-visually-hidden es
- * position: absolute (ui.css:10) → no es ítem flex y no agrega hueco. */
+/* Fija la dirección de fila para evitar que el estilo global de label apile sus elementos. */
 .login-panel .ui-field-label {
   display: flex;
   flex-direction: row;

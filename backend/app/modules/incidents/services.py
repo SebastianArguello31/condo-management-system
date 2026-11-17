@@ -1,3 +1,5 @@
+# Operaciones de negocio para incidencias y seguimiento técnico.
+# Coordina las comprobaciones y el acceso a los repositorios antes de devolver el resultado.
 from psycopg2.errors import ForeignKeyViolation
 from werkzeug.exceptions import BadRequest, Conflict, Forbidden, NotFound
 
@@ -67,7 +69,6 @@ def _get_context(incident_id, user, *, for_update=False, cursor):
 
     return incident
 
-
 def get_incident_context(incident_id, user, *, for_update=False, cursor):
     """Obtiene una incidencia y valida que el usuario pueda acceder a ella."""
     return _get_context(incident_id, user, for_update=for_update, cursor=cursor)
@@ -88,6 +89,7 @@ def _get_detail(incident_id, user, *, cursor):
 def list_incidents(user):
     require_role(user, "ADMIN", "GESTOR", "RESIDENTE", "TECNICO")
 
+    # El alcance del listado se aplica en el servidor según el reportante o el técnico asignado.
     if user["rol"] == "RESIDENTE":
         return incident_repo.list_incidents(reporter_id=user["id_usuario"],)
 
@@ -170,6 +172,7 @@ def create_incident(data, files, user):
             "estado": "RECIBIDA",
         }
 
+    # La reversión SQL no elimina archivos físicos; compensa aquí las escrituras realizadas en disco.
     except Exception:
         attachments.cleanup_files(created_paths)
         raise
@@ -258,6 +261,7 @@ def update_status(incident_id, data, user):
         new_status = status["nombre"].upper()
         validate_transition(incident, new_status, user)
 
+        # Actualiza la fecha de resolución junto con el historial para mantener coherentes los indicadores.
         incident_repo.update_resolution_date(
             incident_id,
             incident["estado"],

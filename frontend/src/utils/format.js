@@ -24,12 +24,7 @@ export function parseLocalDate(value) {
     date.setFullYear(year, month - 1, day);
     date.setHours(0, 0, 0, 0);
 
-    if (
-      year < 1 ||
-      date.getFullYear() !== year ||
-      date.getMonth() !== month - 1 ||
-      date.getDate() !== day
-    ) {
+    if (year < 1 || date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
       return null;
     }
 

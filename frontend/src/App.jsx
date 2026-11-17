@@ -1,10 +1,5 @@
-import {
-  Suspense,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+/* Coordina la sesión, las rutas autorizadas y los proveedores compartidos de la interfaz. */
+import { Suspense, useCallback, useEffect, useRef, useState,} from "react";
 
 import Login from "./features/auth/Login";
 import PasswordRecovery from "./features/auth/PasswordRecovery";
@@ -13,29 +8,14 @@ import ChangePasswordForm from "./features/auth/ChangePasswordForm";
 import { useHashRoute } from "./hooks/useHashRoute";
 import { ConfirmProvider } from "./hooks/useConfirm";
 
-import {
-  defaultRouteFor,
-  navigationForRole,
-  routeForPath,
-  rutaDesdeClavePantalla,
-  rutaSoloDev,
-} from "./config/routing";
+import { defaultRouteFor, navigationForRole, routeForPath, rutaDesdeClavePantalla, rutaSoloDev, } from "./config/routing";
 
-import {
-  api,
-  getAccessToken,
-  setAccessToken,
-} from "./services/api";
+import { api, getAccessToken, setAccessToken, } from "./services/api";
 import { routes } from "./services/routes";
 
 import AppShell from "./components/AppShell";
 import ErrorBoundary from "./components/ui/ErrorBoundary";
-import {
-  Button,
-  ConfirmDialog,
-  ErrorState,
-  ToastProvider,
-} from "./components/ui";
+import { Button, ConfirmDialog, ErrorState, ToastProvider, } from "./components/ui";
 
 import "./styles/users-ui.css";
 

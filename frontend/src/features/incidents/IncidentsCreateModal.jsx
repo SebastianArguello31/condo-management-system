@@ -1,36 +1,21 @@
-/* IncidentsCreateModal — F2-5b: modal de creación de incidencias al kit
- * (cierra B8). Paridad con el creador legado de IncidentsPage: misma
- * FormData ("titulo", "descripcion", "id_unidad", "id_tipo_incidencia" y
- * cada archivo bajo "archivos"), mismo endpoint (POST /incidents). Cambios
- * por convención (§8-bis): FormModal con el error de la acción DENTRO
- * (Alert danger con foco/scroll; HTTP 413 y 400 con err.errors por
- * campo), éxito por Toast y reload() del padre sin titilar, validación en
- * cliente con validate()+incidenciaCrear, cierre bloqueado en busy, Field
- * con name/autoComplete, nota de campos obligatorios activada y límites
- * de adjuntos verificados en cliente contra los REALES del backend
- * (backend/app/modules/incidents/attachments.py:8-15 — 3 archivos, 5 MB,
- * .jpg/.jpeg/.png/.pdf).
- */
+/* Registro de incidencias con adjuntos mediante FormData.
+ * Valida los campos y archivos antes del envío y presenta los errores dentro del modal. */
 import { useEffect, useState } from "react";
+import AttachmentRow from "./AttachmentRow";
 import { api } from "../../services/api";
 import { routes } from "../../services/routes";
 import { useMutation } from "../../hooks/useMutation";
 import { validate, incidenciaCrear } from "../../validations";
-import {
-  Field,
-  FormModal,
-  Input,
-  Select,
-  Textarea,
-  useToast,
-} from "../../components/ui";
+import { Field, FormModal, Input, Select, Textarea, useToast, } from "../../components/ui";
 
-/* Límites REALES del backend (attachments.py:8-15). Si cambian allí,
+/* Límites del backend (attachments.py). Si cambian allí,
  * este bloque es el único lugar del cliente que los repite. */
 const LIMITE_ARCHIVOS = 3;
 const LIMITE_BYTES = 5 * 1024 * 1024;
-const EXTENSIONES = [".jpg", ".jpeg", ".png", ".pdf"];
-const ACCEPT = ".jpg,.jpeg,.png,.pdf";
+const LIMITE_VIDEO_BYTES = 25 * 1024 * 1024;
+const EXTENSIONES_VIDEO = [".mp4", ".mov"];
+const EXTENSIONES = [".jpg", ".jpeg", ".png", ".pdf", ...EXTENSIONES_VIDEO];
+const ACCEPT = EXTENSIONES.join(",");
 
 const EMPTY_FORM = {
   titulo: "",
@@ -42,7 +27,7 @@ const EMPTY_FORM = {
 const MENSAJE_413 =
   "Los archivos superan el tamaño permitido; reduce su peso o envía menos archivos.";
 
-/* Mismo mensaje textual del backend (attachments.py:25). */
+/* Límite de cantidad compartido con el backend. */
 const MENSAJE_MAX_ARCHIVOS = `Puedes adjuntar como máximo ${LIMITE_ARCHIVOS} archivos.`;
 
 function formatBytes(bytes) {
@@ -58,12 +43,15 @@ function validarArchivos(lista) {
   for (const file of lista) {
     const punto = file.name.lastIndexOf(".");
     const extension = punto >= 0 ? file.name.slice(punto).toLowerCase() : "";
+    const esVideo = EXTENSIONES_VIDEO.includes(extension);
+    const limite = esVideo ? LIMITE_VIDEO_BYTES : LIMITE_BYTES;
+    const limiteMB = limite / (1024 * 1024);
     if (!EXTENSIONES.includes(extension)) {
-      errores.push(`${file.name} no es JPG, PNG ni PDF.`);
+      errores.push(`${file.name} no es JPG, PNG, PDF, MP4 ni MOV.`);
     } else if (file.size <= 0) {
       errores.push(`${file.name} está vacío y no se puede adjuntar.`);
-    } else if (file.size > LIMITE_BYTES) {
-      errores.push(`${file.name} supera 5 MB.`);
+    } else if (file.size > limite) {
+      errores.push(`${file.name} supera ${limiteMB} MB.`);
     }
   }
   return errores;
@@ -89,6 +77,7 @@ export default function IncidentsCreateModal({
   const notify = useToast();
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [archivos, setArchivos] = useState([]);
+  const [seleccionError, setSeleccionError] = useState("");
   const [camposErr, setCamposErr] = useState(null);
   const [accionError, setAccionError] = useState("");
   /* Se incrementa en cada submit: al fallar la validación/adjuntos, el
@@ -101,6 +90,36 @@ export default function IncidentsCreateModal({
   const busy = guardando.busy;
 
   const erroresAdjuntos = validarArchivos(archivos);
+
+  function agregarArchivos(event) {
+    const seleccionados = Array.from(event.target.files ?? []);
+    // Permite volver a seleccionar un archivo después de quitarlo.
+    event.target.value = "";
+    if (busy || seleccionados.length === 0) return;
+
+    const combinados = [...archivos];
+    for (const file of seleccionados) {
+      const repetido = combinados.some((actual) =>
+        actual.name === file.name &&
+        actual.size === file.size &&
+        actual.lastModified === file.lastModified
+      );
+      if (!repetido) combinados.push(file);
+    }
+
+    if (combinados.length > LIMITE_ARCHIVOS) {
+      setSeleccionError(`${MENSAJE_MAX_ARCHIVOS} No se agregó esta selección; quita un archivo o selecciona menos.`);
+      return;
+    }
+    setArchivos(combinados);
+    setSeleccionError("");
+  }
+
+  function quitarArchivo(index) {
+    if (busy) return;
+    setArchivos((actuales) => actuales.filter((_, i) => i !== index));
+    setSeleccionError("");
+  }
 
   /* El error por campo se LIMPIA al editar ese campo (o al reabrir, via
    * reiniciar()). */
@@ -128,6 +147,7 @@ export default function IncidentsCreateModal({
   function reiniciar() {
     setForm({ ...EMPTY_FORM });
     setArchivos([]);
+    setSeleccionError("");
     setCamposErr(null);
     setAccionError("");
   }
@@ -167,6 +187,12 @@ export default function IncidentsCreateModal({
     } catch (err) {
       if (err?.status === 413) {
         setAccionError(MENSAJE_413);
+      } else if (err instanceof TypeError && !err.status) {
+        setAccionError(
+          "No se pudo confirmar el envío por un problema de conexión con el servidor. " +
+          "Verifica tu conexión y que el servidor esté disponible. " +
+          "Antes de reintentar, revisa el listado para evitar registrar la incidencia dos veces."
+        );
       } else {
         setAccionError(err?.message ?? "No se pudo registrar la incidencia.");
         if (err?.errors) setCamposErr(normalizarErrores(err.errors));
@@ -242,8 +268,8 @@ export default function IncidentsCreateModal({
         <p>Se registra con prioridad Normal.</p>
         <Field
           label="Evidencias"
-          help={`Hasta ${LIMITE_ARCHIVOS} archivos, 5 MB cada uno. JPG, PNG o PDF.`}
-          error={erroresAdjuntos.length > 0 ? erroresAdjuntos.join(" ") : undefined}
+          help={`Puedes agregar archivos en varias selecciones (${archivos.length}/${LIMITE_ARCHIVOS}). JPG, PNG o PDF: 5 MB por archivo. MP4 o MOV: 25 MB por video.`}
+          error={[seleccionError, ...erroresAdjuntos].filter(Boolean).join(" ") || undefined}
         >
           <Input
             type="file"
@@ -251,15 +277,21 @@ export default function IncidentsCreateModal({
             autoComplete="off"
             multiple
             accept={ACCEPT}
-            onChange={(event) => setArchivos([...event.target.files])}
+            disabled={busy}
+            onChange={agregarArchivos}
           />
         </Field>
         {archivos.length > 0 && (
-          <ul>
-            {archivos.map((file) => (
-              <li key={file.name}>
-                {file.name} · {formatBytes(file.size)}
-              </li>
+          <ul className="incident-attachments" aria-label="Archivos seleccionados">
+            {archivos.map((file, index) => (
+              <AttachmentRow
+                key={JSON.stringify([file.name, file.size, file.lastModified])}
+                name={file.name}
+                detail={formatBytes(file.size)}
+                removing
+                disabled={busy}
+                onAction={() => quitarArchivo(index)}
+              />
             ))}
           </ul>
         )}

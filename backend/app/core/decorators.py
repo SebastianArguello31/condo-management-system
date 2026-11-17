@@ -1,3 +1,5 @@
+# Protección de rutas mediante token Bearer y roles autorizados.
+# La identidad validada se publica en g.current_user durante la solicitud.
 import jwt
 from functools import wraps
 from flask import g, request
@@ -27,11 +29,13 @@ def token_required(function):
         except (jwt.InvalidTokenError, ValueError, TypeError, KeyError,):
             raise Unauthorized("Token inválido") from None
 
+        # Consulta la cuenta en cada solicitud para aplicar desactivaciones y cambios de rol vigentes.
         user = get_user(user_id)
 
         if not user or not user["activo"]:
             raise Unauthorized("Usuario inexistente o desactivado")
 
+        # Rechaza tokens anteriores a un cambio de contraseña aunque todavía no hayan expirado.
         if payload["ver"] != user["session_version"]:
             raise Unauthorized("Tu sesión ya no es válida. Inicia sesión nuevamente.")
 
