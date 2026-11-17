@@ -10,7 +10,6 @@ Desde la raíz, en PowerShell y con el entorno virtual activado según el [READM
 python -m pip install -r requirements.txt
 npm --prefix frontend ci
 python -B -m unittest discover -s backend/tests -t backend -p "test_*.py" -v
-npm --prefix frontend test
 ```
 
 No se utilizan `RUN_DB_TESTS` ni `TEST_DB_*`. `backend/tests/__init__.py` bloquea conexiones reales mediante psycopg2 y sockets durante el proceso. Mantén `-t backend` para cargar el paquete y sus protecciones.
@@ -19,7 +18,6 @@ Para ejecutar archivos específicos:
 
 ```powershell
 python -B -m unittest discover -s backend/tests -t backend -p "test_reservation_rules.py" -v
-node --test frontend/tests/validation.test.js
 ```
 
 ## Cobertura y límites
