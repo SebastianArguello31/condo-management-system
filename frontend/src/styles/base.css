@@ -1,0 +1,77 @@
+/* ==========================================================================
+   Base — reset mínimo, tipografía, foco visible y utilidades.
+   Se importa DESPUÉS del CSS legado (main.jsx) para resolver empates de
+   especificidad a favor de la base. No incluye componentes (van en ui/*.css).
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--ink);
+  background: var(--bg);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* Foco visible: un único anillo para toda la aplicación. */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Movimiento: solo transiciones de color/opacidad; apagar si el usuario lo
+   pide Explícitamente. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* -- Utilidades ------------------------------------------------------------ */
+
+/* Contenido visible solo con lectores de pantalla. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Datos numéricos alineados por columna (IDs, fechas, importes). */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fuente monoespaciada para IDs, códigos y marcas de tiempo. */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

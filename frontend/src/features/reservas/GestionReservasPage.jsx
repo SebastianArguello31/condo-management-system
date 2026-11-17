@@ -1,0 +1,452 @@
+import { useEffect, useMemo, useState } from "react";
+import { api } from "../../services/api";
+import { routes } from "../../services/routes";
+import { useHashRoute } from "../../hooks/useHashRoute";
+import { useQuery } from "../../hooks/useQuery";
+import { useMutation } from "../../hooks/useMutation";
+import { useConfirm } from "../../hooks/useConfirm";
+import { usePagination } from "../../hooks/usePagination";
+import { formatDate, formatTime } from "../../utils/format";
+import DateInput from "../../components/ui/DateInput";
+import { Button, DataTable, ErrorState, Field, FilterBar, PageHeader, Pagination, RowActions, Select, StatusBadge, useToast, } from "../../components/ui";
+
+const ESTADOS = [
+  "PENDIENTE",
+  "CONFIRMADA",
+  "RECHAZADA",
+  "CANCELADA",
+  "FINALIZADA",
+];
+
+const ESTADOS_CANCELABLES = ["PENDIENTE", "CONFIRMADA"];
+
+const CONFIRMACION = {
+  CONFIRMADA: {
+    title: "Aprobar reserva",
+    confirmLabel: "Aprobar",
+    danger: false,
+    toast: "Reserva aprobada.",
+  },
+  RECHAZADA: {
+    title: "Rechazar reserva",
+    confirmLabel: "Rechazar",
+    danger: true,
+    toast: "Reserva rechazada.",
+  },
+  CANCELADA: {
+    title: "Cancelar reserva",
+    confirmLabel: "Sí, cancelar reserva",
+    danger: true,
+    toast: "Reserva cancelada.",
+  },
+};
+
+const EMPTY_FILTERS = {
+  espacio: "",
+  estado: "",
+  fecha: "",
+  residente: "",
+};
+
+const nombreCompleto = (row) =>
+  [row?.residente_nombre, row?.residente_apellido]
+    .filter(Boolean)
+    .join(" ") || "—";
+
+export default function GestionReservasPage({ user }) {
+  const isAdmin = user?.rol === "ADMIN";
+  const puedeGestionar = ["ADMIN", "GESTOR"].includes(user?.rol);
+
+  const notify = useToast();
+  const confirmar = useConfirm();
+  const { params } = useHashRoute();
+
+  const [filtros, setFiltros] = useState({ ...EMPTY_FILTERS });
+  const [dateReset, setDateReset] = useState(0);
+
+  const {
+    data: catalogos,
+    error: errorCatalogos,
+    reload: recargarCatalogos,
+  } = useQuery(async (signal) => {
+    const [espacios, residentes] = await Promise.all([
+      api(routes.commonSpaces, { signal }),
+      isAdmin
+        ? api(routes.residents, { signal })
+        : Promise.resolve([]),
+    ]);
+
+    return [espacios ?? [], residentes ?? []];
+  }, [user?.id_usuario, isAdmin]);
+
+  const [espacios = [], residentes = []] = catalogos || [];
+
+  const estadoDesdeUrl =
+    typeof params.estado === "string" &&
+    ESTADOS.includes(params.estado)
+      ? params.estado
+      : "";
+
+  useEffect(() => {
+    setFiltros((previous) => ({
+      ...previous,
+      estado: estadoDesdeUrl,
+    }));
+  }, [estadoDesdeUrl]);
+
+  function actualizarFiltro(event) {
+    const { name, value } = event.target;
+
+    setFiltros((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  }
+
+  function limpiarFiltros() {
+    setFiltros({ ...EMPTY_FILTERS });
+    setDateReset((current) => current + 1);
+  }
+
+  const consulta = useMemo(() => {
+    const queryParams = new URLSearchParams();
+
+    Object.entries(filtros).forEach(([clave, valor]) => {
+      if (valor !== "") {
+        queryParams.set(clave, valor);
+      }
+    });
+
+    return queryParams.toString();
+  }, [filtros]);
+
+  const { data, loading, error, reload } = useQuery(
+    (signal) =>
+      api(
+        `${routes.reservations}${consulta ? `?${consulta}` : ""}`,
+        { signal }
+      ),
+    [consulta]
+  );
+
+  const rows = data ?? [];
+
+  /* Paginación EN EL CLIENTE (F2-13b): `rows` ya llega filtrado del
+   * servidor (la consulta no cambia); el resetKey son los filtros
+   * serializados ("Limpiar filtros" y el sembrado del hash ?estado=
+   * también los cambian → vuelve a la página 1). Meta y EmptyState
+   * siguen con `rows`/`consulta` (total). */
+  const pag = usePagination(rows, {
+    resetKey: `${filtros.espacio}|${filtros.estado}|${filtros.fecha}|${filtros.residente}`,
+  });
+
+  /* Residente como Select (decisión 2): deduplicado por usuario
+   * conservando la PRIMERA fila (los GET /residents llegan ordenados por
+   * apellido y nombre, mismo criterio del dedicado de ResidentsPage). */
+
+  const residentesUnicos = useMemo(() => {
+    const grupos = new Map();
+
+    residentes.forEach((fila) => {
+      if (!grupos.has(fila.id_usuario)) {
+        grupos.set(fila.id_usuario, fila);
+      }
+    });
+
+    return [...grupos.values()];
+  }, [residentes]);
+
+  const cambiarEstado = useMutation((id, estado) =>
+    api(`${routes.reservations}/${id}/status`, {
+      method: "PATCH",
+      body: { estado },
+    })
+  );
+
+  async function pedirCambio(row, estado) {
+    if (cambiarEstado.busy || !puedeGestionar) return;
+
+    const textos = CONFIRMACION[estado];
+    if (!textos) return;
+
+    const transicionPermitida =
+      (
+        row.estado === "PENDIENTE" &&
+        ["CONFIRMADA", "RECHAZADA", "CANCELADA"].includes(estado)
+      ) ||
+      (
+        row.estado === "CONFIRMADA" &&
+        estado === "CANCELADA"
+      );
+
+    if (!transicionPermitida) return;
+
+    const ok = await confirmar({
+      title: textos.title,
+      message:
+        `La reserva de ${nombreCompleto(row)} en ${row.espacio} del ` +
+        `${formatDate(row.fecha)} quedará ${estado}.` +
+        (estado === "CANCELADA" ? " No hay vuelta atrás." : ""),
+      confirmLabel: textos.confirmLabel,
+      danger: textos.danger,
+    });
+
+    if (!ok) return;
+
+    try {
+      await cambiarEstado.run(row.id_reserva, estado);
+      notify(textos.toast);
+      await reload();
+    } catch (err) {
+      notify(
+        err.message || "No se pudo actualizar la reserva.",
+        { tone: "danger" }
+      );
+    }
+  }
+
+  const pendientes = rows.filter(
+    (row) => row.estado === "PENDIENTE"
+  ).length;
+
+  const conteo =
+    !loading && rows.length > 0
+      ? `${rows.length} ${rows.length === 1 ? "reserva" : "reservas"} · ${pendientes} ${pendientes === 1 ? "pendiente" : "pendientes"}`
+      : undefined;
+
+  const descripcion =
+    "Revisa las reservas del condominio y gestiona su aprobación, rechazo o cancelación.";
+
+  const meta = [descripcion, conteo].filter(Boolean).join(" · ");
+  const hayFiltros = consulta !== "";
+
+  const columns = [
+    {
+      key: "fecha",
+      header: "Fecha",
+      cellClassName: "ui-mono",
+      align: "right",
+      render: (row) => formatDate(row.fecha),
+    },
+    {
+      key: "espacio",
+      header: "Espacio",
+    },
+    {
+      key: "residente",
+      header: "Residente",
+      render: nombreCompleto,
+    },
+    {
+      key: "tipo_evento",
+      header: "Tipo de evento",
+    },
+    {
+      key: "horario",
+      header: "Horario",
+      align: "right",
+      cellClassName: "ui-mono",
+      render: (row) => [
+        formatTime(row.hora_inicio),
+        formatTime(row.hora_fin),
+      ].join(" - "),
+    },
+    {
+      key: "personas",
+      header: "Personas",
+      align: "right",
+      render: (row) => row.cantidad_personas,
+    },
+    {
+      key: "estado",
+      header: "Estado",
+      render: (row) => <StatusBadge estado={row.estado} />,
+    },
+    {
+      key: "acciones",
+      header: "Acciones",
+      cellClassName: "mobile-actions-cell",
+      width: "calc(var(--space-12) * 5)",
+      render: (row) => (
+        <RowActions
+          actions={[
+            ...(puedeGestionar && row.estado === "PENDIENTE"
+              ? [
+                  {
+                    label: "Aprobar",
+                    ariaLabel: `Aprobar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${formatDate(row.fecha)}`,
+                    disabled: cambiarEstado.busy,
+                    onSelect: () => pedirCambio(row, "CONFIRMADA"),
+                  },
+                  {
+                    label: "Rechazar",
+                    danger: true,
+                    ariaLabel: `Rechazar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${formatDate(row.fecha)}`,
+                    disabled: cambiarEstado.busy,
+                    onSelect: () => pedirCambio(row, "RECHAZADA"),
+                  },
+                ]
+              : []),
+
+            ...(puedeGestionar && ESTADOS_CANCELABLES.includes(row.estado)
+              ? [
+                  {
+                    label: "Cancelar",
+                    danger: true,
+                    ariaLabel: `Cancelar la reserva de ${nombreCompleto(row)} en ${row.espacio} del ${formatDate(row.fecha)}`,
+                    disabled: cambiarEstado.busy,
+                    onSelect: () => pedirCambio(row, "CANCELADA"),
+                  },
+                ]
+              : []),
+          ]}
+        />
+      ),
+    },
+  ];
+
+  return (
+    <section className="mobile-management-page">
+      <PageHeader title="Gestión de reservas" meta={meta} />
+
+      {errorCatalogos && (
+        <ErrorState
+          title="No se pudieron cargar los filtros"
+          description={errorCatalogos.message}
+          onRetry={recargarCatalogos}
+        />
+      )}
+
+      <FilterBar onReset={limpiarFiltros}>
+        <Field
+          label="Espacio"
+          help={
+            espacios.length === 0
+              ? "Aún no hay espacios comunes registrados."
+              : undefined
+          }
+        >
+          <Select
+            name="espacio"
+            value={filtros.espacio}
+            onChange={actualizarFiltro}
+          >
+            <option value="">Todos los espacios</option>
+
+            {espacios.map((espacio) => (
+              <option
+                key={espacio.id_espacio_comun}
+                value={espacio.id_espacio_comun}
+              >
+                {espacio.nombre}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field label="Estado">
+          <Select
+            name="estado"
+            value={filtros.estado}
+            onChange={actualizarFiltro}
+          >
+            <option value="">Todos los estados</option>
+
+            {ESTADOS.map((estado) => (
+              <option key={estado} value={estado}>
+                {estado}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field label="Fecha">
+          <DateInput
+            name="fecha"
+            value={filtros.fecha}
+            onChange={actualizarFiltro}
+            resetKey={dateReset}
+          />
+        </Field>
+
+        {isAdmin && (
+          <Field
+            label="Residente"
+            help={
+              residentesUnicos.length === 0
+                ? "Aún no hay residentes registrados."
+                : undefined
+            }
+          >
+            <Select
+              name="residente"
+              autoComplete="off"
+              value={filtros.residente}
+              onChange={actualizarFiltro}
+            >
+              <option value="">Todos los residentes</option>
+
+              {residentesUnicos.map((residente) => (
+                <option
+                  key={residente.id_usuario}
+                  value={residente.id_usuario}
+                >
+                  {[residente.nombre, residente.apellido]
+                    .filter(Boolean)
+                    .join(" ")}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+
+        <Button
+          variant="quiet"
+          disabled={loading}
+          onClick={reload}
+        >
+          Actualizar
+        </Button>
+      </FilterBar>
+
+      <DataTable
+        columns={columns}
+        rows={pag.pageRows}
+        rowKey={(row) => row.id_reserva}
+        caption="Listado de reservas del condominio"
+        loading={loading}
+        error={error}
+        onRetry={reload}
+        emptyTitle={
+          hayFiltros
+            ? "No hay reservas que coincidan."
+            : "No hay reservas"
+        }
+        emptyDescription={
+          hayFiltros
+            ? "Ajusta los filtros para ver resultados."
+            : "Las solicitudes de reserva de los residentes aparecerán aquí."
+        }
+        emptyAction={
+          hayFiltros
+            ? (
+              <Button variant="quiet" onClick={limpiarFiltros}>
+                Limpiar filtros
+              </Button>
+            )
+            : undefined
+        }
+      />
+      <Pagination
+        page={pag.page}
+        pageCount={pag.pageCount}
+        total={pag.total}
+        from={pag.from}
+        to={pag.to}
+        onPrev={pag.goPrev}
+        onNext={pag.goNext}
+        label="Paginación de gestión de reservas"
+      />
+    </section>
+  );
+}

@@ -1,0 +1,135 @@
+/* Estilos del formulario de acceso, basados en los tokens compartidos. */
+
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.login-panel {
+  width: min(100%, calc(var(--space-12) * 9));
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+/* Marca tipográfica izquierda: glifo sin contenedor (stroke currentColor)
+ * junto al kicker; sin bloque de color (convención §3). */
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--brand);
+}
+
+.login-kicker {
+  color: var(--ink-3);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  font-weight: 600;
+}
+
+.login-title {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-28);
+  line-height: var(--lh-28);
+  color: var(--ink);
+}
+
+.login-description {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--ink-2);
+}
+
+/* Fija la dirección de fila para evitar que el estilo global de label apile sus elementos. */
+.login-panel .ui-field-label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+}
+
+/* Asterisco inline a continuación del texto con --space-1 neto: el gap
+ * flex del label es --space-2, así que el compensado negativo deja el
+ * margen exacto pedido (tokens-only). Color/glifo según ui.css
+ * (.ui-field-required → --accent, span inline). */
+.login-panel .ui-field-required {
+  margin-inline-start: calc(var(--space-1) - var(--space-2));
+}
+
+/* Móvil primero: panel compacto; a >640px el padding respira más
+ * (único breakpoint permitido que aplica aquí). La separación
+ * encabezado→formulario se define al final (ronda 2: --space-6). */
+@media (min-width: 640px) {
+  .login-panel {
+    padding: var(--space-8);
+  }
+}
+
+/* ==========================================================================
+ Ronda 2 (pulido holgado, captura del dueño a 1280): el Login es pantalla
+ de entrada SIN shell, así que va más holgado que el kit, y TODO queda
+ acotado a .login-panel (sin tocar kit/ui.css/tokens).
+ ========================================================================== */
+
+/* Etiquetas de 14px (más legible que el estándar 12px del kit); la fila
+ * glifo→texto→asterisco de la ronda 1 NO cambia (mismo gap de --space-2 y
+ * asterisco pegado con --space-1 neto; el glifo 16px mantiene aria-hidden
+ * nativo y hereda --ink-2). */
+.login-panel .ui-field-label {
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+}
+
+/* Controles y botón del Login a 48px (min-height gana por clamping sobre
+ * la height --control-h del kit). El input del kit es input.ui-control
+ * (Input.jsx): su texto queda centrado verticalmente porque el input de
+ * una línea lo pinta centrado en el content box con padding-block: 0.
+ * Foco 2px (--focus-ring), borde --line-control y contrastes intactos. */
+.login-panel input.ui-control {
+  height: var(--space-12);
+  padding-block: 0;
+}
+
+.login-panel .ui-btn {
+  min-height: var(--space-12);
+}
+
+/* Ritmo vertical acotado al panel: --space-5 entre campos; el gap interno
+ * del Field (etiqueta→input, --space-1) queda como el kit. */
+.login-panel .ui-form-stack {
+  gap: var(--space-5);
+}
+
+/* Separación encabezado→formulario: un paso más que la ronda inicial. */
+.login-panel form {
+  margin-top: var(--space-6);
+}
+
+.auth-recovery-content {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+.login-panel .auth-recovery-content form {
+  margin-top: 0;
+}
+
+.auth-password-help {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-12);
+  line-height: var(--lh-14);
+}

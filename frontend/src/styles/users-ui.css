@@ -1,0 +1,144 @@
+/* Base de navegación y pantallas de personas. Los estilos de los otros módulos se conservan. */
+/* F2-12a: la regla .app-shell y TODO el CSS del shell (sidebar/marca/menú/
+ * cuenta/workspace/footer/skip/overlay/ítem activo) se movió a
+ * components/shell.css por tokens. De lo que era el shell queda aquí
+ * únicamente la parte compartida con los modales del kit (.mg-modal
+ * button) y las reglas .mg-* de pantallas con consumidores vivos (la
+ * limpieza muerta es de F2-11). */
+.mg-modal button { font-family: inherit; font-weight: 600; }
+.mg-page-heading { display: flex; justify-content: space-between; align-items: center; gap: 22px; margin-bottom: 27px; }
+.mg-page-heading h1 { font-size: clamp(25px, 2.4vw, 34px); font-weight: 650; letter-spacing: -1px; margin: 7px 0 10px; line-height: 1.2; }
+.mg-page-heading p { color: #74838a; line-height: 1.65; margin: 0; max-width: 590px; }
+.mg-page-heading .mg-eyebrow { font-size: 10px; font-weight: 700; color: #40846f; letter-spacing: 1.7px; }
+.mg-primary, .mg-secondary, .mg-danger { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 10px 16px; border-radius: 8px; font-size: 12px; white-space: nowrap; }
+button.mg-primary { background: #186553; color: white; border: 1px solid #186553; box-shadow: 0 3px 7px #1b554218; }
+button.mg-primary:hover:not(:disabled) { background: #104b3d; }
+button.mg-secondary { background: white; color: #4e6267; border: 1px solid #dce5e2; }
+button.mg-secondary:hover:not(:disabled) { background: #f1f5f3; }
+button.mg-danger { background: #b94242; color: white; border: 1px solid #b94242; }
+.mg-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 17px; margin-bottom: 26px; }
+.mg-stat { background: white; border: 1px solid #e3e9e8; border-radius: 12px; padding: 22px 23px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px #102e2010; }
+.mg-stat > div > span { display: block; font-size: 12px; color: #7b8b91; }
+.mg-stat strong { display: block; font-size: 29px; font-weight: 600; margin-top: 8px; letter-spacing: -.5px; }
+.mg-stat-icon { width: 47px; height: 47px; border-radius: 12px; background: #f0f5f3; color: #518775; display: grid; place-items: center; }
+.mg-stat:nth-child(3) .mg-stat-icon { background: #f4f2ee; color: #a18b65; }
+.mg-panel { background: white; border: 1px solid #e1e8e5; border-radius: 12px; overflow: hidden; box-shadow: 0 3px 10px #203e2910; }
+.mg-toolbar { display: flex; justify-content: space-between; gap: 15px; padding: 21px 23px; align-items: center; }
+label.mg-search { position: relative; flex-direction: row; align-items: center; max-width: 360px; width: 100%; }
+.mg-search > svg { position: absolute; left: 12px; color: #87999d; pointer-events: none; }
+.mg-search input { background: #f9fbfa; border: 1px solid #e3e9e6; padding: 11px 12px 11px 39px; border-radius: 7px; font-size: 12px; height: 40px; }
+.mg-filters { display: flex; gap: 9px; align-items: center; }
+.mg-filters select { font-size: 12px; padding: 10px 28px 10px 12px; border: 1px solid #e3e9e6; height: 40px; border-radius: 7px; color: #596b70; }
+.mg-table-scroll { overflow-x: auto; }
+table.mg-table { margin: 0; min-width: 690px; }
+.mg-table th { font-size: 10px; letter-spacing: .65px; text-transform: uppercase; color: #7c8d92; background: #f8faf9; padding: 14px 22px; border-bottom: 1px solid #e8eeeb; border-top: 1px solid #e8eeeb; font-weight: 600; }
+.mg-table td { padding: 19px 22px; border-bottom: 1px solid #eef2f0; vertical-align: middle; }
+.mg-table tr:last-child td { border-bottom: 0; }
+.mg-table tbody tr:hover { background: #fcfdfc; }
+/* F2-12a: .mg-avatar/.mg-avatar-square eliminadas — único consumidor JSX
+ * era el avatar del bloque de usuario de AppShell (retirado en el
+ * rediseño; grep sin otro consumo; .mg-identity queda para F2-11). */
+.mg-identity { display: flex; gap: 12px; align-items: center; min-width: 185px; }
+.mg-identity strong { display: block; font-size: 12px; font-weight: 650; overflow-wrap: anywhere; max-width: 260px; }
+.mg-identity > div > span { display: block; font-size: 11px; color: #859296; margin-top: 4px; overflow-wrap: anywhere; max-width: 280px; }
+.mg-you { display: inline-block; font-size: 9px; padding: 2px 5px; color: #3e7963; background: #edf5f0; border-radius: 4px; margin-left: 8px; }
+.mg-role-tag, .mg-tag { display: inline-block; font-size: 10px; padding: 5px 8px; border-radius: 5px; background: #f1f4f7; color: #5d7183; }
+.mg-tags { display: flex; gap: 5px; flex-wrap: wrap; max-width: 260px; }
+.mg-tag { background: #f1f5f1; color: #628168; }
+.mg-muted { color: #7c8d93; font-size: 12px; }
+.mg-description { display: block; max-width: 430px; white-space: pre-wrap; overflow-wrap: anywhere; color: #79898f; line-height: 1.6; }
+.mg-status { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 600; padding: 5px 9px; border-radius: 20px; }
+.mg-status i { width: 5px; height: 5px; background: currentColor; border-radius: 50%; }
+.mg-status.is-active { color: #2c8463; background: #edf7f0; }
+.mg-status.is-inactive { color: #8e918d; background: #f1f3f1; }
+.mg-table .mg-actions-heading { text-align: right; }
+.mg-row-actions { display: flex; justify-content: flex-end; gap: 5px; }
+.residents-table th:last-child, .residents-table td:last-child { text-align: left; width: 1%; white-space: nowrap; }
+.residents-table .mg-row-actions { justify-content: flex-start; }
+button.mg-icon-button { padding: 8px; border: 1px solid transparent; background: transparent; color: #7a8d92; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+button.mg-icon-button:hover:not(:disabled) { background: #eef5f1; color: #286c54; }
+button.mg-delete-button:hover:not(:disabled) { background: #fff0ef; color: #bf5353; }
+button.mg-icon-button:disabled { opacity: .3; }
+.mg-pagination { display: flex; justify-content: space-between; align-items: center; padding: 16px 23px; border-top: 1px solid #edf1ef; color: #89989e; font-size: 11px; }
+.mg-pagination > div { display: flex; gap: 12px; align-items: center; }
+.mg-pagination button { min-height: 31px; font-size: 10px; padding: 6px 11px; }
+.mg-bottom-note { color: #8a999c; font-size: 11px; margin: 16px 2px; line-height: 1.7; }
+.resident-dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, .8fr); gap: 18px; margin-bottom: 20px; }
+.resident-profile-card, .resident-units-card, .resident-history-card { padding: 23px; }
+.resident-profile-card .mg-form-grid { padding: 20px 0; }
+.resident-profile-card h2, .resident-units-card h2, .resident-history-card h2 { margin: 0; font-size: 16px; font-weight: 650; }
+.resident-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.resident-history-card .resident-card-heading { padding: 2px 0 17px; }
+.resident-history-card .resident-card-heading p { margin: 6px 0 0; color: #879296; font-size: 12px; }
+.resident-units-card ul { list-style: none; padding: 0; margin: 18px 0 0; }
+.resident-units-card li { display: flex; flex-direction: column; gap: 6px; padding: 14px 0; border-top: 1px solid #edf1ef; }
+.resident-units-card li strong { font-size: 13px; }
+.resident-units-card li span, .resident-units-card > p, .resident-empty-note { color: #84918f; font-size: 12px; line-height: 1.6; }
+.resident-form-actions { display: flex; justify-content: flex-end; }
+.resident-history-card { margin-top: 20px; }
+.mg-alert { padding: 13px 17px; border-radius: 8px; margin: 0 0 18px; font-size: 12px; line-height: 1.6; display: flex; gap: 10px; align-items: center; overflow-wrap: anywhere; }
+.mg-alert-error { color: #a33e3e; background: #fff1ee; border: 1px solid #f9dbd6; }
+.mg-alert-success { color: #287051; background: #edf7ef; border: 1px solid #d9eddf; }
+.mg-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 52px 20px; color: #879993; text-align: center; }
+.mg-empty h2 { color: #47665a; font-size: 17px; font-weight: 600; margin: 0; }
+.mg-empty p { margin: 0 0 5px; line-height: 1.6; }
+.mg-spinner { width: 24px; height: 24px; border: 2px solid #d4e4dc; border-top-color: #408c68; border-radius: 50%; animation: mg-spin 1s linear infinite; }
+@keyframes mg-spin { to { transform: rotate(360deg); } }
+.mg-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+/* F2-12b: radio/sombra/borde/fondo y el blur del ::backdrop salieron del
+ * legado — pintan .ui-modal (radio --radius-md, --surface, borde --line,
+ * box-shadow none, backdrop sin blur). Ancho/padding/max-height quedan
+ * (idénticos al kit) y el dim persiste SOLO para los modales sin
+ * backdrop=true (p. ej. drilldown del Dashboard, pantalla de Dev 3). */
+.mg-modal { --ui-text: #182b31; padding: 0; width: min(660px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); color: var(--ui-text); }
+.mg-modal::backdrop { background: #162e2b66; }
+.mg-modal-heading { display: flex; align-items: flex-start; justify-content: space-between; padding: 25px 28px 21px; border-bottom: 1px solid #edf1ef; gap: 12px; }
+.mg-modal-heading h2 { font-size: 21px; letter-spacing: -.3px; margin: 0 0 8px; font-weight: 650; }
+.mg-modal-heading p { font-size: 12px; color: #85928c; margin: 0; overflow-wrap: anywhere; line-height: 1.6; }
+.mg-form-body { padding: 26px 28px; font-size: 13px; line-height: 1.6; }
+.mg-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 21px 18px; }
+.mg-form-grid label { font-size: 12px; font-weight: 600; gap: 8px; }
+.mg-form-grid input, .mg-form-grid textarea { border-color: #dce5df; border-radius: 8px; font-size: 13px; font-weight: 400; padding: 11px; }
+.mg-form-grid small { font-size: 10px; color: #8a9890; font-weight: 400; }
+.mg-required { color: #4f9777; }
+.mg-full-field { grid-column: 1/-1; }
+label.mg-check-field { display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 10px 0; }
+.mg-check-field input[type=checkbox] { accent-color: #186553; }
+.mg-specialty-picker { border-top: 1px solid #edf1ef; margin-top: 28px; padding-top: 16px; }
+.mg-specialty-picker legend { font-size: 12px; font-weight: 650; padding-right: 10px; }
+.mg-specialty-picker > p { color: #87998f; font-size: 11px; margin: 0 0 14px; }
+.mg-specialty-picker > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mg-specialty-picker label { display: flex; flex-direction: row; align-items: center; padding: 11px; border: 1px solid #e0e7e1; border-radius: 8px; font-size: 12px; cursor: pointer; }
+.mg-specialty-picker label.is-selected { border-color: #9ecbb4; background: #f1f8f3; color: #23664b; }
+.mg-specialty-picker input { accent-color: #186553; flex-shrink: 0; width: 16px; height: 16px; }
+.mg-specialty-picker small { display: block; color: #959e94; font-size: 9px; }
+.mg-modal-actions { display: flex; justify-content: flex-end; gap: 9px; padding: 18px 28px; background: #f8faf8; border-top: 1px solid #edf1ef; }
+.mg-delete-summary { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 10px 0 20px; }
+.mg-delete-summary > svg { color: #bc5450; }
+.mg-delete-summary > span { font-size: 12px; color: #8b9892; overflow-wrap: anywhere; }
+/* F2-12a: el selector `.app-shell :focus-visible` (outline 3px #84baa1)
+ * salió de esta regla para que prevalezca el anillo del kit y de base.css
+ * (2px --focus-ring). El selector de .mg-modal queda (lo gana ui.css:893 y
+ * se revisa en F2-11). */
+.mg-modal :focus-visible { outline: 3px solid #84baa1; outline-offset: 3px; }
+@media (max-width: 1150px) {
+  .mg-toolbar { flex-wrap: wrap; }
+  label.mg-search { max-width: none; flex: 1 1 200px; }
+}
+@media (max-width: 760px) {
+  .mg-page-heading { align-items: flex-start; flex-direction: column; gap: 16px; }
+  .mg-stats { gap: 8px; }
+  .mg-stat { padding: 15px 12px; }
+  .mg-stat > div > span { font-size: 10px; }
+  .mg-stat strong { font-size: 24px; }
+  .mg-stat-icon { display: none; }
+  .mg-toolbar { padding: 15px; }
+  .mg-filters { flex-wrap: wrap; width: 100%; }
+  .mg-filters > label { flex: 1; }
+  .mg-pagination { gap: 15px; flex-wrap: wrap; padding: 15px; }
+  .mg-form-grid, .mg-specialty-picker > div { grid-template-columns: 1fr; }
+  .mg-form-body { padding: 22px; }
+  .mg-modal-heading { padding: 22px; }
+}
+@media (max-width: 900px) { .resident-dashboard-grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .mg-spinner { animation: none; } }

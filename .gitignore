@@ -1,0 +1,31 @@
+# Configuración local
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend
+node_modules/
+dist/
+
+# Archivos subidos y datos locales de Flask
+backend/instance/
+
+# Logs
+*.log
+
+# Archivos de estado y documentación local
+STATUS.md
+docs/contrato-dev4-reservas.md
+docs/dev4/
+frontend/AGENTS.md
+
+
+database/seed_demo.sql
